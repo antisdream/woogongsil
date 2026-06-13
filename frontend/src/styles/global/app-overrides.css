@@ -1,0 +1,385 @@
+/* =====================================================================
+   2026-05-13 최종 요청 반영: 라이트모드 가독성 / 토글 버튼 / 홈 히어로 보정
+   ---------------------------------------------------------------------
+   - 아래 블록은 기존 API 호출, 채점, 로그인, 오답 저장 로직을 변경하지 않고
+     색상·여백·버튼 표시만 재생성 위한 최종 스타일 보정 레이어입니다.
+ - 기존 JSX에 인라인 스타일이 많은 구조라 화면 표시가 흔들리는 지점만
+     선택자를 좁혀 !important를 사용했습니다.
+   ===================================================================== */
+
+/* 1) 테마 토글: 감싸는 캡슐 블록은 제거하고 버튼 2개만 표시합니다. */
+.theme-switch-wrap {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  gap: 8px !important;
+  backdrop-filter: none !important;
+}
+body.wgs-theme-dark .theme-switch-wrap {
+  background: transparent !important;
+}
+.wgs-theme-toggle {
+  width: auto !important;
+  min-width: 0 !important;
+  height: auto !important;
+  padding: 0 !important;
+  gap: 8px !important;
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+.wgs-theme-toggle-thumb {
+  display: none !important;
+}
+.wgs-theme-toggle button {
+  min-width: 92px !important;
+  min-height: 44px !important;
+  padding: 0 18px !important;
+  border-radius: 12px !important;
+  border: 1px solid var(--wgs-border) !important;
+  background: transparent !important;
+  color: var(--wgs-title) !important;
+  font-family: var(--wgs-font-h3) !important;
+  font-size: 15px !important;
+  font-weight: 900 !important;
+  box-shadow: none !important;
+}
+.wgs-theme-toggle button.is-active {
+  background: linear-gradient(135deg, #10b981, #059669) !important;
+  color: #ffffff !important;
+  border-color: rgba(16, 185, 129, 0.72) !important;
+  box-shadow: 0 12px 26px rgba(16, 185, 129, 0.26) !important;
+}
+body.wgs-theme-dark .wgs-theme-toggle button {
+  color: #f8fafc !important;
+  border-color: rgba(148, 163, 184, 0.28) !important;
+}
+body.wgs-theme-dark .wgs-theme-toggle button.is-active {
+  background: linear-gradient(135deg, #10b981, #047857) !important;
+  color: #ffffff !important;
+}
+
+/* 2) 필기/실기 문제은행: 라이트모드에서 흰 글씨가 흰 카드 위에 묻히는 문제를 보정합니다. */
+body.wgs-theme-light .random-practice-page,
+body.wgs-theme-light .ipep-page {
+  color: var(--wgs-text) !important;
+}
+body.wgs-theme-light .random-practice-page .wgs-section-title,
+body.wgs-theme-light .ipep-page h3,
+body.wgs-theme-light .ipep-page h4,
+body.wgs-theme-light .ipep-page p,
+body.wgs-theme-light .ipep-page label,
+body.wgs-theme-light .ipep-page span:not([style*="background: #3b82f6"]):not([style*="background:#3b82f6"]) {
+  color: var(--wgs-text) !important;
+}
+body.wgs-theme-light .random-practice-page > div[style*="background: var(--wgs-input-bg)"],
+body.wgs-theme-light .random-practice-page button[style*="background: var(--wgs-input-bg)"],
+body.wgs-theme-light .ipep-page button[style*="background: var(--wgs-button-muted)"],
+body.wgs-theme-light .ipep-page button[style*="background: var(--wgs-practice-toggle-bg)"],
+body.wgs-theme-light .ipep-page textarea,
+body.wgs-theme-light .ipep-page input,
+body.wgs-theme-light .ipep-page pre {
+  color: var(--wgs-text) !important;
+}
+body.wgs-theme-light .random-practice-page button[style*="background: #3b82f6"],
+body.wgs-theme-light .random-practice-page button[style*="background: '#3b82f6'"],
+body.wgs-theme-light .ipep-page button[style*="background: #3b82f6"],
+body.wgs-theme-light .ipep-page button[style*="background: #10b981"],
+body.wgs-theme-light .ipep-page button[style*="background: #ef4444"] {
+  color: #ffffff !important;
+}
+
+/* 3) 필기/실기 기출문제: 라이트모드에서는 문제/보기/OMR을 밝은 카드와 진한 글씨로 통일합니다. */
+body.wgs-theme-light .past-exam-page,
+body.wgs-theme-light .written-exam-page {
+  color: var(--wgs-text) !important;
+}
+body.wgs-theme-light .past-exam-question-panel {
+  background: var(--wgs-card) !important;
+  color: var(--wgs-text) !important;
+  box-shadow: var(--wgs-shadow) !important;
+}
+body.wgs-theme-light .past-exam-question-panel h1,
+body.wgs-theme-light .past-exam-question-panel h2,
+body.wgs-theme-light .past-exam-question-panel h3,
+body.wgs-theme-light .past-exam-question-panel h4,
+body.wgs-theme-light .past-exam-question-panel p,
+body.wgs-theme-light .past-exam-question-panel span:not([style*="background: #3b82f6"]),
+body.wgs-theme-light .past-exam-question-panel div:not([style*="background: #3b82f6"]),
+body.wgs-theme-light .written-exam-page h1,
+body.wgs-theme-light .written-exam-page h2,
+body.wgs-theme-light .written-exam-page h3,
+body.wgs-theme-light .written-exam-page h4,
+body.wgs-theme-light .written-exam-page p,
+body.wgs-theme-light .written-exam-page span:not([style*="background: #3b82f6"]) {
+  color: var(--wgs-text) !important;
+}
+body.wgs-theme-light .past-exam-question-panel button[style*="background: var(--wgs-button-muted)"],
+body.wgs-theme-light .past-exam-question-panel button[style*="background: var(--wgs-input-bg)"],
+body.wgs-theme-light .past-exam-omr-panel button[style*="background: var(--wgs-input-bg)"],
+body.wgs-theme-light .past-exam-omr-panel h4 {
+  color: var(--wgs-text) !important;
+}
+body.wgs-theme-light .past-exam-question-panel button[style*="background: rgba(59, 130, 246"],
+body.wgs-theme-light .past-exam-question-panel button[style*="background: rgba(16, 185, 129"],
+body.wgs-theme-light .past-exam-question-panel button[style*="background: rgba(239, 68, 68"],
+body.wgs-theme-light .past-exam-question-panel button[style*="background: #3b82f6"],
+body.wgs-theme-light .past-exam-question-panel button[style*="background: #ef4444"],
+body.wgs-theme-light .past-exam-question-panel button[style*="background: #8b5cf6"],
+body.wgs-theme-light .past-exam-omr-panel button[style*="background: #10b981"],
+body.wgs-theme-light .past-exam-omr-panel button[style*="background: #ef4444"] {
+  color: #ffffff !important;
+}
+body.wgs-theme-light .past-exam-omr-panel > div:first-child {
+  background: var(--wgs-card) !important;
+  color: var(--wgs-text) !important;
+}
+body.wgs-theme-light .past-exam-omr-panel > div:last-child {
+  background: var(--wgs-card-soft) !important;
+}
+
+/* 4) 마이페이지 오답노트 응시: 라이트모드 텍스트 대비를 강화합니다. */
+body.wgs-theme-light .wrong-note-page,
+body.wgs-theme-light .wrong-note-page *:not(button):not(.wgs-page-title) {
+  color: var(--wgs-text) !important;
+}
+body.wgs-theme-light .wrong-note-page .wgs-page-title {
+  color: var(--wgs-title-strong) !important;
+}
+body.wgs-theme-light .wrong-note-page button[style*="background: var(--wgs-button-muted)"],
+body.wgs-theme-light .wrong-note-page input,
+body.wgs-theme-light .wrong-note-page select,
+body.wgs-theme-light .wrong-note-page textarea,
+body.wgs-theme-light .wrong-note-page pre {
+  color: var(--wgs-text) !important;
+}
+body.wgs-theme-light .wrong-note-page button[style*="background: #3b82f6"],
+body.wgs-theme-light .wrong-note-page button[style*="background: #ef4444"],
+body.wgs-theme-light .wrong-note-page button[style*="background: #10b981"],
+body.wgs-theme-light .wrong-note-page button[style*="background: #8b5cf6"] {
+  color: #ffffff !important;
+}
+
+/* 5) 오류신고 버튼: 문제 카드 우측 경계선에 붙지 않도록 최소 여백과 줄바꿈 방지를 적용합니다. */
+.wgs-error-report-btn {
+  flex: 0 0 auto !important;
+  margin-left: auto !important;
+  margin-right: clamp(8px, 1.2vw, 18px) !important;
+  white-space: nowrap !important;
+}
+.exam-question-title-row {
+  align-items: center !important;
+  padding-right: clamp(6px, 1vw, 14px) !important;
+}
+.exam-question-title-row > h2,
+.exam-question-title-row > h3,
+.exam-question-title-row > h4 {
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+}
+
+/* 6) 홈 히어로: 시험 관련 문구와 환영 카드가 배경 이미지와 어색하게 겹치지 않도록 위치를 보정합니다. */
+.home-hero .wgs-page-title {
+  color: var(--wgs-title-strong) !important;
+}
+body.wgs-theme-dark .home-hero .wgs-page-title {
+  color: #ffffff !important;
+}
+.wgs-home-welcome-card {
+  transform: translateY(-14px) !important;
+  margin-bottom: 8px !important;
+}
+.home-hero .home-hero-actions,
+.home-hero > div:last-child {
+  transform: translateY(-8px) !important;
+}
+
+/* 7) 작은 화면 안전장치: 토글과 신고 버튼이 화면을 밀어내지 않도록 반응형으로 줄입니다. */
+@media (max-width: 720px) {
+  .wgs-theme-toggle {
+    gap: 6px !important;
+  }
+  .wgs-theme-toggle button {
+    min-width: 76px !important;
+    min-height: 38px !important;
+    padding: 0 12px !important;
+    font-size: 13px !important;
+  }
+  .exam-question-title-row {
+    flex-wrap: wrap !important;
+  }
+  .wgs-error-report-btn {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+  .wgs-home-welcome-card {
+    transform: translateY(-8px) !important;
+  }
+}
+
+/* 8) 기출문제 선택/채점 상태는 연한 배경을 쓰므로 라이트모드에서는 진한 글씨를 우선 적용합니다. */
+body.wgs-theme-light .past-exam-question-panel button[style*="background: rgba(59, 130, 246"],
+body.wgs-theme-light .past-exam-question-panel button[style*="background: rgba(16, 185, 129"],
+body.wgs-theme-light .past-exam-question-panel button[style*="background: rgba(239, 68, 68"] {
+  color: var(--wgs-text) !important;
+  font-weight: 900 !important;
+}
+
+/* =========================================================
+   제출 확인 모달 / FAQ 가독성 보정
+   - 기존 시험 제출, FAQ 열기/닫기 로직은 변경하지 않고 색상/형태만 보정합니다.
+   ========================================================= */
+.past-exam-confirm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(0, 0, 0, 0.72);
+}
+
+.past-exam-confirm-modal-card {
+  width: min(450px, calc(100vw - 48px));
+  padding: 40px;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  background: #1e2433;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.48);
+  text-align: center;
+}
+
+.past-exam-confirm-icon {
+  margin-bottom: 12px;
+  font-size: 42px;
+  line-height: 1;
+}
+
+.past-exam-confirm-message {
+  margin-bottom: 30px;
+  color: #f8fafc !important;
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1.65;
+  word-break: keep-all;
+}
+
+.past-exam-confirm-message strong {
+  color: #fcd34d !important;
+}
+
+.past-exam-confirm-actions {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+}
+
+.past-exam-confirm-actions button {
+  flex: 1 1 0;
+  min-width: 150px;
+  padding: 15px 0;
+  border: 0;
+  border-radius: 8px;
+  color: #fff !important;
+  font-size: 16px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.past-exam-confirm-submit {
+  background: #10b981;
+}
+
+.past-exam-confirm-cancel {
+  background: #ef4444;
+}
+
+@media (max-width: 520px) {
+  .past-exam-confirm-modal-card {
+    padding: 30px 22px;
+  }
+
+  .past-exam-confirm-actions {
+    flex-direction: column;
+  }
+
+  .past-exam-confirm-actions button {
+    width: 100%;
+  }
+}
+
+/* FAQ 표 셀 보정: 분류/질문/보기 컬럼의 과한 박스감을 제거하고 테마별 대비를 확보합니다. */
+.faq-category-badge {
+  display: inline !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: var(--wgs-muted) !important;
+  font-size: 14px;
+  font-weight: 800;
+  text-decoration: none !important;
+}
+
+.faq-question-cell button,
+.faq-open-btn {
+  background: transparent !important;
+  box-shadow: none !important;
+  color: var(--wgs-text) !important;
+}
+
+.faq-question-cell button {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  width: auto !important;
+  max-width: 100%;
+  padding: 8px 10px !important;
+  border: 0 !important;
+  border-radius: 8px !important;
+  font-weight: 900 !important;
+  line-height: 1.4 !important;
+  word-break: keep-all;
+  text-align: center;
+}
+
+.faq-open-btn {
+  min-width: 78px !important;
+  min-height: 38px !important;
+  padding: 8px 12px !important;
+  border: 1px solid var(--wgs-border) !important;
+  border-radius: 10px !important;
+  font-weight: 900 !important;
+  line-height: 1.2 !important;
+  white-space: nowrap !important;
+}
+
+body.wgs-theme-light .faq-category-badge {
+  color: #475569 !important;
+}
+
+body.wgs-theme-light .faq-question-cell button {
+  color: #0f172a !important;
+}
+
+body.wgs-theme-light .faq-open-btn {
+  color: #1e40af !important;
+  background: #ffffff !important;
+}
+
+body.wgs-theme-dark .faq-category-badge {
+  color: #93c5fd !important;
+}
+
+body.wgs-theme-dark .faq-question-cell button {
+  color: #f8fafc !important;
+}
+
+body.wgs-theme-dark .faq-open-btn {
+  color: #bfdbfe !important;
+  background: rgba(15, 23, 42, 0.4) !important;
+}

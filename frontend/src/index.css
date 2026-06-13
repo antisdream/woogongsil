@@ -1,0 +1,119 @@
+/* 전역 진입점 스타일입니다. */
+:root {
+  --bg-color: #121620;
+  --card-bg: #2a3042;
+  --text-main: #f8fafc;
+  --text-muted: #94a3b8;
+  --border-color: #3b4256;
+  --primary: #3b82f6;
+  --primary-hover: #2563eb;
+  --danger: #ef4444;
+  --danger-hover: #dc2828;
+  --success: #10b981;
+}
+
+body {
+  margin: 0;
+  background-color: var(--bg-color);
+  color: var(--text-main);
+  font-family: var(--wgs-font-body, 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif);
+  line-height: 1.6;
+}
+
+.container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+/* 네비게이션 메뉴 바 */
+.navbar {
+  display: flex;
+  gap: 15px;
+  background-color: var(--card-bg);
+  padding: 15px 20px;
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  margin-bottom: 30px;
+  overflow-x: auto;
+}
+
+.navbar a {
+  text-decoration: none;
+  color: var(--text-main);
+  font-weight: 600;
+  padding: 10px 15px;
+  background-color: var(--bg-color);
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  transition: all 0.2s;
+}
+
+.navbar a:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+/* 카드 UI */
+.card {
+  background-color: var(--card-bg);
+  padding: 30px;
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  margin-bottom: 20px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+}
+
+/* 버튼 */
+button {
+  background-color: var(--bg-color);
+  color: var(--text-main);
+  border: 1px solid var(--border-color);
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+button:hover:not(:disabled) {
+  border-color: var(--primary);
+}
+
+button.primary { background-color: var(--primary); color: white; border: none; }
+button.primary:hover { background-color: var(--primary-hover); }
+button.danger { background-color: var(--danger); color: white; border: none; }
+button.danger:hover { background-color: var(--danger-hover); }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* 옵션(보기) 버튼 - 문제 풀이용 */
+.option-btn {
+  display: block;
+  width: 100%;
+  text-align: left;
+  margin-bottom: 10px;
+  padding: 15px;
+  font-size: 16px;
+  background-color: var(--bg-color);
+}
+.option-btn.selected {
+  border: 2px solid var(--primary);
+  background-color: rgba(59, 130, 246, 0.1);
+}
+
+/* 입력창 (Input) */
+input, select {
+  width: 100%;
+  padding: 12px;
+  margin-bottom: 15px;
+  background-color: var(--bg-color);
+  border: 1px solid var(--border-color);
+  color: white;
+  border-radius: 8px;
+  box-sizing: border-box;
+}
+
+table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+th, td { border: 1px solid var(--border-color); padding: 12px; text-align: center; }
+th { background-color: var(--bg-color); }

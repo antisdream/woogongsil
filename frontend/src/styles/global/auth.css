@@ -1,0 +1,316 @@
+/* ==========================================================
+   /login 전용 페이지 스타일
+   - 홈 안에 있던 로그인 박스를 분리한 뒤 로그인/회원가입/ID/PW찾기를
+     한 페이지 탭 구조로 묶기 위한 스타일입니다.
+   - 기존 필기/실기/게시판/랭킹/멀티플레이 스타일과 겹치지 않도록
+     wgs-auth, wgs-login 접두어만 사용합니다.
+   ========================================================== */
+.wgs-auth-page {
+  /* 로그인 전용 페이지도 필기/실기/마이페이지처럼 공통 1480px 폭을 사용합니다. */
+  width: min(100%, 1480px);
+  max-width: 1480px;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+.wgs-auth-hero {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 18px;
+  margin-bottom: 24px;
+  padding: clamp(28px, 3.2vw, 44px);
+  border: 1px solid var(--wgs-border);
+  border-radius: 18px;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.18), rgba(16, 185, 129, 0.09));
+  box-shadow: 0 12px 28px var(--wgs-shadow);
+}
+
+.wgs-auth-kicker {
+  display: inline-flex;
+  margin-bottom: 10px;
+  color: #38bdf8;
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+}
+
+.wgs-auth-hero h1 {
+  margin: 0;
+  color: var(--wgs-title);
+  font-size: clamp(28px, 4vw, 44px);
+  line-height: 1.1;
+  letter-spacing: -0.05em;
+}
+
+.wgs-auth-hero p {
+  margin: 12px 0 0;
+  color: var(--wgs-muted);
+  font-size: 14px;
+  line-height: 1.55;
+  word-break: keep-all;
+}
+
+.wgs-auth-shell {
+  /* 다른 주요 페이지 카드와 높이감이 맞도록 로그인/회원가입 탭 영역을 넓은 카드로 확장합니다. */
+  overflow: hidden;
+  min-height: clamp(620px, 62vh, 820px);
+  border: 1px solid var(--wgs-border);
+  border-radius: 22px;
+  background: var(--wgs-card-bg);
+  box-shadow: var(--wgs-shadow);
+  backdrop-filter: blur(18px);
+}
+
+.wgs-auth-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0;
+  background: rgba(2, 6, 23, 0.22);
+  border-bottom: 1px solid var(--wgs-border);
+}
+
+.wgs-auth-tabs button {
+  min-height: 70px;
+  padding: 16px 12px;
+  border: 0;
+  border-right: 1px solid var(--wgs-border);
+  background: transparent;
+  color: var(--wgs-muted);
+  font-size: 17px;
+  font-weight: 900;
+  cursor: pointer;
+  transition: background 0.18s ease, color 0.18s ease, transform 0.18s ease;
+}
+
+.wgs-auth-tabs button:last-child {
+  border-right: 0;
+}
+
+.wgs-auth-tabs button span {
+  display: inline-block;
+  margin-right: 6px;
+}
+
+.wgs-auth-tabs button.is-active {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  color: #ffffff;
+  box-shadow: inset 0 -3px 0 rgba(255, 255, 255, 0.25);
+}
+
+.wgs-auth-content {
+  /* 내부 폼은 가운데에 두되, 바깥 탭/카드는 다른 페이지와 같은 넓은 레이아웃을 유지합니다. */
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  min-height: clamp(540px, 52vh, 720px);
+  padding: clamp(38px, 4.8vw, 64px);
+}
+
+
+/* 선택된 로그인 센터 탭별 내부 정렬입니다.
+   로그인 탭은 중앙 배치, 회원가입/ID·PW 찾기는 폼 높이를 고려해 상단 여백을 조정합니다. */
+.wgs-auth-content--login {
+  align-items: center;
+}
+
+.wgs-auth-content--signup {
+  align-items: flex-start;
+  padding-top: clamp(34px, 3.5vw, 48px);
+}
+
+.wgs-auth-content--find {
+  align-items: flex-start;
+  padding-top: clamp(42px, 4vw, 58px);
+}
+
+/* 회원가입 탭 내장 모드 전용 보정입니다.
+   기존 회원가입 검증 로직은 그대로 두고, 넓어진 로그인 센터에 맞게 크기만 키웁니다. */
+.wgs-signup-embedded {
+  box-sizing: border-box;
+}
+
+.wgs-signup-embedded h2 {
+  margin-bottom: 34px !important;
+  font-size: clamp(30px, 2.2vw, 36px) !important;
+  line-height: 1.2 !important;
+}
+
+.wgs-signup-embedded form {
+  gap: 24px !important;
+}
+
+.wgs-signup-embedded label {
+  font-size: 16px !important;
+  line-height: 1.45 !important;
+}
+
+.wgs-signup-embedded label span {
+  font-size: 13px !important;
+}
+
+.wgs-signup-embedded input {
+  min-height: 56px !important;
+  padding: 16px 18px !important;
+  border-radius: 12px !important;
+  font-size: 16px !important;
+}
+
+.wgs-signup-embedded button:not([title]) {
+  min-height: 56px !important;
+  padding: 0 22px !important;
+  border-radius: 12px !important;
+  font-size: 16px !important;
+}
+
+.wgs-signup-embedded button[title] {
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  font-size: 20px !important;
+}
+
+/* 아이디/PW 찾기 탭 내장 모드 전용 보정입니다.
+   내부 아이디 찾기/비밀번호 찾기 탭과 인증 박스가 작아 보이지 않도록 폭과 폰트를 보강합니다. */
+.wgs-findauth-embedded {
+  box-sizing: border-box;
+  background: rgba(15, 23, 42, 0.22) !important;
+}
+
+.wgs-findauth-embedded p {
+  margin-bottom: 18px !important;
+  font-size: 16px !important;
+  line-height: 1.55 !important;
+}
+
+.wgs-findauth-embedded input {
+  min-height: 56px !important;
+  border-radius: 12px !important;
+  font-size: 16px !important;
+}
+
+.wgs-findauth-embedded button {
+  min-height: 56px;
+  border-radius: 12px !important;
+  font-size: 16px !important;
+}
+
+.wgs-findauth-embedded h3 {
+  font-size: 26px !important;
+}
+
+.wgs-login-panel-body {
+  width: min(680px, 100%);
+  margin: 0 auto;
+}
+
+.wgs-login-title {
+  margin: 0 0 8px;
+  color: var(--wgs-title);
+  text-align: center;
+  font-size: clamp(30px, 2.4vw, 38px);
+  font-weight: 900;
+}
+
+.wgs-login-desc {
+  margin: 0 0 32px;
+  color: var(--wgs-muted);
+  text-align: center;
+  font-size: 16px;
+}
+
+.wgs-login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.wgs-login-form input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 18px 20px;
+  border: 1px solid var(--wgs-border);
+  border-radius: 12px;
+  background: var(--wgs-input-bg);
+  color: var(--wgs-title);
+  font-size: 17px;
+  outline: none;
+  min-height: 60px;
+}
+
+.wgs-login-form input:focus {
+  border-color: #60a5fa;
+  box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.18);
+}
+
+.wgs-login-password-wrap {
+  position: relative;
+}
+
+.wgs-login-password-wrap input {
+  padding-right: 52px;
+}
+
+.wgs-login-password-wrap button {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  transform: translateY(-50%);
+  border: 0;
+  background: transparent;
+  color: var(--wgs-muted);
+  font-size: 18px;
+  cursor: pointer;
+}
+
+.wgs-login-submit {
+  min-height: 64px;
+  border: 0;
+  border-radius: 14px;
+  background: #3b82f6;
+  color: #ffffff;
+  font-size: 17px;
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: 0 12px 22px rgba(59, 130, 246, 0.24);
+}
+
+.wgs-login-submit:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+
+@media (max-width: 900px) {
+  .wgs-auth-content--signup,
+  .wgs-auth-content--find {
+    padding-top: 28px;
+  }
+
+  .wgs-signup-embedded,
+  .wgs-findauth-embedded {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .wgs-auth-hero {
+    align-items: stretch;
+    flex-direction: column;
+    padding: 20px;
+  }
+
+  .wgs-auth-tabs button {
+    min-height: 54px;
+    font-size: 13px;
+  }
+
+  .wgs-auth-tabs button span {
+    display: block;
+    margin: 0 0 3px;
+  }
+
+  .wgs-auth-content {
+    padding: 22px 16px;
+  }
+}
