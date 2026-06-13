@@ -1,0 +1,36 @@
+{
+  "name": "backend",
+  "version": "1.0.0",
+  "description": "",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "check": "node --check server.js && node --check config/env.js && node --check config/database.js && node --check multiplayerRoutes.js && node --check multiplayerSocket.js && node --check ipepRoutes.js && node --check mailer.js && npm run check:routes && npm run check:middleware && npm run check:services && npm run check:scripts",
+    "check:routes": "node --check routes/errorReportRoutes.js && node --check routes/adminRoutes.js && node --check routes/auth/authRoutes.js && node --check routes/auth/accountRecoveryRoutes.js && node --check routes/boardRoutes.js && node --check routes/examRoutes.js && node --check routes/fortuneRoutes.js && node --check routes/practicalUserRoutes.js && node --check routes/mealmapRoutes.js && node --check routes/ranking/rankingRoutes.js && node --check routes/ranking/rankingHistoryRoutes.js && node --check routes/realtimeRoutes.js && node --check routes/siteManagementRoutes.js && node --check routes/userRoutes.js",
+    "check:middleware": "node --check middleware/gatekeeperSecurity.js",
+    "check:services": "node --check services/kakaoHelpers.js && node --check services/realtimeState.js && node --check services/adminRuntimeState.js && node --check services/jsonFileStores.js",
+    "check:scripts": "node --check scripts/ipep/load_ipep_csv.js && node --check scripts/ipep/fill_ipep_image_stems.js && node --check scripts/ipep/update_ipep_image_paths_db.js && node --check scripts/legacy_reload_written_questions.js && node --check scripts/upload_written_csv.js && node --check scripts/import_explanations_only.js",
+    "ipep:fill-image-stems": "node scripts/ipep/fill_ipep_image_stems.js",
+    "ipep:load-csv": "node scripts/ipep/load_ipep_csv.js",
+    "ipep:update-image-paths": "node scripts/ipep/update_ipep_image_paths_db.js",
+    "written:upload-csv": "node scripts/upload_written_csv.js",
+    "written:import-explanations": "node scripts/import_explanations_only.js",
+    "test": "npm run check"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "bcrypt": "^6.0.0",
+    "cors": "^2.8.6",
+    "csv-parse": "^6.2.1",
+    "csv-parser": "^3.2.0",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "fs": "^0.0.1-security",
+    "mysql2": "^3.22.3",
+    "nodemailer": "^8.0.7",
+    "socket.io": "^4.8.3"
+  }
+}
