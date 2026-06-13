@@ -1,0 +1,188 @@
+/* =========================================================
+   User management and recent-login table layout adjustment
+   ========================================================= */
+.admin-card-action-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.admin-user-layout.admin-user-layout-single {
+  display: block !important;
+  grid-template-columns: minmax(0, 1fr) !important;
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+.admin-user-layout-single .admin-user-wide-card {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  box-sizing: border-box;
+}
+
+.admin-user-wide-card .admin-user-table-scroll,
+.admin-user-wide-card .admin-log-table-scroll,
+.admin-user-wide-card .admin-table-scroll {
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow-x: auto;
+  overflow-y: visible;
+  box-sizing: border-box;
+}
+
+.admin-user-wide-card .admin-user-table:not(.admin-recent-log-table) {
+  width: 100% !important;
+  min-width: 1380px !important;
+  table-layout: fixed;
+}
+
+.admin-user-wide-card .admin-recent-log-table {
+  width: 100% !important;
+  min-width: 1180px !important;
+  table-layout: fixed;
+}
+
+.admin-user-wide-card .admin-user-table:not(.admin-recent-log-table) th,
+.admin-user-wide-card .admin-user-table:not(.admin-recent-log-table) td,
+.admin-user-wide-card .admin-recent-log-table th,
+.admin-user-wide-card .admin-recent-log-table td {
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+.admin-user-wide-card .admin-user-table:not(.admin-recent-log-table) th:nth-child(1),
+.admin-user-wide-card .admin-user-table:not(.admin-recent-log-table) td:nth-child(1) { width: 110px; }
+.admin-user-wide-card .admin-user-table:not(.admin-recent-log-table) th:nth-child(2),
+.admin-user-wide-card .admin-user-table:not(.admin-recent-log-table) td:nth-child(2) { width: 92px; }
+.admin-user-wide-card .admin-user-table:not(.admin-recent-log-table) th:nth-child(3),
+.admin-user-wide-card .admin-user-table:not(.admin-recent-log-table) td:nth-child(3) { width: 190px; }
+.admin-user-wide-card .admin-user-table:not(.admin-recent-log-table) th:nth-child(4),
+.admin-user-wide-card .admin-user-table:not(.admin-recent-log-table) td:nth-child(4) { width: 105px; }
+.admin-user-wide-card .admin-user-table:not(.admin-recent-log-table) th:nth-child(5),
+.admin-user-wide-card .admin-user-table:not(.admin-recent-log-table) td:nth-child(5) { width: 130px; }
+.admin-user-wide-card .admin-user-table:not(.admin-recent-log-table) th:nth-child(6),
+.admin-user-wide-card .admin-user-table:not(.admin-recent-log-table) td:nth-child(6) { width: 105px; }
+.admin-user-wide-card .admin-user-table:not(.admin-recent-log-table) th:nth-child(7),
+.admin-user-wide-card .admin-user-table:not(.admin-recent-log-table) td:nth-child(7),
+.admin-user-wide-card .admin-user-table:not(.admin-recent-log-table) th:nth-child(8),
+.admin-user-wide-card .admin-user-table:not(.admin-recent-log-table) td:nth-child(8) { width: 126px; }
+.admin-user-wide-card .admin-user-table:not(.admin-recent-log-table) th:nth-child(9),
+.admin-user-wide-card .admin-user-table:not(.admin-recent-log-table) td:nth-child(9) { width: 88px; }
+.admin-user-wide-card .admin-user-table:not(.admin-recent-log-table) th:nth-child(10),
+.admin-user-wide-card .admin-user-table:not(.admin-recent-log-table) td:nth-child(10) { width: 118px; }
+.admin-user-wide-card .admin-user-table:not(.admin-recent-log-table) th:nth-child(11),
+.admin-user-wide-card .admin-user-table:not(.admin-recent-log-table) td:nth-child(11) { width: 98px; }
+.admin-user-wide-card .admin-user-table:not(.admin-recent-log-table) th:nth-child(12),
+.admin-user-wide-card .admin-user-table:not(.admin-recent-log-table) td:nth-child(12) { width: 92px; }
+.admin-user-wide-card .admin-user-table:not(.admin-recent-log-table) th:nth-child(13),
+.admin-user-wide-card .admin-user-table:not(.admin-recent-log-table) td:nth-child(13) { width: 128px; }
+
+/* 사용자 관리 회원 목록/최근 접속 기록 탭 표시 보정
+   - 기능 로직은 Admin.jsx의 기존 API/권한 처리 그대로 유지하고, 사용자 관리 영역의 표 폭·버튼·페이지 표시만 보정합니다. */
+.admin-page .admin-user-card {
+  width: 100%;
+  max-width: 100%;
+}
+
+.admin-page .admin-user-table-wrap {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  box-sizing: border-box;
+}
+
+.admin-page .admin-user-table {
+  width: 100%;
+  min-width: 1320px;
+  table-layout: fixed;
+  border-collapse: collapse;
+}
+
+.admin-page .admin-user-table th,
+.admin-page .admin-user-table td {
+  box-sizing: border-box;
+  vertical-align: middle;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.admin-page .admin-user-table th:nth-child(1),
+.admin-page .admin-user-table td:nth-child(1) { width: 84px; }
+.admin-page .admin-user-table th:nth-child(2),
+.admin-page .admin-user-table td:nth-child(2) { width: 72px; }
+.admin-page .admin-user-table th:nth-child(3),
+.admin-page .admin-user-table td:nth-child(3) { width: 176px; }
+.admin-page .admin-user-table th:nth-child(4),
+.admin-page .admin-user-table td:nth-child(4) { width: 86px; }
+.admin-page .admin-user-table th:nth-child(5),
+.admin-page .admin-user-table td:nth-child(5) { width: 96px; }
+.admin-page .admin-user-table th:nth-child(6),
+.admin-page .admin-user-table td:nth-child(6) { width: 86px; }
+.admin-page .admin-user-table th:nth-child(7),
+.admin-page .admin-user-table td:nth-child(7) { width: 102px; }
+.admin-page .admin-user-table th:nth-child(8),
+.admin-page .admin-user-table td:nth-child(8) { width: 102px; }
+.admin-page .admin-user-table th:nth-child(9),
+.admin-page .admin-user-table td:nth-child(9) { width: 76px; }
+.admin-page .admin-user-table th:nth-child(10),
+.admin-page .admin-user-table td:nth-child(10) { width: 104px; }
+.admin-page .admin-user-table th:nth-child(11),
+.admin-page .admin-user-table td:nth-child(11) { width: 82px; }
+.admin-page .admin-user-table th:nth-child(12),
+.admin-page .admin-user-table td:nth-child(12) { width: 118px; }
+.admin-page .admin-user-table th:nth-child(13),
+.admin-page .admin-user-table td:nth-child(13) { width: 76px; }
+.admin-page .admin-user-table th:nth-child(14),
+.admin-page .admin-user-table td:nth-child(14) { width: 124px; }
+
+.admin-page .admin-user-table td:nth-child(9),
+.admin-page .admin-user-table td:nth-child(11),
+.admin-page .admin-user-table td:nth-child(12),
+.admin-page .admin-user-table td:nth-child(13),
+.admin-page .admin-user-table td:nth-child(14) {
+  overflow: visible;
+}
+
+.admin-page .admin-user-table .admin-action-btn,
+.admin-page .admin-user-table .admin-protected-label,
+.admin-page .admin-user-table .admin-inline-badge,
+.admin-page .admin-user-table .admin-role-badge,
+.admin-page .admin-user-table .admin-status-badge {
+  max-width: 100%;
+  white-space: nowrap;
+}
+
+.admin-page .admin-user-table .admin-action-btn {
+  min-width: 0;
+  padding: 7px 9px;
+  font-size: 11px;
+  line-height: 1.15;
+  border-radius: 999px;
+}
+
+.admin-page .admin-user-table .admin-action-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  flex-wrap: nowrap;
+}
+
+.admin-page .admin-recent-log-table {
+  width: 100%;
+  min-width: 920px;
+  table-layout: fixed;
+}
+
+.admin-page .admin-user-pagination,
+.admin-page .admin-user-pagination span {
+  color: #ffffff !important;
+}
+
+.admin-page .admin-user-page-btn {
+  color: #ffffff !important;
+}

@@ -1,0 +1,279 @@
+/*  전체 공지 발송 패널 */
+.admin-notice-panel {
+  border-color: rgba(96, 165, 250, 0.36);
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.96), rgba(15, 31, 51, 0.94));
+}
+
+.admin-alert-success {
+  border: 1px solid rgba(52, 211, 153, 0.35);
+  background: rgba(6, 78, 59, 0.28);
+  color: #bbf7d0;
+}
+
+.admin-notice-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(310px, 0.85fr);
+  gap: 18px;
+}
+
+.admin-notice-form,
+.admin-notice-history {
+  padding: 20px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 20px;
+  background: rgba(2, 6, 23, 0.34);
+}
+
+.admin-notice-form {
+  display: grid;
+  gap: 16px;
+}
+
+.admin-notice-form label {
+  display: grid;
+  gap: 8px;
+  color: #dbeafe;
+  font-weight: 900;
+}
+
+.admin-notice-form input,
+.admin-notice-form select,
+.admin-notice-form textarea {
+  width: 100%;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  border-radius: 14px;
+  background: rgba(2, 6, 23, 0.78);
+  color: #ffffff;
+  outline: none;
+}
+
+.admin-notice-form input,
+.admin-notice-form select {
+  min-height: 46px;
+  padding: 0 14px;
+}
+
+.admin-notice-form textarea {
+  min-height: 170px;
+  padding: 14px;
+  resize: vertical;
+  line-height: 1.6;
+}
+
+.admin-notice-form input:focus,
+.admin-notice-form select:focus,
+.admin-notice-form textarea:focus {
+  border-color: rgba(96, 165, 250, 0.85);
+  box-shadow: 0 0 0 4px rgba(96, 165, 250, 0.12);
+}
+
+.admin-notice-form-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.admin-notice-form-bottom small {
+  color: #93c5fd;
+  font-weight: 800;
+}
+
+.admin-notice-form-bottom button {
+  min-height: 46px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 12px;
+  background: #3b82f6;
+  color: #ffffff;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.admin-notice-form-bottom button:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.admin-notice-history h3 {
+  margin: 0;
+  font-size: 22px;
+}
+
+.admin-notice-history > p {
+  margin: 10px 0 16px;
+  color: #cbd5e1;
+  line-height: 1.55;
+}
+
+.admin-notice-history-list {
+  display: grid;
+  gap: 12px;
+  max-height: 430px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.admin-notice-history-item {
+  padding: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 16px;
+  background: rgba(15, 31, 51, 0.84);
+}
+
+.admin-notice-history-item div {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.admin-notice-history-item strong {
+  color: #ffffff;
+}
+
+.admin-notice-history-item p {
+  margin: 10px 0;
+  color: #dbeafe;
+  line-height: 1.55;
+  word-break: keep-all;
+}
+
+.admin-notice-history-item small {
+  color: #94a3b8;
+  font-weight: 700;
+}
+
+.admin-notice-level {
+  flex: 0 0 auto;
+  padding: 5px 9px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.admin-notice-level-info {
+  background: rgba(59, 130, 246, 0.18);
+  color: #bfdbfe;
+}
+
+.admin-notice-level-warning {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fde68a;
+}
+
+.admin-notice-level-urgent {
+  background: rgba(248, 113, 113, 0.22);
+  color: #fecaca;
+}
+
+/* 로그인 사용자가 받는 관리자 공지 모달 */
+.admin-notice-user-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(2, 6, 23, 0.72);
+  backdrop-filter: blur(8px);
+}
+
+.admin-notice-user-modal {
+  width: min(560px, 100%);
+  padding: 30px;
+  border: 1px solid rgba(147, 197, 253, 0.36);
+  border-radius: 26px;
+  background: linear-gradient(135deg, rgba(15, 31, 51, 0.98), rgba(30, 41, 59, 0.96));
+  color: #ffffff;
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.42);
+}
+
+.admin-notice-user-modal--warning {
+  border-color: rgba(245, 158, 11, 0.45);
+}
+
+.admin-notice-user-modal--urgent {
+  border-color: rgba(248, 113, 113, 0.5);
+}
+
+.admin-notice-user-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: rgba(59, 130, 246, 0.18);
+  color: #bfdbfe;
+  font-weight: 900;
+}
+
+.admin-notice-user-modal h2 {
+  margin: 18px 0 12px;
+  font-size: clamp(26px, 4vw, 38px);
+  letter-spacing: -0.05em;
+}
+
+.admin-notice-user-modal p {
+  margin: 0;
+  color: #e2e8f0;
+  line-height: 1.75;
+  white-space: pre-wrap;
+  word-break: keep-all;
+}
+
+.admin-notice-user-meta {
+  margin-top: 18px;
+  color: #94a3b8;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.admin-notice-user-modal button {
+  margin-top: 24px;
+  width: 100%;
+  min-height: 48px;
+  border: 0;
+  border-radius: 14px;
+  background: #3b82f6;
+  color: #ffffff;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+@media (max-width: 1100px) {
+  .admin-notice-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+/* 관리자 점검 모드 카드 */
+.admin-maintenance-section { border-color: rgba(248, 113, 113, 0.22); }
+.admin-maintenance-box { display: grid; gap: 16px; padding: 20px; border: 1px solid rgba(148, 163, 184, 0.18); border-radius: 20px; background: rgba(15, 23, 42, 0.6); }
+.admin-maintenance-status { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.admin-maintenance-status strong { display: block; color: #ffffff; font-size: 18px; }
+.admin-maintenance-status small { display: block; margin-top: 4px; color: #94a3b8; font-weight: 700; }
+.admin-maintenance-badge { flex: 0 0 auto; padding: 9px 13px; border-radius: 999px; font-size: 13px; font-weight: 900; }
+.admin-maintenance-badge-on { background: rgba(248, 113, 113, 0.22); color: #fecaca; }
+.admin-maintenance-badge-off { background: rgba(34, 197, 94, 0.18); color: #bbf7d0; }
+.admin-maintenance-label { color: #dbeafe; font-weight: 900; }
+.admin-maintenance-box textarea { width: 100%; min-height: 120px; padding: 14px; border: 1px solid rgba(148, 163, 184, 0.24); border-radius: 14px; background: rgba(15, 23, 42, 0.72); color: #ffffff; resize: vertical; line-height: 1.6; }
+.admin-maintenance-box textarea:focus { outline: none; border-color: rgba(248, 113, 113, 0.7); box-shadow: 0 0 0 4px rgba(248, 113, 113, 0.11); }
+.admin-maintenance-actions { display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap; }
+.admin-maintenance-actions button { min-height: 44px; padding: 0 16px; border: 0; border-radius: 12px; color: #ffffff; font-weight: 900; cursor: pointer; }
+.admin-maintenance-actions button:first-child { background: #475569; }
+.admin-maintenance-on-button { background: #dc2626; }
+.admin-maintenance-off-button { background: #16a34a; }
+.admin-maintenance-actions button:disabled { opacity: 0.65; cursor: not-allowed; }
+.admin-maintenance-help { margin: 0; color: #bfdbfe; line-height: 1.6; font-weight: 800; }
+
+/* 일반 사용자 점검 안내 전체 화면 */
+.maintenance-lock-page { min-height: 100vh; display: grid; place-items: center; padding: 24px; background: radial-gradient(circle at top, rgba(248, 113, 113, 0.2), transparent 34%), #020617; color: #ffffff; }
+.maintenance-lock-card { width: min(620px, 100%); padding: clamp(28px, 5vw, 46px); border: 1px solid rgba(248, 113, 113, 0.36); border-radius: 28px; background: linear-gradient(135deg, rgba(15, 23, 42, 0.98), rgba(30, 41, 59, 0.96)); box-shadow: 0 30px 90px rgba(0, 0, 0, 0.5); text-align: center; }
+.maintenance-lock-badge { display: inline-flex; padding: 8px 13px; border-radius: 999px; background: rgba(248, 113, 113, 0.22); color: #fecaca; font-weight: 900; }
+.maintenance-lock-card h1 { margin: 20px 0 12px; font-size: clamp(28px, 5vw, 42px); letter-spacing: -0.05em; }
+.maintenance-lock-card p { margin: 0; color: #e2e8f0; line-height: 1.75; white-space: pre-wrap; word-break: keep-all; }
+.maintenance-lock-meta { margin-top: 18px; color: #94a3b8; font-weight: 800; }
+.maintenance-lock-card button { margin-top: 24px; width: 100%; min-height: 50px; border: 0; border-radius: 14px; background: #3b82f6; color: #ffffff; font-weight: 900; cursor: pointer; }

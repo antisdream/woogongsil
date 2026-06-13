@@ -1,0 +1,682 @@
+/* =========================================================
+   관리자 페이지 Step4 스타일
+   - 기존 학습 페이지/문제 페이지의 기능 로직은 변경하지 않고 /admin 전용 class만 추가합니다.
+   - admin- 접두사를 사용해 다른 페이지 CSS와 충돌 가능성을 낮춘다.
+========================================================= */
+
+/* 관리자 페이지 전체 폭과 기본 여백 */
+.admin-page {
+  width: min(100%, 1600px);
+  margin: 0 auto;
+  padding: clamp(24px, 4vw, 56px) clamp(16px, 3vw, 40px) 80px;
+  color: #f8fbff;
+}
+
+/* 관리자 상단 히어로 카드 */
+.admin-hero-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 28px;
+  padding: clamp(34px, 5vw, 64px);
+  border: 1px solid rgba(96, 165, 250, 0.28);
+  border-radius: 28px;
+  background: linear-gradient(135deg, rgba(20, 56, 102, 0.95), rgba(5, 74, 71, 0.88));
+  box-shadow: 0 28px 70px rgba(0, 0, 0, 0.28);
+}
+
+.admin-hero-text {
+  min-width: 0;
+}
+
+.admin-kicker,
+.admin-step-label {
+  margin: 0 0 10px;
+  color: #93c5fd;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.admin-hero-text h1 {
+  margin: 0;
+  font-size: clamp(42px, 6vw, 76px);
+  line-height: 1.05;
+  letter-spacing: -0.07em;
+  text-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+.admin-hero-text p:last-child {
+  margin: 22px 0 0;
+  color: #dbeafe;
+  font-size: clamp(16px, 1.5vw, 21px);
+  line-height: 1.65;
+}
+
+.admin-permission-card {
+  flex: 0 0 190px;
+  display: grid;
+  place-items: center;
+  gap: 8px;
+  min-height: 120px;
+  padding: 22px;
+  border: 1px solid rgba(16, 185, 129, 0.45);
+  border-radius: 22px;
+  background: rgba(16, 185, 129, 0.14);
+  box-shadow: inset 0 0 35px rgba(16, 185, 129, 0.08);
+}
+
+.admin-permission-card span {
+  color: #d1fae5;
+  font-weight: 800;
+}
+
+.admin-permission-card strong {
+  color: #34d399;
+  font-size: 28px;
+}
+
+/* 관리자 요약 카드 */
+.admin-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 18px;
+  margin-top: 26px;
+}
+
+.admin-stat-card {
+  padding: 24px;
+  border: 1px solid rgba(148, 163, 184, 0.23);
+  border-radius: 22px;
+  background: rgba(15, 31, 51, 0.88);
+  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.16);
+}
+
+.admin-stat-card span {
+  display: block;
+  color: #cbd5e1;
+  font-weight: 800;
+  margin-bottom: 14px;
+}
+
+.admin-stat-card strong {
+  display: block;
+  color: #ffffff;
+  font-size: clamp(28px, 3vw, 42px);
+  letter-spacing: -0.05em;
+}
+
+.admin-stat-card p {
+  margin: 16px 0 0;
+  color: #bfdbfe;
+  line-height: 1.55;
+}
+
+/* 관리자 공통 패널 */
+.admin-panel,
+.admin-feature-section,
+.admin-next-card {
+  margin-top: 30px;
+  padding: clamp(22px, 3vw, 34px);
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 24px;
+  background: rgba(15, 31, 51, 0.9);
+  box-shadow: 0 22px 55px rgba(0, 0, 0, 0.2);
+}
+
+/*  실시간 접속자 패널은 초록 계열로 구분합니다. */
+.admin-online-panel {
+  border-color: rgba(16, 185, 129, 0.38);
+  background: linear-gradient(135deg, rgba(5, 45, 50, 0.94), rgba(15, 31, 51, 0.92));
+}
+
+.admin-panel-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 24px;
+  margin-bottom: 22px;
+}
+
+.admin-panel-head h2,
+.admin-feature-section h2,
+.admin-next-card h2 {
+  margin: 0;
+  font-size: clamp(26px, 3vw, 42px);
+  letter-spacing: -0.05em;
+}
+
+.admin-panel-head p,
+.admin-feature-section > p {
+  margin: 12px 0 0;
+  color: #cbd5e1;
+  line-height: 1.65;
+}
+
+.admin-panel-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.admin-small-status {
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: rgba(2, 6, 23, 0.38);
+  color: #bfdbfe;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.admin-primary-mini-btn,
+.admin-search-form button,
+.admin-card-title-row button,
+.admin-next-card button {
+  border: 0;
+  border-radius: 12px;
+  background: #3b82f6;
+  color: #ffffff;
+  font-weight: 900;
+  cursor: pointer;
+  transition: transform 0.15s ease, opacity 0.15s ease, box-shadow 0.15s ease;
+}
+
+.admin-primary-mini-btn {
+  min-height: 44px;
+  padding: 0 18px;
+}
+
+.admin-primary-mini-btn:hover,
+.admin-search-form button:hover,
+.admin-card-title-row button:hover,
+.admin-next-card button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 28px rgba(59, 130, 246, 0.24);
+}
+
+.admin-primary-mini-btn:disabled,
+.admin-card-title-row button:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/*  실시간 접속자 카드와 목록 */
+.admin-online-grid {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  gap: 18px;
+}
+
+.admin-online-count-card,
+.admin-online-list-card {
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 20px;
+  background: rgba(2, 6, 23, 0.32);
+}
+
+.admin-online-count-card {
+  padding: 24px;
+}
+
+.admin-online-count-card span {
+  color: #a7f3d0;
+  font-weight: 900;
+}
+
+.admin-online-count-card strong {
+  display: block;
+  margin-top: 12px;
+  color: #ffffff;
+  font-size: 48px;
+  letter-spacing: -0.06em;
+}
+
+.admin-online-count-card p {
+  margin: 16px 0 0;
+  color: #cbd5e1;
+  line-height: 1.6;
+}
+
+.admin-online-list-card {
+  padding: 14px;
+  min-height: 150px;
+}
+
+.admin-online-list {
+  display: grid;
+  gap: 12px;
+  max-height: 340px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.admin-online-user {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid rgba(52, 211, 153, 0.22);
+  border-radius: 16px;
+  background: rgba(15, 31, 51, 0.78);
+}
+
+.admin-online-avatar {
+  flex: 0 0 46px;
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  border-radius: 15px;
+  background: linear-gradient(135deg, #10b981, #60a5fa);
+  color: #ffffff;
+  font-weight: 900;
+  font-size: 20px;
+}
+
+.admin-online-info {
+  min-width: 0;
+  flex: 1;
+}
+
+.admin-online-name-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.admin-online-name-row strong {
+  color: #ffffff;
+  font-size: 18px;
+}
+
+.admin-online-name-row span,
+.admin-online-name-row em {
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(59, 130, 246, 0.18);
+  color: #bfdbfe;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.admin-online-name-row em {
+  background: rgba(16, 185, 129, 0.18);
+  color: #86efac;
+}
+
+.admin-online-info p {
+  margin: 8px 0 0;
+  color: #cbd5e1;
+  font-size: 14px;
+}
+
+.admin-online-live-badge {
+  flex: 0 0 auto;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: rgba(16, 185, 129, 0.2);
+  color: #6ee7b7;
+  font-weight: 900;
+}
+
+/* 검색 폼 */
+.admin-search-form {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.admin-search-form input {
+  width: min(340px, 42vw);
+  min-height: 46px;
+  padding: 0 16px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  border-radius: 13px;
+  background: rgba(2, 6, 23, 0.78);
+  color: #ffffff;
+  outline: none;
+}
+
+.admin-search-form input:focus {
+  border-color: rgba(96, 165, 250, 0.8);
+  box-shadow: 0 0 0 4px rgba(96, 165, 250, 0.12);
+}
+
+.admin-search-form button {
+  min-height: 46px;
+  padding: 0 18px;
+}
+
+.admin-search-form .admin-secondary-btn {
+  background: #475569;
+}
+
+/* 에러/알림 박스 */
+.admin-alert {
+  margin-bottom: 18px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  font-weight: 800;
+}
+
+.admin-alert-error {
+  border: 1px solid rgba(248, 113, 113, 0.35);
+  background: rgba(127, 29, 29, 0.28);
+  color: #fecaca;
+}
+
+/* 사용자 관리 요약 */
+.admin-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.admin-summary-grid article {
+  padding: 20px;
+  border-radius: 18px;
+  background: rgba(2, 6, 23, 0.45);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+}
+
+.admin-summary-grid span {
+  color: #cbd5e1;
+  font-weight: 800;
+}
+
+.admin-summary-grid strong {
+  display: block;
+  margin-top: 10px;
+  color: #60a5fa;
+  font-size: 36px;
+  letter-spacing: -0.05em;
+}
+
+/* 사용자 테이블과 최근 기록 레이아웃 */
+.admin-user-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 330px;
+  gap: 18px;
+}
+
+.admin-table-card,
+.admin-log-card {
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 20px;
+  background: rgba(2, 6, 23, 0.34);
+  overflow: hidden;
+}
+
+.admin-card-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 18px 12px;
+}
+
+.admin-card-title-row h3,
+.admin-log-card h3 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.admin-card-title-row button {
+  min-height: 40px;
+  padding: 0 14px;
+}
+
+.admin-table-scroll {
+  width: 100%;
+  overflow-x: auto;
+  padding: 0 18px 18px;
+}
+
+.admin-user-table {
+  width: 100%;
+  min-width: 980px;
+  border-collapse: collapse;
+  overflow: hidden;
+  border-radius: 14px;
+}
+
+.admin-user-table th,
+.admin-user-table td {
+  padding: 14px 12px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+  text-align: left;
+  color: #dbeafe;
+  font-size: 14px;
+  vertical-align: middle;
+}
+
+.admin-user-table th {
+  background: rgba(30, 58, 95, 0.95);
+  color: #ffffff;
+  font-weight: 900;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.admin-row-highlight td {
+  background: rgba(16, 185, 129, 0.06);
+}
+
+.admin-badge,
+.admin-badge-live {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(59, 130, 246, 0.18);
+  color: #bfdbfe;
+  font-size: 12px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.admin-badge-live {
+  background: rgba(16, 185, 129, 0.2);
+  color: #86efac;
+}
+
+.admin-chip-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.admin-chip-row span {
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: rgba(100, 116, 139, 0.26);
+  color: #e2e8f0;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.admin-empty-cell,
+.admin-empty-box {
+  text-align: center;
+  color: #94a3b8 !important;
+}
+
+.admin-empty-box {
+  display: grid;
+  place-items: center;
+  min-height: 110px;
+  padding: 20px;
+  border-radius: 16px;
+  background: rgba(2, 6, 23, 0.35);
+}
+
+.admin-log-card {
+  padding: 18px;
+}
+
+.admin-log-card p {
+  margin: 10px 0 16px;
+  color: #cbd5e1;
+  line-height: 1.55;
+}
+
+.admin-log-list {
+  display: grid;
+  gap: 10px;
+  max-height: 510px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.admin-log-item {
+  padding: 14px;
+  border-radius: 14px;
+  background: rgba(15, 31, 51, 0.84);
+  border: 1px solid rgba(148, 163, 184, 0.14);
+}
+
+.admin-log-item strong,
+.admin-log-item span {
+  display: block;
+}
+
+.admin-log-item span {
+  margin-top: 8px;
+  color: #94a3b8;
+  font-size: 13px;
+}
+
+.admin-log-type {
+  font-weight: 900;
+  margin-right: 4px;
+}
+
+.admin-log-type-in {
+  color: #34d399;
+}
+
+.admin-log-type-out {
+  color: #f87171;
+}
+
+/* 하단 기능 설계 목록 */
+.admin-feature-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+  margin-top: 22px;
+}
+
+.admin-feature-grid article {
+  min-height: 170px;
+  padding: 24px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 20px;
+  background: rgba(15, 31, 51, 0.85);
+}
+
+.admin-feature-grid span {
+  display: inline-grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  background: rgba(59, 130, 246, 0.16);
+  font-size: 26px;
+}
+
+.admin-feature-grid h3 {
+  margin: 16px 0 10px;
+  font-size: 24px;
+}
+
+.admin-feature-grid p {
+  margin: 0;
+  color: #cbd5e1;
+  line-height: 1.6;
+}
+
+.admin-feature-grid em {
+  display: inline-block;
+  margin-top: 18px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: rgba(59, 130, 246, 0.18);
+  color: #93c5fd;
+  font-style: normal;
+  font-weight: 900;
+}
+
+.admin-next-card ol {
+  margin: 20px 0 0;
+  padding-left: 24px;
+  color: #dbeafe;
+  line-height: 1.9;
+}
+
+.admin-next-card button {
+  margin-top: 24px;
+  min-height: 46px;
+  padding: 0 18px;
+}
+
+/* 관리자 페이지 반응형 처리 */
+@media (max-width: 1100px) {
+  .admin-stat-grid,
+  .admin-summary-grid,
+  .admin-feature-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .admin-user-layout,
+  .admin-online-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .admin-hero-card,
+  .admin-panel-head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .admin-permission-card {
+    flex: initial;
+    min-height: auto;
+  }
+
+  .admin-stat-grid,
+  .admin-summary-grid,
+  .admin-feature-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-search-form,
+  .admin-panel-actions {
+    justify-content: flex-start;
+  }
+
+  .admin-search-form input {
+    width: 100%;
+  }
+
+  .admin-online-user {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .admin-online-live-badge {
+    align-self: flex-start;
+  }
+}

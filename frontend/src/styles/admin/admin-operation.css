@@ -1,0 +1,219 @@
+/* =========================================================
+   Notice and maintenance operation history UI
+   ========================================================= */
+.admin-notice-grid {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.admin-secondary-mini-btn {
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(15, 23, 42, 0.68);
+  color: #e5e7eb;
+  border-radius: 12px;
+  padding: 10px 14px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.admin-secondary-mini-btn:hover {
+  transform: translateY(-1px);
+  border-color: rgba(96, 165, 250, 0.55);
+}
+
+.admin-operation-log-section {
+  margin-top: 24px;
+}
+
+.admin-operation-log-head {
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.admin-operation-log-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.admin-operation-log-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 18px 0 14px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: rgba(15, 23, 42, 0.54);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  color: #dbeafe;
+}
+
+.admin-operation-log-summary strong {
+  color: #f8fafc;
+  font-size: 1rem;
+}
+
+.admin-operation-log-summary span {
+  color: #bfdbfe;
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+.admin-operation-log-table-wrap {
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 18px;
+  overflow: auto;
+  background: rgba(2, 6, 23, 0.42);
+}
+
+.admin-operation-log-table {
+  width: 100%;
+  min-width: 900px;
+  border-collapse: collapse;
+}
+
+.admin-operation-log-table th,
+.admin-operation-log-table td {
+  padding: 14px 12px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.14);
+  text-align: left;
+  vertical-align: top;
+}
+
+.admin-operation-log-table th {
+  color: #e0f2fe;
+  font-size: 0.9rem;
+  background: rgba(15, 23, 42, 0.66);
+}
+
+.admin-operation-log-table td {
+  color: #f8fafc;
+  font-size: 0.92rem;
+}
+
+.admin-operation-message {
+  max-width: 420px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: #dbeafe !important;
+}
+
+.admin-operation-type-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 900;
+}
+
+.admin-operation-type-pill.is-notice {
+  background: rgba(59, 130, 246, 0.16);
+  color: #bfdbfe;
+  border: 1px solid rgba(96, 165, 250, 0.36);
+}
+
+.admin-operation-type-pill.is-maintenance {
+  background: rgba(245, 158, 11, 0.16);
+  color: #fde68a;
+  border: 1px solid rgba(245, 158, 11, 0.36);
+}
+
+.admin-operation-pagination {
+  margin-top: 14px;
+}
+
+body.wgs-theme-light .admin-secondary-mini-btn,
+body.light-mode .admin-secondary-mini-btn,
+body.light .admin-secondary-mini-btn {
+  background: #ffffff;
+  color: #0f172a;
+  border-color: rgba(148, 163, 184, 0.55);
+}
+
+body.wgs-theme-light .admin-operation-log-summary,
+body.light-mode .admin-operation-log-summary,
+body.light .admin-operation-log-summary {
+  background: #f8fafc;
+  border-color: rgba(148, 163, 184, 0.34);
+  color: #1e293b;
+}
+
+body.wgs-theme-light .admin-operation-log-summary strong,
+body.light-mode .admin-operation-log-summary strong,
+body.light .admin-operation-log-summary strong {
+  color: #0f172a;
+}
+
+body.wgs-theme-light .admin-operation-log-summary span,
+body.light-mode .admin-operation-log-summary span,
+body.light .admin-operation-log-summary span {
+  color: #475569;
+}
+
+body.wgs-theme-light .admin-operation-log-table-wrap,
+body.light-mode .admin-operation-log-table-wrap,
+body.light .admin-operation-log-table-wrap {
+  background: #ffffff;
+  border-color: rgba(148, 163, 184, 0.34);
+}
+
+body.wgs-theme-light .admin-operation-log-table th,
+body.light-mode .admin-operation-log-table th,
+body.light .admin-operation-log-table th {
+  background: #eff6ff;
+  color: #0f172a;
+}
+
+body.wgs-theme-light .admin-operation-log-table td,
+body.light-mode .admin-operation-log-table td,
+body.light .admin-operation-log-table td {
+  color: #1e293b;
+  border-bottom-color: rgba(148, 163, 184, 0.25);
+}
+
+body.wgs-theme-light .admin-operation-message,
+body.light-mode .admin-operation-message,
+body.light .admin-operation-message {
+  color: #334155 !important;
+}
+
+body.wgs-theme-light .admin-operation-type-pill.is-notice,
+body.light-mode .admin-operation-type-pill.is-notice,
+body.light .admin-operation-type-pill.is-notice {
+  background: #dbeafe;
+  color: #1d4ed8;
+  border-color: #93c5fd;
+}
+
+body.wgs-theme-light .admin-operation-type-pill.is-maintenance,
+body.light-mode .admin-operation-type-pill.is-maintenance,
+body.light .admin-operation-type-pill.is-maintenance {
+  background: #fef3c7;
+  color: #92400e;
+  border-color: #fcd34d;
+}
+
+@media (max-width: 760px) {
+  .admin-operation-log-head,
+  .admin-operation-log-summary {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .admin-operation-log-actions {
+    justify-content: stretch;
+  }
+
+  .admin-operation-log-actions button {
+    flex: 1 1 180px;
+  }
+}
+
+/* 최근 발송 이력 사이드 박스를 제거했으므로 공지 입력 영역은 한 줄 전체를 사용합니다. */
+.admin-notice-layout {
+  grid-template-columns: minmax(0, 1fr);
+}

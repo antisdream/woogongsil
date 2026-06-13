@@ -1,0 +1,527 @@
+/* ============================================================
+   Admin Step7 문제/해설 관리 스타일
+   ------------------------------------------------------------
+   기존 Step3~Step6 클래스는 변경하지 않고 Step7 전용 클래스만 추가합니다.
+   화면 폭이 좁아져도 목록과 상세 폼을 세로로 배치해 모바일/태블릿에서도 영향을 받지 않도록 한다.
+============================================================ */
+.admin-question-section {
+  border-color: rgba(56, 189, 248, 0.22);
+}
+
+.admin-question-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin: 18px 0;
+}
+
+.admin-question-summary-grid article {
+  padding: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 14px;
+  background: rgba(2, 6, 23, 0.32);
+}
+
+.admin-question-summary-grid span,
+.admin-question-summary-grid small {
+  display: block;
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+.admin-question-summary-grid strong {
+  display: block;
+  margin-top: 8px;
+  color: #60a5fa;
+  font-size: 24px;
+  line-height: 1.1;
+}
+
+.admin-question-toolbar {
+  display: grid;
+  grid-template-columns: 150px minmax(220px, 1fr) repeat(3, minmax(120px, 160px)) auto auto;
+  gap: 10px;
+  align-items: center;
+  margin: 18px 0;
+}
+
+.admin-question-toolbar input,
+.admin-question-toolbar select,
+.admin-question-form input,
+.admin-question-form select,
+.admin-question-form textarea {
+  width: 100%;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 10px;
+  background: rgba(2, 6, 23, 0.72);
+  color: #e5eefb;
+  outline: none;
+  font-size: 13px;
+}
+
+.admin-question-toolbar input,
+.admin-question-toolbar select {
+  min-height: 38px;
+  padding: 0 12px;
+}
+
+.admin-question-toolbar button,
+.admin-question-pagination button,
+.admin-question-form-head button,
+.admin-table-action-btn {
+  min-height: 38px;
+  border: 0;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #2563eb, #0ea5e9);
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.admin-question-toolbar .admin-secondary-btn,
+.admin-question-pagination button {
+  background: rgba(148, 163, 184, 0.22);
+}
+
+.admin-question-toolbar button:disabled,
+.admin-question-pagination button:disabled,
+.admin-question-form-head button:disabled,
+.admin-table-action-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.admin-question-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.12fr) minmax(360px, 0.88fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.admin-question-list-card,
+.admin-question-detail-card {
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 16px;
+  background: rgba(15, 23, 42, 0.62);
+  padding: 16px;
+  min-width: 0;
+}
+
+.admin-question-detail-card > h3,
+.admin-question-list-card h3 {
+  margin: 0;
+  color: #e5eefb;
+}
+
+.admin-question-detail-card > p {
+  margin: 8px 0 14px;
+  color: #94a3b8;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.admin-question-table th:nth-child(3),
+.admin-question-table td:nth-child(3) {
+  min-width: 250px;
+}
+
+.admin-question-table th:nth-child(2),
+.admin-question-table td:nth-child(2) {
+  min-width: 180px;
+}
+
+.admin-table-action-btn {
+  min-width: 76px;
+  min-height: 32px;
+  padding: 0 10px;
+  font-size: 12px;
+}
+
+.admin-question-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.admin-question-pagination button {
+  min-width: 68px;
+  min-height: 34px;
+}
+
+.admin-question-pagination span {
+  color: #cbd5e1;
+  font-size: 13px;
+}
+
+.admin-question-empty-detail {
+  min-height: 180px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  border-radius: 14px;
+  background: rgba(2, 6, 23, 0.42);
+  color: #94a3b8;
+  font-size: 13px;
+  line-height: 1.6;
+  padding: 20px;
+}
+
+.admin-question-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.admin-question-form-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 14px;
+  background: rgba(2, 6, 23, 0.46);
+}
+
+.admin-question-form-head span {
+  display: block;
+  color: #38bdf8;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.admin-question-form-head strong {
+  display: block;
+  margin-top: 4px;
+  color: #f8fafc;
+  line-height: 1.35;
+}
+
+.admin-question-form-head button {
+  flex: 0 0 auto;
+  padding: 0 14px;
+}
+
+.admin-question-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.admin-question-options-grid,
+.admin-question-image-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.admin-question-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  color: #cbd5e1;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.admin-question-form input,
+.admin-question-form select {
+  min-height: 38px;
+  padding: 0 12px;
+}
+
+.admin-question-form textarea {
+  min-height: 110px;
+  resize: vertical;
+  padding: 12px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+
+.admin-question-wide-label textarea {
+  min-height: 160px;
+}
+
+.admin-question-image-grid input + input {
+  margin-top: -2px;
+}
+
+.admin-question-image-grid img {
+  width: 100%;
+  max-height: 260px;
+  object-fit: contain;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 12px;
+  background: #020617;
+  padding: 8px;
+}
+
+.admin-question-image-grid small,
+.admin-question-help {
+  color: #94a3b8;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.admin-question-help {
+  margin: 0;
+  padding: 12px;
+  border-radius: 12px;
+  background: rgba(14, 165, 233, 0.08);
+  border: 1px solid rgba(14, 165, 233, 0.12);
+}
+
+.admin-badge-live {
+  background: rgba(16, 185, 129, 0.2) !important;
+  color: #6ee7b7 !important;
+}
+
+@media (max-width: 1180px) {
+  .admin-question-toolbar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .admin-question-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .admin-question-summary-grid,
+  .admin-question-form-grid,
+  .admin-question-options-grid,
+  .admin-question-image-grid,
+  .admin-question-toolbar {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-question-form-head {
+    flex-direction: column;
+  }
+
+  .admin-question-form-head button {
+    width: 100%;
+  }
+}
+
+/* ============================================================
+   관리자 페이지 탭 분리 스타일
+   ------------------------------------------------------------
+   기존 관리자 기능의 API와 로직은 유지하고, 화면 배치만 탭 구조로 정리합니다.
+   admin-tab/admin-dashboard/admin-display 접두사를 사용해 다른 페이지와 충돌을 줄인다.
+============================================================ */
+.admin-page-tabbed {
+  max-width: 1600px;
+}
+
+.admin-hero-card-compact {
+  padding: clamp(28px, 4vw, 48px);
+}
+
+.admin-operation-card strong {
+  font-size: clamp(22px, 2vw, 30px);
+  text-align: center;
+}
+
+/* 관리자 기능 탭 메뉴: 한 화면에 모든 기능을 쌓지 않고 성격별로 전환합니다. */
+.admin-tab-nav {
+  position: sticky;
+  top: 12px;
+  z-index: 10;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 26px;
+  padding: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 22px;
+  background: rgba(2, 6, 23, 0.78);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.22);
+}
+
+.admin-tab-button {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 74px;
+  padding: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 16px;
+  background: rgba(15, 31, 51, 0.78);
+  color: #dbeafe;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.admin-tab-button:hover {
+  transform: translateY(-1px);
+  border-color: rgba(96, 165, 250, 0.45);
+  background: rgba(30, 58, 95, 0.82);
+}
+
+.admin-tab-button-active {
+  border-color: rgba(56, 189, 248, 0.72);
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.35), rgba(14, 165, 233, 0.2));
+  box-shadow: inset 0 0 0 1px rgba(147, 197, 253, 0.16), 0 18px 35px rgba(14, 165, 233, 0.16);
+}
+
+.admin-tab-icon {
+  flex: 0 0 42px;
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border-radius: 13px;
+  background: rgba(59, 130, 246, 0.16);
+  font-size: 22px;
+}
+
+.admin-tab-text {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.admin-tab-text strong {
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 900;
+  line-height: 1.2;
+  word-break: keep-all;
+}
+
+.admin-tab-text small {
+  color: #94a3b8;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.35;
+  word-break: keep-all;
+}
+
+.admin-dashboard-panel {
+  border-color: rgba(96, 165, 250, 0.28);
+}
+
+/* 대시보드 요약 카드: 각 카드를 누르면 해당 관리 탭으로 이동합니다. */
+.admin-dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.admin-dashboard-card {
+  min-height: 190px;
+  padding: 24px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 20px;
+  background: rgba(2, 6, 23, 0.34);
+  color: #e5eefb;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+}
+
+.admin-dashboard-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(96, 165, 250, 0.45);
+  background: rgba(15, 31, 51, 0.78);
+}
+
+.admin-dashboard-card span {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  background: rgba(59, 130, 246, 0.16);
+  font-size: 26px;
+}
+
+.admin-dashboard-card strong {
+  display: block;
+  margin-top: 18px;
+  color: #ffffff;
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+}
+
+.admin-dashboard-card p {
+  margin: 10px 0 0;
+  color: #cbd5e1;
+  line-height: 1.6;
+  word-break: keep-all;
+}
+
+/* 화면 설정 관리 탭은 후속 구현에서 CRUD API를 붙일 수 있도록 자리만 먼저 만든다. */
+.admin-display-placeholder {
+  border-color: rgba(168, 85, 247, 0.28);
+}
+
+.admin-display-ready-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.admin-display-ready-grid article {
+  padding: 22px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 18px;
+  background: rgba(2, 6, 23, 0.34);
+}
+
+.admin-display-ready-grid span {
+  display: inline-flex;
+  padding: 7px 11px;
+  border-radius: 999px;
+  background: rgba(168, 85, 247, 0.18);
+  color: #d8b4fe;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.admin-display-ready-grid strong {
+  display: block;
+  margin-top: 16px;
+  color: #ffffff;
+  font-size: 22px;
+  font-weight: 900;
+}
+
+.admin-display-ready-grid p {
+  margin: 10px 0 0;
+  color: #cbd5e1;
+  line-height: 1.6;
+  word-break: keep-all;
+}
+
+@media (max-width: 1180px) {
+  .admin-tab-nav,
+  .admin-dashboard-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .admin-display-ready-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .admin-tab-nav,
+  .admin-dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-tab-nav {
+    position: static;
+  }
+
+  .admin-tab-button {
+    min-height: 64px;
+  }
+}

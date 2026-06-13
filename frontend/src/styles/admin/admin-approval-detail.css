@@ -1,0 +1,869 @@
+
+/* 결재 사항 표 컬럼 폭과 버튼/상세보기 UI만 정규화합니다. */
+.admin-approval-table {
+  min-width: 1320px;
+  table-layout: fixed;
+}
+
+.admin-approval-table col.approval-col-check { width: 64px; }
+.admin-approval-table col.approval-col-no { width: 58px; }
+.admin-approval-table col.approval-col-status { width: 96px; }
+.admin-approval-table col.approval-col-requester { width: 126px; }
+.admin-approval-table col.approval-col-summary { width: 250px; }
+.admin-approval-table col.approval-col-method { width: 82px; }
+.admin-approval-table col.approval-col-date { width: 150px; }
+.admin-approval-table col.approval-col-reason { width: 160px; }
+.admin-approval-table col.approval-col-detail { width: 92px; }
+.admin-approval-table col.approval-col-process { width: 112px; }
+
+.admin-approval-table th,
+.admin-approval-table td {
+  padding: 14px 12px;
+  line-height: 1.45;
+  vertical-align: middle;
+}
+
+.admin-approval-table .approval-status-cell,
+.admin-approval-table .approval-method-cell,
+.admin-approval-table .approval-date-cell,
+.admin-approval-table .approval-detail-cell,
+.admin-approval-table .approval-process-cell,
+.admin-approval-table .admin-approval-check-col,
+.admin-approval-table .admin-approval-no-col {
+  white-space: nowrap;
+}
+
+.admin-approval-table .approval-summary-cell,
+.admin-approval-table .approval-reason-cell,
+.admin-approval-table .approval-requester-cell {
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+.admin-approval-table .admin-approval-status {
+  justify-content: center;
+  min-width: 50px;
+}
+
+.approval-detail-open-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 54px;
+  min-height: 32px;
+  padding: 7px 12px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(59, 130, 246, 0.18);
+  color: #eaf4ff;
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: inset 0 0 0 1px rgba(96, 165, 250, 0.25);
+}
+
+.approval-detail-open-btn:hover {
+  background: rgba(59, 130, 246, 0.34);
+}
+
+body.wgs-theme-light .approval-detail-open-btn {
+  background: #eff6ff;
+  color: #1d4ed8;
+  box-shadow: inset 0 0 0 1px #bfdbfe;
+}
+
+.admin-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 28px;
+  background: rgba(2, 6, 23, 0.72);
+  backdrop-filter: blur(8px);
+}
+
+.admin-approval-detail-modal {
+  width: min(920px, 96vw);
+  max-height: min(820px, 88vh);
+  overflow: auto;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  border-radius: 24px;
+  background: #142237;
+  color: #f8fafc;
+  box-shadow: 0 26px 80px rgba(0, 0, 0, 0.45);
+  padding: 28px;
+}
+
+.admin-approval-detail-modal-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 20px;
+}
+
+.admin-approval-detail-modal-head h3 {
+  margin: 12px 0 8px;
+  font-size: clamp(24px, 3vw, 34px);
+  line-height: 1.15;
+}
+
+.admin-approval-detail-modal-head p {
+  margin: 0;
+  color: #cbd5e1;
+  font-weight: 700;
+}
+
+.admin-small-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 30px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(59, 130, 246, 0.18);
+  color: #bfdbfe;
+  font-weight: 900;
+  font-size: 13px;
+}
+
+.admin-modal-close-btn {
+  flex: 0 0 auto;
+  border: 0;
+  border-radius: 14px;
+  padding: 11px 16px;
+  background: #3b82f6;
+  color: #ffffff;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.admin-approval-detail-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.admin-approval-detail-summary div {
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 16px;
+  background: rgba(15, 23, 42, 0.34);
+  padding: 14px;
+}
+
+.admin-approval-detail-summary strong,
+.admin-approval-detail-summary span {
+  display: block;
+}
+
+.admin-approval-detail-summary strong {
+  margin-bottom: 6px;
+  color: #93c5fd;
+  font-size: 13px;
+}
+
+.admin-approval-detail-summary span {
+  white-space: pre-wrap;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+.admin-approval-detail-pre {
+  min-height: 260px;
+  max-height: 420px;
+  overflow: auto;
+  margin: 0;
+  padding: 18px;
+  border-radius: 18px;
+  background: rgba(2, 6, 23, 0.68);
+  color: #f8fafc;
+  font-size: 14px;
+  line-height: 1.65;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+body.wgs-theme-light .admin-approval-detail-modal {
+  background: #ffffff;
+  color: #0f172a;
+  border-color: #cbd5e1;
+}
+
+body.wgs-theme-light .admin-approval-detail-modal-head p {
+  color: #475569;
+}
+
+body.wgs-theme-light .admin-approval-detail-summary div {
+  background: #f8fafc;
+  border-color: #dbe3ef;
+}
+
+body.wgs-theme-light .admin-approval-detail-summary strong {
+  color: #1d4ed8;
+}
+
+body.wgs-theme-light .admin-approval-detail-pre {
+  background: #0f172a;
+  color: #f8fafc;
+}
+
+@media (max-width: 720px) {
+  .admin-approval-detail-modal {
+    padding: 20px;
+  }
+
+  .admin-approval-detail-modal-head,
+  .admin-approval-detail-summary {
+    display: block;
+  }
+
+  .admin-approval-detail-summary div + div {
+    margin-top: 10px;
+  }
+
+  .admin-modal-close-btn {
+    margin-top: 14px;
+  }
+}
+
+/* =========================================================
+   결재 상세 JSON 가독성 보정
+   - 관리자 > 결재 사항 > 상세 보기 JSON 영역 배경 보정
+   - 라이트/다크모드에서 뒤 배경이 비쳐 보이는 문제 방지
+   - DB/권한/결재 로직은 변경하지 않는 CSS 전용 패치
+   ========================================================= */
+
+body [class*="approval"] pre,
+body [class*="Approval"] pre,
+body [class*="approve"] pre,
+body [class*="Approve"] pre,
+body [class*="admin"] pre,
+body [class*="Admin"] pre {
+  background: #07111f !important;
+  color: #ff6b6b !important;
+  border: 1px solid rgba(148, 163, 184, 0.38) !important;
+  border-radius: 16px !important;
+  padding: 18px 20px !important;
+  margin: 0 !important;
+  box-shadow:
+    0 18px 40px rgba(0, 0, 0, 0.28),
+    inset 0 0 0 1px rgba(15, 23, 42, 0.28) !important;
+  white-space: pre-wrap !important;
+  word-break: break-word !important;
+  overflow: auto !important;
+  max-height: min(56vh, 620px) !important;
+  line-height: 1.55 !important;
+  font-size: 14px !important;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;
+  opacity: 1 !important;
+  backdrop-filter: none !important;
+}
+
+body [class*="approval"] pre code,
+body [class*="Approval"] pre code,
+body [class*="approve"] pre code,
+body [class*="Approve"] pre code,
+body [class*="admin"] pre code,
+body [class*="Admin"] pre code {
+  background: transparent !important;
+  color: inherit !important;
+  padding: 0 !important;
+  border: 0 !important;
+  white-space: inherit !important;
+  font: inherit !important;
+}
+
+/* 라이트모드에서 JSON 박스가 흰 배경에 묻히지 않도록 살짝 더 밝은 다크 박스로 고정 */
+html.light body [class*="approval"] pre,
+html.light-mode body [class*="approval"] pre,
+body.light [class*="approval"] pre,
+body.light-mode [class*="approval"] pre,
+body[data-theme="light"] [class*="approval"] pre,
+html.light body [class*="admin"] pre,
+html.light-mode body [class*="admin"] pre,
+body.light [class*="admin"] pre,
+body.light-mode [class*="admin"] pre,
+body[data-theme="light"] [class*="admin"] pre {
+  background: #0b1220 !important;
+  color: #ff4d4f !important;
+  border-color: rgba(30, 41, 59, 0.32) !important;
+}
+
+/* JSON 영역을 감싸는 카드/모달 내부도 투명하게 비치지 않도록 보정 */
+body [class*="approval"] [class*="json"],
+body [class*="Approval"] [class*="json"],
+body [class*="admin"] [class*="json"],
+body [class*="Admin"] [class*="json"],
+body [class*="approval"] [class*="detail"],
+body [class*="Approval"] [class*="detail"] {
+  opacity: 1 !important;
+}
+
+
+
+/* =========================================================
+   결재 상세 테마 변수
+   - 관리자 > 결재 사항 > 상세 보기 모달/JSON 영역 배경 변수
+   - 실제 배경 강제는 Admin.jsx 인라인 스타일에서 처리합니다
+   - DB/권한/결재 로직은 변경하지 않습니다
+   ========================================================= */
+body {
+  --wgs-approval-modal-bg: #0f172a;
+  --wgs-approval-modal-fg: #f8fafc;
+  --wgs-approval-modal-border: rgba(148, 163, 184, 0.38);
+  --wgs-approval-json-bg: #020617;
+  --wgs-approval-json-fg: #ff4d4f;
+  --wgs-approval-json-border: rgba(248, 113, 113, 0.38);
+}
+
+body.wgs-theme-light {
+  --wgs-approval-modal-bg: #ffffff;
+  --wgs-approval-modal-fg: #0f172a;
+  --wgs-approval-modal-border: #cbd5e1;
+  --wgs-approval-json-bg: #111827;
+  --wgs-approval-json-fg: #ff3333;
+  --wgs-approval-json-border: rgba(239, 68, 68, 0.45);
+}
+
+/* =========================================================
+   결재 상세 모달 시각 레이어 고정
+   - 관리자 > 결재 사항 > 상세 보기 모달 전체 배경 강제 고정
+   - 라이트/다크모드 모두 뒤 배경과 JSON 영역이 겹쳐 보이는 문제 방지
+   - DB/권한/결재 로직은 변경하지 않는 CSS 전용 패치
+   ========================================================= */
+
+:root {
+  --wgs-fix15-26-modal-bg: #07111f;
+  --wgs-fix15-26-panel-bg: #0f172a;
+  --wgs-fix15-26-json-bg: #020617;
+  --wgs-fix15-26-border: rgba(148, 163, 184, 0.42);
+  --wgs-fix15-26-text: #f8fafc;
+  --wgs-fix15-26-red: #ff4d4f;
+}
+
+/* 결재 상세 모달의 바깥 오버레이 */
+html body .admin-modal-backdrop[aria-label="결재 상세 내용"] {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 2147483000 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 64px 24px !important;
+  overflow: auto !important;
+  background: rgba(2, 6, 23, 0.76) !important;
+  background-color: rgba(2, 6, 23, 0.76) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+}
+
+/* 결재 상세 모달의 실제 카드 */
+html body .admin-modal-backdrop[aria-label="결재 상세 내용"] .admin-approval-detail-modal {
+  position: relative !important;
+  width: min(1080px, calc(100vw - 48px)) !important;
+  max-width: min(1080px, calc(100vw - 48px)) !important;
+  max-height: calc(100vh - 96px) !important;
+  overflow: auto !important;
+  padding: 34px !important;
+  border-radius: 28px !important;
+  background: var(--wgs-fix15-26-modal-bg) !important;
+  background-color: var(--wgs-fix15-26-modal-bg) !important;
+  color: var(--wgs-fix15-26-text) !important;
+  border: 1px solid var(--wgs-fix15-26-border) !important;
+  box-shadow: 0 36px 100px rgba(0, 0, 0, 0.82) !important;
+  opacity: 1 !important;
+  isolation: isolate !important;
+}
+
+/* 제목/설명 텍스트 */
+html body .admin-modal-backdrop[aria-label="결재 상세 내용"] .admin-approval-detail-modal h1,
+html body .admin-modal-backdrop[aria-label="결재 상세 내용"] .admin-approval-detail-modal h2,
+html body .admin-modal-backdrop[aria-label="결재 상세 내용"] .admin-approval-detail-modal h3,
+html body .admin-modal-backdrop[aria-label="결재 상세 내용"] .admin-approval-detail-modal p,
+html body .admin-modal-backdrop[aria-label="결재 상세 내용"] .admin-approval-detail-modal strong {
+  color: var(--wgs-fix15-26-text) !important;
+}
+
+/* 상태/방식/요청내용/반려사유 카드 */
+html body .admin-modal-backdrop[aria-label="결재 상세 내용"] .admin-approval-detail-summary > div {
+  background: var(--wgs-fix15-26-panel-bg) !important;
+  background-color: var(--wgs-fix15-26-panel-bg) !important;
+  color: var(--wgs-fix15-26-text) !important;
+  border: 1px solid var(--wgs-fix15-26-border) !important;
+  border-radius: 18px !important;
+  box-shadow: none !important;
+  opacity: 1 !important;
+}
+
+html body .admin-modal-backdrop[aria-label="결재 상세 내용"] .admin-approval-detail-summary span {
+  color: var(--wgs-fix15-26-red) !important;
+  font-weight: 900 !important;
+}
+
+/* JSON 표시 영역 */
+html body .admin-modal-backdrop[aria-label="결재 상세 내용"] .admin-approval-detail-modal pre,
+html body .admin-modal-backdrop[aria-label="결재 상세 내용"] .admin-approval-detail-modal code,
+html body .admin-modal-backdrop[aria-label="결재 상세 내용"] .admin-approval-detail-modal [class*="json"],
+html body .admin-modal-backdrop[aria-label="결재 상세 내용"] .admin-approval-detail-modal [class*="Json"],
+html body .admin-modal-backdrop[aria-label="결재 상세 내용"] .admin-approval-detail-modal [class*="payload"],
+html body .admin-modal-backdrop[aria-label="결재 상세 내용"] .admin-approval-detail-modal [class*="Payload"] {
+  display: block !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  margin-top: 24px !important;
+  padding: 24px 28px !important;
+  border-radius: 20px !important;
+  background: var(--wgs-fix15-26-json-bg) !important;
+  background-color: var(--wgs-fix15-26-json-bg) !important;
+  color: var(--wgs-fix15-26-red) !important;
+  border: 1px solid var(--wgs-fix15-26-border) !important;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03) !important;
+  opacity: 1 !important;
+  white-space: pre-wrap !important;
+  word-break: break-word !important;
+  overflow: auto !important;
+  font-family: Consolas, "Courier New", monospace !important;
+  font-size: 14px !important;
+  line-height: 1.72 !important;
+  text-shadow: none !important;
+}
+
+/* 닫기 버튼이 배경에 묻히지 않도록 */
+html body .admin-modal-backdrop[aria-label="결재 상세 내용"] .admin-modal-close-btn {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 3 !important;
+  background: #2563eb !important;
+  color: #ff3333 !important;
+  border: 0 !important;
+  box-shadow: 0 10px 28px rgba(37, 99, 235, 0.35) !important;
+}
+
+/* 모바일/좁은 화면 보정 */
+@media (max-width: 768px) {
+  html body .admin-modal-backdrop[aria-label="결재 상세 내용"] {
+    padding: 24px 12px !important;
+    align-items: flex-start !important;
+  }
+
+  html body .admin-modal-backdrop[aria-label="결재 상세 내용"] .admin-approval-detail-modal {
+    width: calc(100vw - 24px) !important;
+    max-width: calc(100vw - 24px) !important;
+    max-height: calc(100vh - 48px) !important;
+    padding: 22px !important;
+    border-radius: 22px !important;
+  }
+}
+
+
+/* =========================================================
+   결재 상세 모달 배경 보정
+   - JSX 인라인 스타일과 CSS 대체 보정을 함께 적용
+   - 결재 상세 보기 모달이 뒤 배경과 겹쳐 보이는 문제 방지
+   ========================================================= */
+
+:root {
+  --wgs-fix15-27-modal-bg: #07111f;
+  --wgs-fix15-27-modal-text: #f8fafc;
+  --wgs-fix15-27-json-bg: #020617;
+  --wgs-fix15-27-card-bg: #0f172a;
+  --wgs-fix15-27-modal-border: rgba(148, 163, 184, 0.45);
+}
+
+body.wgs-theme-light {
+  --wgs-fix15-27-modal-bg: #ffffff;
+  --wgs-fix15-27-modal-text: #0f172a;
+  --wgs-fix15-27-json-bg: #f8fafc;
+  --wgs-fix15-27-card-bg: #ffffff;
+  --wgs-fix15-27-modal-border: rgba(100, 116, 139, 0.32);
+}
+
+html body .admin-modal-backdrop,
+html body [role="dialog"][aria-label*="결재"],
+html body [aria-label*="결재 상세"] {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 10000 !important;
+  background: rgba(2, 6, 23, 0.82) !important;
+  background-color: rgba(2, 6, 23, 0.82) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+}
+
+html body .admin-modal-backdrop .admin-approval-detail-modal,
+html body [role="dialog"][aria-label*="결재"] .admin-approval-detail-modal,
+html body [aria-label*="결재 상세"] .admin-approval-detail-modal,
+html body .admin-modal-backdrop > div:has(.admin-approval-detail-pre),
+html body [role="dialog"][aria-label*="결재"] > div:has(.admin-approval-detail-pre) {
+  background: var(--wgs-fix15-27-modal-bg) !important;
+  background-color: var(--wgs-fix15-27-modal-bg) !important;
+  color: var(--wgs-fix15-27-modal-text) !important;
+  border: 1px solid var(--wgs-fix15-27-modal-border) !important;
+  border-radius: 28px !important;
+  box-shadow: 0 34px 100px rgba(0, 0, 0, 0.72) !important;
+  opacity: 1 !important;
+  isolation: isolate !important;
+  background-clip: padding-box !important;
+}
+
+html body .admin-approval-detail-summary > div,
+html body .admin-approval-detail-meta-card {
+  background: var(--wgs-fix15-27-card-bg) !important;
+  background-color: var(--wgs-fix15-27-card-bg) !important;
+  border: 1px solid var(--wgs-fix15-27-modal-border) !important;
+}
+
+html body .admin-approval-detail-pre,
+html body .admin-modal-backdrop pre,
+html body [role="dialog"][aria-label*="결재"] pre {
+  display: block !important;
+  background: var(--wgs-fix15-27-json-bg) !important;
+  background-color: var(--wgs-fix15-27-json-bg) !important;
+  color: #ff3b3b !important;
+  border: 1px solid var(--wgs-fix15-27-modal-border) !important;
+  border-radius: 18px !important;
+  padding: 20px !important;
+  max-height: 420px !important;
+  overflow: auto !important;
+  white-space: pre-wrap !important;
+  word-break: break-word !important;
+  line-height: 1.65 !important;
+}
+
+
+/* 결재 상세 JSON 박스 전용 보정입니다. */
+html body .admin-approval-detail-json-box {
+  display: block !important;
+  background: #020617 !important;
+  background-color: #020617 !important;
+  border: 1px solid rgba(148, 163, 184, 0.55) !important;
+  border-radius: 22px !important;
+  padding: 20px !important;
+  opacity: 1 !important;
+  isolation: isolate !important;
+  position: relative !important;
+  z-index: 5 !important;
+}
+
+html body .admin-approval-detail-json-box .admin-approval-detail-pre {
+  background: #020617 !important;
+  background-color: #020617 !important;
+  color: #ff3b3b !important;
+  margin: 0 !important;
+  opacity: 1 !important;
+}
+
+/* =========================================================
+   결재 상세 JSON 고정 패널
+   - 결재 상세 보기 JSON 영역이 라이트/다크 모드에서 뒤 배경과 섞여 보이는 문제 방지
+   - DB/권한/결재 로직 변경하지 않습니다., UI 표시 영역만 고정
+   ========================================================= */
+
+html body .admin-modal-backdrop[aria-label="결재 상세 내용"] .admin-approval-detail-json-panel {
+  display: block !important;
+  width: 100% !important;
+  margin-top: 24px !important;
+  padding: 20px !important;
+  border-radius: 22px !important;
+  background: #020617 !important;
+  background-color: #020617 !important;
+  background-image: linear-gradient(#020617, #020617) !important;
+  border: 1px solid rgba(148, 163, 184, 0.55) !important;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.58), inset 0 0 0 1px rgba(255,255,255,0.04) !important;
+  opacity: 1 !important;
+  isolation: isolate !important;
+  position: relative !important;
+  z-index: 20 !important;
+  overflow: hidden !important;
+  filter: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  mix-blend-mode: normal !important;
+  transform: translateZ(0) !important;
+  contain: paint !important;
+}
+
+html body .admin-modal-backdrop[aria-label="결재 상세 내용"] .admin-approval-detail-json-panel::before,
+html body .admin-modal-backdrop[aria-label="결재 상세 내용"] .admin-approval-detail-json-solid-bg {
+  content: "" !important;
+  position: absolute !important;
+  inset: 0 !important;
+  display: block !important;
+  background: #020617 !important;
+  background-color: #020617 !important;
+  background-image: linear-gradient(#020617, #020617) !important;
+  opacity: 1 !important;
+  z-index: 0 !important;
+  pointer-events: none !important;
+}
+
+html body .admin-modal-backdrop[aria-label="결재 상세 내용"] .admin-approval-detail-json-panel .admin-approval-detail-pre {
+  display: block !important;
+  position: relative !important;
+  z-index: 2 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-height: 260px !important;
+  max-height: 420px !important;
+  margin: 0 !important;
+  padding: 20px !important;
+  border-radius: 18px !important;
+  overflow: auto !important;
+  white-space: pre-wrap !important;
+  word-break: break-word !important;
+  line-height: 1.65 !important;
+  background: #020617 !important;
+  background-color: #020617 !important;
+  background-image: linear-gradient(#020617, #020617) !important;
+  color: #ff3b3b !important;
+  border: 1px solid rgba(148, 163, 184, 0.45) !important;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.04) !important;
+  opacity: 1 !important;
+  filter: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  mix-blend-mode: normal !important;
+}
+
+html body .admin-modal-backdrop[aria-label="결재 상세 내용"] .admin-approval-detail-json-panel .admin-approval-detail-pre * {
+  background: transparent !important;
+  background-color: transparent !important;
+  color: inherit !important;
+  text-shadow: none !important;
+}
+
+@media (max-width: 768px) {
+  html body .admin-modal-backdrop[aria-label="결재 상세 내용"] .admin-approval-detail-json-panel {
+    padding: 14px !important;
+    border-radius: 18px !important;
+  }
+
+  html body .admin-modal-backdrop[aria-label="결재 상세 내용"] .admin-approval-detail-json-panel .admin-approval-detail-pre {
+    padding: 14px !important;
+    font-size: 12px !important;
+  }
+}
+
+/* =========================================================
+   결재 상세 JSON 상단 겹침 방지
+   - 넓은 범위의 [class*="json"] 선택자가 JSON 배경 레이어에도 영향을 주어,
+     JSON 박스 상단이 겹쳐 보이는 문제 보정
+   - DB/백엔드/권한/결재 로직 변경하지 않습니다., 결재 상세 모달 UI만 보정
+   ========================================================= */
+
+html body .admin-modal-backdrop[aria-label="결재 상세 내용"] .admin-approval-detail-json-panel {
+  box-sizing: border-box !important;
+  display: block !important;
+  margin-top: 30px !important;
+  padding: 0 !important;
+  border-radius: 22px !important;
+  background: #020617 !important;
+  background-color: #020617 !important;
+  background-image: linear-gradient(#020617, #020617) !important;
+  border: 1px solid rgba(148, 163, 184, 0.55) !important;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.58), inset 0 0 0 1px rgba(255,255,255,0.04) !important;
+  overflow: visible !important;
+  position: relative !important;
+  isolation: isolate !important;
+  contain: none !important;
+}
+
+html body .admin-modal-backdrop[aria-label="결재 상세 내용"] .admin-approval-detail-json-panel::before,
+html body .admin-modal-backdrop[aria-label="결재 상세 내용"] .admin-approval-detail-json-solid-bg {
+  content: "" !important;
+  position: absolute !important;
+  inset: 0 !important;
+  width: auto !important;
+  max-width: none !important;
+  min-width: 0 !important;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: inherit !important;
+  box-shadow: none !important;
+  outline: 0 !important;
+  overflow: hidden !important;
+  background: #020617 !important;
+  background-color: #020617 !important;
+  background-image: linear-gradient(#020617, #020617) !important;
+  opacity: 1 !important;
+  z-index: 0 !important;
+  pointer-events: none !important;
+  transform: none !important;
+  filter: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  white-space: normal !important;
+  word-break: normal !important;
+  line-height: normal !important;
+  font-size: inherit !important;
+}
+
+html body .admin-modal-backdrop[aria-label="결재 상세 내용"] .admin-approval-detail-json-panel .admin-approval-detail-pre {
+  box-sizing: border-box !important;
+  display: block !important;
+  position: relative !important;
+  z-index: 2 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-height: 300px !important;
+  max-height: min(440px, calc(100vh - 360px)) !important;
+  margin: 0 !important;
+  margin-top: 0 !important;
+  padding: 30px 24px 24px 24px !important;
+  border-radius: 22px !important;
+  overflow: auto !important;
+  scroll-padding-top: 30px !important;
+  white-space: pre-wrap !important;
+  word-break: break-word !important;
+  line-height: 1.72 !important;
+  background: #020617 !important;
+  background-color: #020617 !important;
+  background-image: linear-gradient(#020617, #020617) !important;
+  color: #ff3b3b !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  opacity: 1 !important;
+  filter: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  mix-blend-mode: normal !important;
+}
+
+@media (max-width: 768px) {
+  html body .admin-modal-backdrop[aria-label="결재 상세 내용"] .admin-approval-detail-json-panel {
+    margin-top: 22px !important;
+  }
+
+  html body .admin-modal-backdrop[aria-label="결재 상세 내용"] .admin-approval-detail-json-panel .admin-approval-detail-pre {
+    min-height: 260px !important;
+    max-height: min(420px, calc(100vh - 320px)) !important;
+    padding: 24px 16px 18px 16px !important;
+    font-size: 12px !important;
+  }
+}
+
+
+/* =========================================================
+   결재 상세 JSON 뷰어 보정
+   기준:
+   - 안정적인 JSON 패널 기준선을 복원한 뒤 적용
+   - Admin.jsx 구조는 유지
+   - 고정 배경 레이어 제거 후 JSON 박스를 단일 검정 패널로 고정
+   ========================================================= */
+
+html body .admin-modal-backdrop[aria-label="결재 상세 내용"] .admin-approval-detail-json-box,
+html body .admin-modal-backdrop[aria-label="결재 상세 내용"] .admin-approval-detail-json-panel {
+  display: block !important;
+  position: relative !important;
+  box-sizing: border-box !important;
+
+  width: 100% !important;
+  max-width: 100% !important;
+
+  margin: 30px 0 0 0 !important;
+  padding: 0 !important;
+
+  background: #020617 !important;
+  background-color: #020617 !important;
+  background-image: linear-gradient(#020617, #020617) !important;
+
+  border: 1px solid rgba(148, 163, 184, 0.42) !important;
+  border-radius: 22px !important;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.55) !important;
+
+  overflow: hidden !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+
+  filter: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  mix-blend-mode: normal !important;
+  isolation: isolate !important;
+  contain: none !important;
+  transform: none !important;
+}
+
+html body .admin-modal-backdrop[aria-label="결재 상세 내용"] .admin-approval-detail-json-solid-bg {
+  display: none !important;
+}
+
+html body .admin-modal-backdrop[aria-label="결재 상세 내용"] .admin-approval-detail-json-box .admin-approval-detail-pre,
+html body .admin-modal-backdrop[aria-label="결재 상세 내용"] .admin-approval-detail-json-panel .admin-approval-detail-pre {
+  display: block !important;
+  position: relative !important;
+  z-index: 2 !important;
+  box-sizing: border-box !important;
+
+  width: 100% !important;
+  max-width: 100% !important;
+
+  min-height: 420px !important;
+  max-height: min(520px, calc(100vh - 360px)) !important;
+
+  margin: 0 !important;
+  padding: 34px 30px !important;
+
+  background: #020617 !important;
+  background-color: #020617 !important;
+  background-image: linear-gradient(#020617, #020617) !important;
+
+  color: #ff4444 !important;
+  border: 0 !important;
+  border-radius: 22px !important;
+  box-shadow: none !important;
+  outline: none !important;
+
+  overflow: auto !important;
+  white-space: pre-wrap !important;
+  word-break: break-word !important;
+  overflow-wrap: anywhere !important;
+
+  font-size: 14px !important;
+  line-height: 1.72 !important;
+  font-family: Consolas, Monaco, "Courier New", monospace !important;
+
+  opacity: 1 !important;
+  visibility: visible !important;
+  filter: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  mix-blend-mode: normal !important;
+
+  top: auto !important;
+  left: auto !important;
+  right: auto !important;
+  bottom: auto !important;
+  transform: none !important;
+}
+
+html body .admin-modal-backdrop[aria-label="결재 상세 내용"] .admin-approval-detail-pre * {
+  background: transparent !important;
+  color: inherit !important;
+  opacity: 1 !important;
+  filter: none !important;
+  mix-blend-mode: normal !important;
+}
+
+@media (max-width: 768px) {
+  html body .admin-modal-backdrop[aria-label="결재 상세 내용"] .admin-approval-detail-json-box,
+  html body .admin-modal-backdrop[aria-label="결재 상세 내용"] .admin-approval-detail-json-panel {
+    margin-top: 22px !important;
+    border-radius: 18px !important;
+  }
+
+  html body .admin-modal-backdrop[aria-label="결재 상세 내용"] .admin-approval-detail-json-box .admin-approval-detail-pre,
+  html body .admin-modal-backdrop[aria-label="결재 상세 내용"] .admin-approval-detail-json-panel .admin-approval-detail-pre {
+    min-height: 340px !important;
+    max-height: min(460px, calc(100vh - 320px)) !important;
+    padding: 26px 20px !important;
+    border-radius: 18px !important;
+    font-size: 13px !important;
+  }
+}
