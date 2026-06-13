@@ -13,8 +13,8 @@ const { createDatabasePool } = require('./config/database');
 
 // Socket.IO 선택 로딩
 // ------------------------------------------------------------
-// npm install socket.io를 아직 하지 않았더라도 기존 사이트가 바로 죽지 않도록
-// try/catch로 감싸둔다. 단, 멀티플레이 실시간 기능을 쓰려면 반드시 설치해야 한다.
+// npm install socket.io를 아직 하지 않았더라도 기존 사이트가 바로 중단되지 않도록
+// try/catch로 감싸둡니다. 단, 멀티플레이 실시간 기능을 사용하려면 반드시 설치해야 합니다.
 let SocketIOServer = null;
 try {
     SocketIOServer = require('socket.io').Server;
@@ -23,7 +23,7 @@ try {
 }
 
 
-// process.env를 읽는 모듈보다 먼저 backend/.env를 불러옵니다.
+// process.env를 읽는 모듈보다 먼저 환경 변수 파일를 불러옵니다.
 loadEnvFile();
 
 // 기존 이메일 인증 기능용 mailer.
@@ -57,10 +57,10 @@ const { createJsonFileStores } = require('./services/jsonFileStores');
 
 const app = express();
 
-// HTTP 서버 + Socket.IO 서버 준비
+// HTTP 서버 + Socket.IO 서버 준비합니다
 // ------------------------------------------------------------
 // 기존 app.listen 대신 server.listen을 사용해야 같은 포트에서
-// Express API와 Socket.IO가 함께 동작한다.
+// Express API와 Socket.IO가 함께 동작합니다.
 const server = http.createServer(app);
 const io = SocketIOServer ? new SocketIOServer(server, {
     cors: {
@@ -72,10 +72,10 @@ const io = SocketIOServer ? new SocketIOServer(server, {
 const createMultiplayerRouter = require('./multiplayerRoutes');
 const { attachMultiplayerSocket } = require('./multiplayerSocket');
 
-// 프론트에서 API 요청을 보낼 수 있도록 CORS 허용
+// 프론트에서 API 요청을 보낼 수 있도록 CORS 허용합니다
 app.use(cors());
 
-// JSON body를 Express가 읽을 수 있게 함
+// JSON body를 Express가 읽을 수 있도록 설정합니다.
 app.use(express.json({ limit: '10mb' }));
 
 const { requireHcaptcha } = registerGatekeeperSecurity({
@@ -191,7 +191,7 @@ async function notifyMealMapPlaceDecisionV2515(placeId, decision) {
     const place = rows[0];
     if (!place || !place.reporter_id) return false;
     const approved = decision === 'approved';
-    // 사용자 팝업에는 식당명/개발용 변수를 노출하지 않고 승인·반려 결과만 간단히 보여준다.
+    // 사용자 팝업에는 식당명/개발용 변수를 노출하지 않고 승인·반려 결과만 간단히 보여줍니다.
     const title = '회식맵 알림';
     const message = approved ? '회식맵 제보가 승인되었습니다.' : '회식맵 제보가 반려되었습니다.';
     return createMealMapUserNoticeV2515(place.reporter_id, title, message, {
@@ -220,7 +220,7 @@ async function notifyMealMapEditDecisionV2515(editId, decision) {
     if (!edit || !edit.user_id) return false;
     const placeName = edit.proposed_name || edit.current_name || '수정 제안한 장소';
     const approved = decision === 'approved';
-    // 사용자 팝업에는 식당명/개발용 변수를 노출하지 않고 승인·반려 결과만 간단히 보여준다.
+    // 사용자 팝업에는 식당명/개발용 변수를 노출하지 않고 승인·반려 결과만 간단히 보여줍니다.
     const title = '회식맵 알림';
     const message = approved ? '회식맵 수정 제안이 승인되었습니다.' : '회식맵 수정 제안이 반려되었습니다.';
     return createMealMapUserNoticeV2515(edit.user_id, title, message, {
@@ -239,7 +239,7 @@ async function notifyMealMapEditDecisionV2515(editId, decision) {
 
 // 필기 기출문제 멀티플레이 API + Socket.IO 연결
 // ------------------------------------------------------------
-// 기존 필기/실기/게시판/FAQ API보다 독립된 /api/multiplayer 경로로만 추가한다.
+// 기존 필기/실기/게시판/FAQ API보다 독립된 /api/multiplayer 경로로만 추가합니다.
 // 기존 API 경로를 수정하지 않기 때문에 기존 기능과 충돌하지 않는다.
 try {
     const multiplayerRouter = createMultiplayerRouter({ pool, io });
@@ -260,13 +260,13 @@ try {
 
 // 실기 오답노트 SQL 테이블 안전 점검
 // ----------------------------------------------------------
-// 기존 DB를 삭제하거나 초기화하지 않고, 필요한 컬럼만 없을 때 추가함.
+// 기존 DB를 삭제하거나 초기화하지 않고, 필요한 컬럼만 없을 때 추가합니다.
 // 기존 wgs_wrong_notes 테이블에 subject 컬럼만 없는 경우에도
 // 서버 실행 시 자동으로 보완되도록 만들었다.
 async function ensureWrongNotesSchema() {
     try {
         // 테이블이 아예 없는 경우를 대비한 안전 생성 코드.
-        // 이미 존재하는 테이블은 건드리지 않는다.
+        // 이미 존재하는 테이블은 변경하지 않는다.
         await pool.promise().query(`CREATE TABLE IF NOT EXISTS wgs_wrong_notes (
                 id INT NOT NULL AUTO_INCREMENT,
                 userId VARCHAR(50) NOT NULL,
@@ -283,8 +283,8 @@ async function ensureWrongNotesSchema() {
         const [columns] = await pool.promise().query(`SHOW COLUMNS FROM wgs_wrong_notes`);
         const columnNames = new Set(columns.map((col) => col.Field));
 
-        // 예전 스키마에는 source/year/session/subject/savedAt 중 일부가 없을 수 있어서 하나씩 확인 후 추가한다.
-        // ALTER는 없는 컬럼에만 실행되므로 기존 데이터는 유지된다.
+        // 예전 스키마에는 source/year/session/subject/savedAt 중 일부가 없을 수 있어서 하나씩 확인 후 추가합니다.
+        // ALTER는 없는 컬럼에만 실행되므로 기존 데이터는 유지됩니다.
         if (!columnNames.has('source')) {
             await pool.promise().query(`ALTER TABLE wgs_wrong_notes ADD COLUMN source VARCHAR(20) NOT NULL DEFAULT 'random'AFTER question_id`);
         }
@@ -302,7 +302,7 @@ async function ensureWrongNotesSchema() {
         }
 
         // Duplicate-prevention indexes are optional compatibility helpers.
-        // 이미 같은 이름의 인덱스가 있으면 MySQL에서 에러가 나므로 무시한다.
+        // 이미 같은 이름의 인덱스가 있으면 MySQL에서 에러가 나므로 무시합니다.
         try {
             await pool.promise().query(`CREATE INDEX idx_wgs_wrong_notes_user_source_qid ON wgs_wrong_notes (userId, source, question_id)`);
         } catch (indexErr) {
@@ -314,15 +314,15 @@ async function ensureWrongNotesSchema() {
 
         console.log('OK: wgs_wrong_notes schema checked');
     } catch (err) {
-        // 스키마 보정 실패가 있어도 서버 전체가 죽지 않게 경고만 출력한다.
-        // 실제 저장 시 다시 에러가 보이면 터미널 로그를 보고 수정하면 된다.
+        // 스키마 보정 실패가 있어도 서버 전체가 중단되지 않도록 경고만 출력합니다.
+        // 저장 과정에서 오류가 발생하면 터미널 로그를 기준으로 스키마를 확인합니다.
         console.warn('wgs_wrong_notes schema check warning:', err.message);
     }
 }
 
 ensureWrongNotesSchema();
 
-// React 빌드 결과물을 Express가 정적 파일로 제공하도록 함.
+// React 빌드 결과물을 Express가 정적 파일로 제공합니다.
 
 // 정보처리기사 실기 API 연결 블록
 // ----------------------------------------------------------
@@ -361,7 +361,7 @@ const SALT_ROUNDS = 10;
 
 // 기본 관리자 계정 식별자입니다.
 // 운영자 권한은 계속 DB 기반 관리자 설정으로 확인합니다.
-const ADMIN_USER_ID = String(process.env.WGS_ADMIN_USER_ID || process.env.ADMIN_USER_ID || 'skn29').trim().toLowerCase();
+const ADMIN_USER_ID = String(process.env.WGS_ADMIN_USER_ID || process.env.ADMIN_USER_ID || '').trim().toLowerCase();
 
 // 실시간 세션과 접속자 상태 도우미입니다.
 // 인스턴스 ID는 열린 브라우저 탭이 서버 재시작을 감지하고 다시 인증하도록 돕습니다.
@@ -380,9 +380,9 @@ const {
 } = createRealtimeState({ adminUserId: ADMIN_USER_ID });
 
 async function validateRealtimeSession(req) {
-    // 일부 관리자 조회 API는 GET(query) 또는 body 없는 요청으로 들어올 수 있다.
-    // 기존처럼 req.body.id를 바로 읽으면 body가 undefined인 순간 서버 전체가 종료된다.
-    // 그래서 body/query/header를 모두 안전하게 읽는 방식으로 통일한다.
+    // 일부 관리자 조회 API는 GET(query) 또는 body 없는 요청으로 들어올 수 있습니다.
+    // req.body.id를 바로 읽으면 body가 undefined인 요청에서 서버 오류가 발생할 수 있습니다.
+    // body, query, header를 모두 확인하는 방식으로 요청 값을 통일합니다.
     const body = req && req.body && typeof req.body === 'object'? req.body : {};
     const query = req && req.query && typeof req.query === 'object'? req.query : {};
 
@@ -424,12 +424,12 @@ async function validateRealtimeSession(req) {
 // 목적:
 // 1) 프론트에서 관리자 버튼을 숨기는 것만으로는 보안이 부족하다.
 // 2) 사용자가 주소창에 /admin을 직접 입력하거나 브라우저 값을 조작해도
-//  실제 관리자 API는 서버에서 세션토큰과 관리자 아이디를 다시 검사한다.
-// 3) 이 함수는 다음 Step의 사용자 관리/점검모드/전체공지 API에서도 그대로 재사용한다.
+//  실제 관리자 API는 서버에서 세션토큰과 관리자 아이디를 다시 검사합니다.
+// 3) 이 함수는 다음 Step의 사용자 관리/점검모드/전체공지 API에서도 그대로 재사용합니다.
 async function validateAdminSession(req) {
-    // 결재 승인 시 서버 내부에서 실제 CRUD API를 다시 호출한다.
-    // 이 내부 호출은 브라우저 세션 토큰이 없으므로, 별도 내부 승인 토큰이 있을 때만 최고관리자 요청으로 인정한다.
-    // 일반 브라우저 요청은 아래 validateRealtimeSession 로직을 그대로 통과해야 하므로 기존 로그인/중복로그인/세션만료 기능은 유지된다.
+    // 결재 승인 시 서버 내부에서 실제 CRUD API를 다시 호출합니다.
+    // 이 내부 호출은 브라우저 세션 토큰이 없으므로, 별도 내부 승인 토큰이 있을 때만 최고관리자 요청으로 인정합니다.
+    // 일반 브라우저 요청은 아래 validateRealtimeSession 로직을 그대로 통과해야 하므로 기존 로그인/중복로그인/세션만료 기능은 유지됩니다.
     if (isApprovalBypassRequest(req)) {
         return {
             ok: true,
@@ -448,7 +448,7 @@ async function validateAdminSession(req) {
 
     const auth = await validateRealtimeSession(req);
 
-    // 로그인 세션 자체가 유효하지 않으면 관리자 여부를 볼 필요 없이 차단한다.
+    // 로그인 세션 자체가 유효하지 않으면 관리자 여부를 볼 필요 없이 차단합니다.
     if (!auth.valid) {
         return { ...auth, ok: false, statusCode: 401, message: '관리자 인증이 필요합니다.', isAdmin: false, isPrimaryAdmin: false, isOperator: false };
     }
@@ -459,7 +459,7 @@ async function validateAdminSession(req) {
     const isOperator = isAdminAccessUser({ ...userControl, id: normalizedUserId });
     const isSuspended = normalizeAdminBool(userControl?.is_suspended);
 
-    // 최고관리자 또는 운영자 권한을 받은 사용자만 관리자 페이지/API를 사용할 수 있다.
+    // 최고관리자 또는 운영자 권한을 받은 사용자만 관리자 페이지와 API를 사용할 수 있습니다.
     if (!isOperator || isSuspended) {
         return { ...auth, ok: false, statusCode: 403, message: isSuspended ? '임시정지된 계정입니다.' : '관리자 권한이 필요합니다.', valid: false, isAdmin: false, isPrimaryAdmin, isOperator: false, reason: isSuspended ? 'suspended' : 'not_admin' };
     }
@@ -469,16 +469,16 @@ async function validateAdminSession(req) {
 
 // 관리자 화면 날짜 포맷 보조 함수
 // ------------------------------------------------------------
-//  사용자 관리 API에서 최근 로그인/로그아웃 시간을 표시할 때 사용한다.
+//  사용자 관리 API에서 최근 로그인/로그아웃 시간을 표시할 때 사용합니다.
 // 이전 병합 과정에서 이 함수 호출부만 남고 함수 정의가 빠져
-// /api/admin/users 호출 시 formatAdminDateTime is not defined 오류가 발생했다.
-// 여기서는 기존 DB/로그인 로직은 건드리지 않고, 표시용 문자열 변환만 담당한다.
+// 관리자 회원 목록 API에서 날짜 포맷 함수를 안정적으로 사용할 수 있도록 제공합니다.
+// 여기서는 기존 DB/로그인 로직은 변경하지 않고, 표시용 문자열 변환만 담당합니다.
 function formatAdminDateTime(value) {
     if (!value) return null;
 
     const date = value instanceof Date ? value : new Date(value);
 
-    // MySQL DATETIME 문자열이나 Date 객체가 예상 밖 값이면 화면이 깨지지 않도록 원문 문자열을 반환한다.
+    // MySQL DATETIME 문자열이나 Date 객체가 예상 밖 값이면 화면이 영향을 받지 않도록 원문 문자열을 반환합니다.
     if (Number.isNaN(date.getTime())) {
         const fallback = String(value || '').trim();
         return fallback || null;
@@ -564,7 +564,7 @@ const BOARD_TYPE_NOTICE = 'notice';
 const BOARD_MARKER_NOTICE_FOR_MAIL = '[[UGONGSIL_BOARD:NOTICE]]';
 const NOTICE_MAIL_SUBJECT = '우공실 사이트 공지';
 
-// .env에 PUBLIC_SITE_URL을 넣으면 운영/로컬 주소를 쉽게 바꿀 수 있습니다.
+// .env의 PUBLIC_SITE_URL 값으로 배포 주소와 개발 주소를 쉽게 전환할 수 있습니다.
 // 예: PUBLIC_SITE_URL=http://www.woogongsil.kro.kr/
 function getPublicSiteUrl() {
     return process.env.PUBLIC_SITE_URL || 'https://www.woogongsil.co.kr/';
@@ -718,7 +718,7 @@ function normalizeToMysqlDateTime(value) {
 }
 
 // 랭킹 24시간 날짜 계산 유틸
-// - 기준: 서버 로컬 시간
+// - 기준: 서버 기준 시간
 // - 운영 시간: 00:00:00 ~ 23:59:59, 프리시즌 없이 항상 랭킹 반영
 // - 날짜 포맷은 기존 DB/JSON 파일과 호환되도록 2026-5-10 형태를 유지합니다.
 // - 함수명(getSeasonStatus)은 기존 호출부 호환을 위해 유지하지만,
@@ -747,7 +747,7 @@ function getSeasonStatus() {
 // 3. DB 스키마 호환성 보정
 // - 핵심: 게시판 날짜는 DATETIME이 아니라 VARCHAR여야 기존 문자열이 안 깨져.
 // - 핵심: noticeOrder 컬럼은 이미 있으면 ALTER ADD를 실행하지 않아
-//  Duplicate column name 경고가 터미널에 반복 출력되지 않게 한다.
+//  Duplicate column name 경고가 터미널에 반복 출력되지 않도록 처리합니다.
 async function ensureSchemaCompatibility() {
     // 컬럼 존재 여부 확인 함수
     // - INFORMATION_SCHEMA를 조회해서 현재 접속 DB 안에 특정 컬럼이 있는지 확인합니다.
@@ -800,8 +800,8 @@ async function ensureSchemaCompatibility() {
     }
 
     // 기존 공지 중 noticeOrder가 비어 있는 데이터에 기본 순서를 채웁니다.
-    // - 관리자가 직접 공지 순서를 저장하기 전까지는 기존처럼 최신 공지가 위에 오도록 id 기준으로 부여합니다.
-    // - 이미 순서가 저장된 공지는 건드리지 않으므로 관리자 정렬값이 덮어써지지 않습니다.
+    // - 관리자가 직접 공지 순서를 저장하기 전까지는 최신 공지가 위에 오도록 id 기준으로 부여합니다.
+    // - 이미 순서가 저장된 공지는 변경하지 않으므로 관리자 정렬값이 갱신되지 않습니다.
     try {
         const [noticeRows] = await pool.query(
             'SELECT id FROM wgs_posts WHERE isNotice = 1 AND noticeOrder IS NULL ORDER BY CAST(id AS UNSIGNED) DESC, id DESC'
@@ -817,8 +817,8 @@ async function ensureSchemaCompatibility() {
     }
 
     //  화면 설정 관리 테이블 보정
-    // - 기존 기능 DB 구조를 건드리지 않고 관리자 화면 설정 CRUD 전용 테이블만 추가합니다.
-    // - CREATE TABLE IF NOT EXISTS 방식이라 로컬/AWS 어디서 실행해도 반복 실행이 안전합니다.
+    // - 기존 기능 DB 구조를 변경하지 않고 관리자 화면 설정 CRUD 전용 테이블만 추가합니다.
+    // - CREATE TABLE IF NOT EXISTS 방식이라 환경별 어디서 실행해도 반복 실행이 안전합니다.
     try {
         await pool.query(`CREATE TABLE IF NOT EXISTS wgs_screen_settings (
                 id INT AUTO_INCREMENT PRIMARY KEY,
@@ -884,7 +884,7 @@ async function ensureSchemaCompatibility() {
 
         // 홈 화면에 보이는 문구/링크 기본값을 관리자 화면 설정 DB에 안전하게 등록합니다.
         // - page_key='home', section_key + setting_key 조합으로 저장해 useScreenSettings('home')의 getSetting('section.key')와 맞춥니다.
-        // - INSERT IGNORE를 사용해 기존 관리자가 수정한 setting_value는 덮어쓰지 않습니다.
+        // - INSERT IGNORE를 사용해 기존 관리자가 수정한 setting_value는 갱신하지 않습니다.
         // - 이후 UPDATE는 관리자 목록에서 보이는 이름/설명/정렬만 보정하고 실제 문구값은 유지합니다.
         const homeScreenDefaultRowsFix18V9 = [
             ['home', 'hero', 'text', 'hero_title', '홈 메인 제목', '정보 처리 기사', '홈 상단 배너의 큰 제목입니다.', 100],
@@ -1336,8 +1336,8 @@ async function importDataFromJSON() {
 // 5. 공통 DB 조회 헬퍼
 async function getUserById(id) {
     //  로그인 핫픽스
-    // - 사용자 관리 패치 컬럼이 아직 DB에 없을 때 SELECT에서 Unknown column으로 로그인 자체가 막히는 문제를 방지한다.
-    // - 서버 시작 보정 + 사용자 조회 직전 보정을 같이 둬서 로컬/AWS Lightsail 반영 순서가 달라도 안전하게 처리한다.
+    // - 사용자 관리 패치 컬럼이 아직 DB에 없을 때 SELECT에서 Unknown column으로 로그인 자체가 막히는 문제를 방지합니다.
+    // - 서버 시작 보정 + 사용자 조회 직전 보정을 같이 둬서 환경별 Lightsail 반영 순서가 달라도 안전하게 처리합니다.
     await ensureAdminUserControlSchema();
 
     const [rows] = await pool.query(
@@ -1476,11 +1476,11 @@ registerAuthRoutes({
 // 관리자 -1. 사용자 목록/접속 기록 조회 API
 // ------------------------------------------------------------
 // 목적:
-// 1) 관리자 권한 사용자만 전체 회원 목록과 최근 로그인/로그아웃 기록을 확인할 수 있게 한다.
-// 2) 회원 정보는 조회 전용으로만 제공해서 기존 회원가입/로그인/마이페이지 로직을 건드리지 않는다.
+// 1) 관리자 권한 사용자만 전체 회원 목록과 최근 로그인/로그아웃 기록을 확인할 수 있도록 합니다.
+// 2) 회원 정보는 조회 전용으로만 제공해서 기존 회원가입/로그인/마이페이지 로직을 변경하지 않는다.
 // 3) 게시글/댓글/오답 수는 관리자 화면 참고용 통계이며, 관련 테이블이 없거나 비어 있어도
-//  관리자 화면 전체가 깨지지 않도록 안전하게 0으로 처리한다.
-// 4) 이번 단계는 DB 구조 변경 없이 조회 API만 추가한다.
+//  관리자 화면 전체가 영향을 받지 않도록 안전하게 0으로 처리합니다.
+// 4) 이번 단계는 DB 구조 변경 없이 조회 API만 추가합니다.
 async function adminTableExists(tableName) {
     try {
         const [rows] = await pool.query(
@@ -1512,11 +1512,11 @@ async function adminColumnExists(tableName, columnName) {
 }
 
 
-let adminUserControlSchemaReady = false; // 사용자 제어 DB 구조를 1회 보정했는지 기억한다.
-let adminUserControlSchemaPromise = null; // 동시에 여러 요청이 들어와도 ALTER가 중복 실행되지 않도록 잠금 역할을 한다.
+let adminUserControlSchemaReady = false; // 사용자 제어 DB 구조를 1회 보정했는지 기억합니다.
+let adminUserControlSchemaPromise = null; // 동시에 여러 요청이 들어와도 ALTER가 중복 실행되지 않도록 잠금 역할을 합니다.
 
 async function ensureAdminUserControlSchema() {
-    // 사용자 임시정지/운영자/결재 기능용 컬럼과 테이블을 로컬·AWS에서 안전하게 보정한다.
+    // 사용자 접속 제한, 운영자, 결재 기능용 컬럼과 테이블을 개발·배포 환경에서 안전하게 보정합니다.
     if (adminUserControlSchemaReady) return;
     if (adminUserControlSchemaPromise) return adminUserControlSchemaPromise;
 
@@ -1572,7 +1572,7 @@ async function ensureAdminUserControlSchema() {
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
 
-    // 전체 공지 발송과 점검 모드 변경은 운영자가 바로 적용하므로 별도의 공통 이력 테이블에 저장한다.
+    // 전체 공지 발송과 점검 모드 변경은 운영자가 바로 적용하므로 별도의 공통 이력 테이블에 저장합니다.
     await pool.query(`CREATE TABLE IF NOT EXISTS wgs_admin_operation_logs (
             id BIGINT AUTO_INCREMENT PRIMARY KEY,
             operation_type VARCHAR(40) NOT NULL,
@@ -1588,7 +1588,7 @@ async function ensureAdminUserControlSchema() {
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
 
-    // 같은 결재 DB 행을 공유하면서 최고관리자 목록과 운영자 본인 목록은 각각 숨김 처리한다.
+    // 같은 결재 DB 행을 공유하면서 최고관리자 목록과 운영자 본인 목록은 각각 숨김 처리합니다.
     // 실제 DELETE를 하지 않으므로 한쪽이 정리해도 다른 쪽의 확인/감사 목록에는 영향을 주지 않는다.
     const approvalVisibilityColumns = [
         ['hidden_from_primary', "TINYINT(1) NOT NULL DEFAULT 0 COMMENT '최고관리자 결재 목록 숨김 여부'"],
@@ -1672,7 +1672,7 @@ async function validateOperatorAdmin(userId) {
 }
 
 // 프론트에서 버튼을 숨겨도 주소/요청을 직접 조작할 수 있으므로
-// 서버에서도 "요청자(requester)"와 "대상(target)"을 나눠 위험 작업을 방어한다.
+// 서버에서도 "요청자(requester)"와 "대상(target)"을 나눠 위험 작업을 방어합니다.
 // - 최고관리자: 최고관리자 본인만 보호하고 운영자/일반 사용자는 관리 가능
 // - 운영자 권한 사용자: 최고관리자, 다른 운영자, 자기 자신은 보호
 async function isUserManagementTargetProtected(requesterId, targetUserId) {
@@ -1688,8 +1688,8 @@ async function isUserManagementTargetProtected(requesterId, targetUserId) {
     return Boolean(targetUser && normalizeAdminBool(targetUser.is_operator));
 }
 
-// 승인 반영용 내부 토큰이다. .env에 ADMIN_APPROVAL_BYPASS_TOKEN이 있으면 그 값을 쓰고, 없으면 서버 시작마다 난수로 만든다.
-// 기존처럼 예측 가능한 기본 문자열을 쓰면 외부 요청자가 헤더를 흉내 낼 수 있으므로 런타임 난수로 보호한다.
+// 승인 반영용 내부 토큰입니다. .env에 ADMIN_APPROVAL_BYPASS_TOKEN이 있으면 그 값을 쓰고, 없으면 서버 시작마다 난수로 만든다.
+// 예측 가능한 기본 문자열은 외부 요청자가 헤더를 흉내 낼 수 있으므로 런타임 난수로 보호합니다.
 const ADMIN_APPROVAL_INTERNAL_TOKEN = process.env.ADMIN_APPROVAL_BYPASS_TOKEN || crypto.randomBytes(32).toString('hex');
 
 function getApprovalBypassToken() {
@@ -1860,7 +1860,7 @@ registerSiteManagementRoutes({
     mealmapHttpsJson,
 });
 
-// 14. React SPA 새로고침 방어
+// 14. React SPA 새로고침 방지합니다.
 // - /api로 시작하지 않는 요청은 React의 index.html로 보내서 F5 새로고침 404를 방지해.
 // - 반드시 모든 API 라우터보다 아래에 있어야 해.
 app.use((req, res, next) => {
@@ -1887,9 +1887,8 @@ app.use((req, res) => {
 async function startServer() {
     try {
         await ensureSchemaCompatibility();
-        //  로그인 핫픽스
-        // - 사용자 관리 패치에서 추가한 컬럼/결재 테이블이 DB에 없으면 로그인 SELECT 단계에서 Unknown column 에러가 발생할 수 있어.
-        // - 서버 시작 직후 1회 자동 보정해서 로컬과 AWS Lightsail DB 구조 차이를 줄인다.
+        // 사용자 관리에 필요한 컬럼과 결재 테이블을 서버 시작 시 확인합니다.
+        // DB 스키마 차이로 로그인 SELECT 단계에서 Unknown column 오류가 발생하지 않도록 보정합니다.
         await ensureAdminUserControlSchema();
         await importDataFromJSON();
 

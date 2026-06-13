@@ -9,7 +9,7 @@ function registerSiteManagementRoutes(options = {}) {
     const mealmapKakaoMapJsKey = options.mealmapKakaoMapJsKey;
     const mealmapKakaoRestKey = options.mealmapKakaoRestKey;
     const mealmapHttpsJson = options.mealmapHttpsJson;
-    const ADMIN_USER_ID = String(options.adminUserId || process.env.WGS_ADMIN_USER_ID || process.env.ADMIN_USER_ID || 'skn29').trim().toLowerCase();
+    const ADMIN_USER_ID = String(options.adminUserId || process.env.WGS_ADMIN_USER_ID || process.env.ADMIN_USER_ID || '').trim().toLowerCase();
 
     if (!app || typeof app.get !== 'function') {
         throw new Error('registerSiteManagementRoutes requires an Express app.');
@@ -204,7 +204,7 @@ function getClassScheduleDbConfig() {
   return {
     host: env.DB_HOST || '127.0.0.1',
     port: Number(env.DB_PORT || 3306),
-    user: env.DB_USER || env.MYSQL_USER || 'exambank',
+    user: env.DB_USER || env.MYSQL_USER || '',
     password: env.DB_PASSWORD || env.MYSQL_PASSWORD || '',
     database: env.DB_NAME || env.MYSQL_DATABASE || 'exam_bank',
     dateStrings: true,
@@ -672,7 +672,7 @@ app.get('/api/admin/class-schedules', async (req, res) => {
 
 // 달력 일정 색상/테두리/강조 타입까지 저장하는 관리자 CRUD 우선 라우트
 // - 기존 라우트보다 앞에 배치하여 먼저 응답합니다.
-// - 기존 홈/관리자 GET API와 충돌하지 않도록 POST/PUT/PATCH/DELETE만 처리합니다.
+// - 기존 홈/관리자 GET API와 충돌하지 않도록 POST/PUT//DELETE만 처리합니다.
 
 const classScheduleColumnCache = { value: null };
 
@@ -1766,7 +1766,7 @@ function sanitizeMealMapLayoutValueV253(key, value) {
   if (!allowed.has(key)) return null;
   const raw = String(value ?? '').trim();
   if (!raw) return MEALMAP_DEFAULT_LAYOUTS_V253[key];
-  // CSS injection 방지: 숫자, px, rem, %, vw, vh, clamp(), calc()에 필요한 안전 문자만 허용한다.
+  // CSS injection 방지: 숫자, px, rem, %, vw, vh, clamp(), calc()에 필요한 안전 문자만 허용합니다.
   const safe = raw.replace(/[^0-9a-zA-Z가-힣.%() +\-_,]/g, '').slice(0, 80);
   return safe || MEALMAP_DEFAULT_LAYOUTS_V253[key];
 }

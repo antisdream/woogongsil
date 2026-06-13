@@ -6,7 +6,7 @@ import { toast } from "react-toastify";
  * 관리자 오류신고 수신 이메일
  * 실제 메일 발송 계정은 백엔드 .env의 MAIL_USER / MAIL_APP_PASSWORD를 사용합니다.
  */
-const ADMIN_EMAIL = "jiyong8074@gmail.com";
+const ADMIN_EMAIL = import.meta.env.VITE_ERROR_REPORT_TO || "운영자 메일은 서버 환경변수로 관리됩니다.";
 
 /**
  * 프론트 개발 서버와 백엔드 서버가 포트가 다를 수 있어서 API 주소를 안전하게 결정합니다.
@@ -17,7 +17,7 @@ const ADMIN_EMAIL = "jiyong8074@gmail.com";
  * 2) Vite 개발 서버(보통 5173)에서 프론트를 따로 띄우는 경우:
  *  http://localhost:5000/api/error-report 로 직접 요청
  *
- * 3) VITE_API_BASE_URL can override the detected API base URL.
+ * 3) VITE_API_BASE_URL이 있으면 자동 감지한 API 주소보다 우선 사용합니다.
  */
 const getApiBaseUrl = () => {
   const envBaseUrl = import.meta.env?.VITE_API_BASE_URL;
@@ -33,7 +33,7 @@ const getApiBaseUrl = () => {
     return "http://localhost:5000";
   }
 
-  // 백엔드 서버가 프론트 dist를 같이 제공하는 경우는 상대경로 사용
+  // 백엔드 서버가 프론트 dist를 같이 제공하는 경우는 상대경로 사용합니다
   return "";
 };
 
@@ -117,7 +117,7 @@ export default function ErrorReportButton({
 
   /**
    * 현재 문제 기준으로 관리자 전달용 제목을 자동 생성합니다.
-   * 문제를 넘길 때마다 제목도 바뀌도록 useMemo 사용
+   * 문제를 넘길 때마다 제목도 바뀌도록 useMemo 사용합니다
    */
   const defaultTitle = useMemo(
     () => buildDefaultTitle({ examType, mode, questionInfo }),
@@ -151,7 +151,7 @@ export default function ErrorReportButton({
   const handleOpen = () => {
     /**
      * 문제 오류신고는 누가 신고했는지 확인이 필요하므로 로그인 상태에서만 허용합니다.
-     * 기존 기능은 건드리지 않고 신고 버튼 클릭 시점에만 로그인 여부를 검사합니다.
+     * 기존 기능은 변경하지 않고 신고 버튼 클릭 시점에만 로그인 여부를 검사합니다.
      */
     if (!userId) {
       toast.warn("로그인이 필요한 기능입니다, 회원가입 또는 로그인을 먼저 해주세요.");

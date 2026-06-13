@@ -5,7 +5,7 @@ function createDatabasePool(env = process.env) {
     const pool = mysql.createPool({
         host: env.DB_HOST || '127.0.0.1',
         port: Number(env.DB_PORT || 3306),
-        user: env.DB_USER || 'exambank',
+        user: env.DB_USER || '',
         password: env.DB_PASSWORD || '',
         database: env.DB_NAME || 'exam_bank',
         waitForConnections: true,
