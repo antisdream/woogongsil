@@ -1,0 +1,233 @@
+/* 회식맵 전용 테마 보정: 기존 우공실 다크/라이트 테마 클래스만 따라가고 다른 페이지는 변경하지 않는다. */
+body.wgs-theme-light .mealmap-page {
+  color: #172033;
+  background: linear-gradient(135deg, #f7fbff 0%, #eef5ff 55%, #f8fbff 100%) !important;
+}
+
+body.wgs-theme-dark .mealmap-page {
+  color: #e5eefc;
+  background: linear-gradient(135deg, #071225 0%, #0b1930 55%, #06101f 100%) !important;
+}
+
+body.wgs-theme-light .mealmap-hero,
+body.wgs-theme-light .mealmap-toolbar,
+body.wgs-theme-light .mealmap-search-box,
+body.wgs-theme-light .mealmap-map-wrap,
+body.wgs-theme-light .mealmap-map-card,
+body.wgs-theme-light .mealmap-map-head,
+body.wgs-theme-light .mealmap-detail-card,
+body.wgs-theme-light .mealmap-detail-panel,
+body.wgs-theme-light .mealmap-empty-card,
+body.wgs-theme-light .mealmap-modal-card,
+body.wgs-theme-light .mealmap-report-card,
+body.wgs-theme-light .mealmap-comment-item,
+body.wgs-theme-light .mealmap-detail-note,
+body.wgs-theme-light .mealmap-map-guide {
+  background: rgba(255, 255, 255, 0.94) !important;
+  color: #172033 !important;
+  border-color: rgba(15, 23, 42, 0.10) !important;
+  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.10) !important;
+}
+
+body.wgs-theme-dark .mealmap-hero,
+body.wgs-theme-dark .mealmap-toolbar,
+body.wgs-theme-dark .mealmap-search-box,
+body.wgs-theme-dark .mealmap-map-wrap,
+body.wgs-theme-dark .mealmap-map-card,
+body.wgs-theme-dark .mealmap-map-head,
+body.wgs-theme-dark .mealmap-detail-card,
+body.wgs-theme-dark .mealmap-detail-panel,
+body.wgs-theme-dark .mealmap-empty-card,
+body.wgs-theme-dark .mealmap-modal-card,
+body.wgs-theme-dark .mealmap-report-card,
+body.wgs-theme-dark .mealmap-comment-item,
+body.wgs-theme-dark .mealmap-detail-note,
+body.wgs-theme-dark .mealmap-map-guide {
+  background: rgba(15, 23, 42, 0.92) !important;
+  color: #e5eefc !important;
+  border-color: rgba(148, 163, 184, 0.22) !important;
+  box-shadow: 0 22px 60px rgba(0, 0, 0, 0.38) !important;
+}
+
+body.wgs-theme-light .mealmap-title,
+body.wgs-theme-light .mealmap-hero h1,
+body.wgs-theme-light .mealmap-detail-title,
+body.wgs-theme-light .mealmap-detail-card h2,
+body.wgs-theme-light .mealmap-section-title,
+body.wgs-theme-light .mealmap-card-title,
+body.wgs-theme-light .mealmap-modal-title {
+  color: #101827 !important;
+}
+
+body.wgs-theme-dark .mealmap-title,
+body.wgs-theme-dark .mealmap-hero h1,
+body.wgs-theme-dark .mealmap-detail-title,
+body.wgs-theme-dark .mealmap-detail-card h2,
+body.wgs-theme-dark .mealmap-section-title,
+body.wgs-theme-dark .mealmap-card-title,
+body.wgs-theme-dark .mealmap-modal-title {
+  color: #f8fafc !important;
+}
+
+body.wgs-theme-light .mealmap-subtitle,
+body.wgs-theme-light .mealmap-hero p,
+body.wgs-theme-light .mealmap-detail-subtitle,
+body.wgs-theme-light .mealmap-detail-card p,
+body.wgs-theme-light .mealmap-help,
+body.wgs-theme-light .mealmap-muted,
+body.wgs-theme-light .mealmap-comment-date,
+body.wgs-theme-light .mealmap-row-label {
+  color: #475569 !important;
+}
+
+body.wgs-theme-dark .mealmap-subtitle,
+body.wgs-theme-dark .mealmap-hero p,
+body.wgs-theme-dark .mealmap-detail-subtitle,
+body.wgs-theme-dark .mealmap-detail-card p,
+body.wgs-theme-dark .mealmap-help,
+body.wgs-theme-dark .mealmap-muted,
+body.wgs-theme-dark .mealmap-comment-date,
+body.wgs-theme-dark .mealmap-row-label {
+  color: #a8b4c8 !important;
+}
+
+body.wgs-theme-light .mealmap-input,
+body.wgs-theme-light .mealmap-search-input,
+body.wgs-theme-light .mealmap-textarea,
+body.wgs-theme-light .mealmap-select,
+body.wgs-theme-light .mealmap-comment-input {
+  background: #ffffff !important;
+  color: #111827 !important;
+  border-color: rgba(15, 23, 42, 0.14) !important;
+}
+
+body.wgs-theme-dark .mealmap-input,
+body.wgs-theme-dark .mealmap-search-input,
+body.wgs-theme-dark .mealmap-textarea,
+body.wgs-theme-dark .mealmap-select,
+body.wgs-theme-dark .mealmap-comment-input {
+  background: #0f172a !important;
+  color: #f8fafc !important;
+  border-color: rgba(148, 163, 184, 0.28) !important;
+}
+
+body.wgs-theme-light .mealmap-input::placeholder,
+body.wgs-theme-light .mealmap-search-input::placeholder,
+body.wgs-theme-light .mealmap-textarea::placeholder,
+body.wgs-theme-light .mealmap-comment-input::placeholder {
+  color: #64748b !important;
+}
+
+body.wgs-theme-dark .mealmap-input::placeholder,
+body.wgs-theme-dark .mealmap-search-input::placeholder,
+body.wgs-theme-dark .mealmap-textarea::placeholder,
+body.wgs-theme-dark .mealmap-comment-input::placeholder {
+  color: #94a3b8 !important;
+}
+
+body.wgs-theme-light .mealmap-btn-secondary,
+body.wgs-theme-light .mealmap-chip,
+body.wgs-theme-light .mealmap-like-btn,
+body.wgs-theme-light .mealmap-report-btn,
+body.wgs-theme-light .mealmap-reset-btn {
+  background: #eef2f7 !important;
+  color: #172033 !important;
+  border-color: rgba(15, 23, 42, 0.10) !important;
+}
+
+body.wgs-theme-dark .mealmap-btn-secondary,
+body.wgs-theme-dark .mealmap-chip,
+body.wgs-theme-dark .mealmap-like-btn,
+body.wgs-theme-dark .mealmap-report-btn,
+body.wgs-theme-dark .mealmap-reset-btn {
+  background: #1e293b !important;
+  color: #e5eefc !important;
+  border-color: rgba(148, 163, 184, 0.22) !important;
+}
+
+body.wgs-theme-light .mealmap-chip.active,
+body.wgs-theme-dark .mealmap-chip.active,
+body.wgs-theme-light .mealmap-apply-btn,
+body.wgs-theme-dark .mealmap-apply-btn,
+body.wgs-theme-light .mealmap-primary-btn,
+body.wgs-theme-dark .mealmap-primary-btn,
+body.wgs-theme-light .mealmap-submit-btn,
+body.wgs-theme-dark .mealmap-submit-btn {
+  background: #ff4f63 !important;
+  color: #ffffff !important;
+  border-color: #ff4f63 !important;
+}
+
+body.wgs-theme-light .mealmap-like-btn.is-liked,
+body.wgs-theme-dark .mealmap-like-btn.is-liked {
+  background: rgba(255, 79, 99, 0.16) !important;
+  color: #ff4f63 !important;
+  border-color: rgba(255, 79, 99, 0.34) !important;
+}
+
+body.wgs-theme-light .mealmap-detail-divider,
+body.wgs-theme-light .mealmap-divider {
+  border-color: rgba(15, 23, 42, 0.10) !important;
+}
+
+body.wgs-theme-dark .mealmap-detail-divider,
+body.wgs-theme-dark .mealmap-divider {
+  border-color: rgba(148, 163, 184, 0.22) !important;
+}
+
+body.wgs-theme-light .mealmap-map-grid,
+body.wgs-theme-light .mealmap-map-surface,
+body.wgs-theme-light .mealmap-fake-map {
+  background-color: #eef6ff !important;
+}
+
+body.wgs-theme-dark .mealmap-map-grid,
+body.wgs-theme-dark .mealmap-map-surface,
+body.wgs-theme-dark .mealmap-fake-map {
+  background-color: #0b1629 !important;
+  background-image:
+    linear-gradient(rgba(148, 163, 184, 0.11) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(148, 163, 184, 0.11) 1px, transparent 1px) !important;
+}
+
+body.wgs-theme-dark .mealmap-detail-meta,
+body.wgs-theme-dark .mealmap-comments,
+body.wgs-theme-dark .mealmap-comment-list article {
+  color: #e5eefc !important;
+  border-color: rgba(148, 163, 184, 0.20) !important;
+}
+
+body.wgs-theme-light .mealmap-detail-meta,
+body.wgs-theme-light .mealmap-comments,
+body.wgs-theme-light .mealmap-comment-list article {
+  color: #172033 !important;
+  border-color: rgba(15, 23, 42, 0.10) !important;
+}
+
+body.wgs-theme-dark .mealmap-detail-actions button:not(.mealmap-naver-btn),
+body.wgs-theme-dark .mealmap-comment-form input {
+  background: #1e293b !important;
+  color: #e5eefc !important;
+  border-color: rgba(148, 163, 184, 0.22) !important;
+}
+
+body.wgs-theme-light .mealmap-detail-actions button:not(.mealmap-naver-btn),
+body.wgs-theme-light .mealmap-comment-form input {
+  background: #eef2f7 !important;
+  color: #172033 !important;
+  border-color: rgba(15, 23, 42, 0.10) !important;
+}
+
+body.wgs-theme-dark .mealmap-comment-form button,
+body.wgs-theme-light .mealmap-comment-form button {
+  background: #111827 !important;
+  color: #ffffff !important;
+}
+
+@media (max-width: 900px) {
+  body.wgs-theme-dark .mealmap-detail-panel,
+  body.wgs-theme-light .mealmap-detail-panel {
+    position: static !important;
+    max-height: none !important;
+  }
+}

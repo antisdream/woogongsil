@@ -1,0 +1,186 @@
+/* ============================================================
+   Meal-map activity feed styles
+   - 회식맵 사용자 활동 이력 팝업
+   - 라이트/다크 모드와 무관하게 흰 배경 + 검은 글씨로 고정해 표 가독성을 지킨다.
+============================================================ */
+.admin-notice-user-meta span {
+  display: block;
+  line-height: 1.7;
+}
+
+.mealmap-history-btn {
+  background: #fff7ed !important;
+  color: #9a3412 !important;
+  border: 1px solid #fed7aa !important;
+}
+
+.mealmap-activity-modal {
+  width: min(1320px, 96vw) !important;
+  max-height: 88vh;
+  background: #ffffff !important;
+  color: #111827 !important;
+  border: 1px solid #e5e7eb !important;
+  box-shadow: 0 32px 90px rgba(0, 0, 0, 0.28) !important;
+}
+
+.mealmap-activity-modal * {
+  color: inherit;
+  box-sizing: border-box;
+}
+
+.mealmap-activity-head {
+  align-items: flex-start;
+  gap: 16px;
+  border-bottom: 1px solid #e5e7eb;
+  padding-bottom: 16px;
+}
+
+.mealmap-activity-head h2 {
+  margin: 4px 0 6px;
+  color: #111827 !important;
+}
+
+.mealmap-activity-head p:not(.mealmap-kicker) {
+  margin: 0;
+  color: #475569 !important;
+  font-weight: 800;
+  line-height: 1.6;
+}
+
+.mealmap-activity-head > button {
+  width: 42px;
+  height: 42px;
+  border-radius: 999px;
+  background: #f1f5f9 !important;
+  color: #111827 !important;
+}
+
+.mealmap-activity-empty {
+  padding: 42px 16px;
+  text-align: center;
+  color: #475569 !important;
+  font-weight: 900;
+}
+
+.mealmap-activity-table-wrap {
+  overflow: auto;
+  max-height: 58vh;
+  border: 1px solid #e5e7eb;
+  border-radius: 18px;
+  background: #ffffff;
+}
+
+.mealmap-activity-table {
+  width: 100%;
+  min-width: 1180px;
+  border-collapse: collapse;
+  background: #ffffff;
+  color: #111827;
+  font-size: 13px;
+}
+
+.mealmap-activity-table th,
+.mealmap-activity-table td {
+  padding: 12px 10px;
+  border-bottom: 1px solid #e5e7eb;
+  vertical-align: top;
+  text-align: left;
+  color: #111827 !important;
+  word-break: keep-all;
+}
+
+.mealmap-activity-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #f8fafc !important;
+  color: #334155 !important;
+  font-weight: 950;
+  white-space: nowrap;
+}
+
+.mealmap-activity-status {
+  display: inline-flex;
+  min-width: 74px;
+  justify-content: center;
+  padding: 6px 9px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 950;
+  background: #e0f2fe;
+  color: #075985 !important;
+}
+
+.mealmap-activity-status-approved {
+  background: #dcfce7;
+  color: #166534 !important;
+}
+
+.mealmap-activity-status-rejected {
+  background: #fee2e2;
+  color: #991b1b !important;
+}
+
+.mealmap-activity-resubmit {
+  border: 0;
+  border-radius: 12px;
+  padding: 9px 12px;
+  background: #ff4f5e !important;
+  color: #ffffff !important;
+  font-weight: 950;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.mealmap-activity-muted {
+  color: #64748b !important;
+  font-weight: 850;
+  white-space: nowrap;
+}
+
+.mealmap-activity-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+  color: #334155 !important;
+  font-weight: 900;
+}
+
+.mealmap-activity-pager {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.mealmap-activity-pager button {
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  padding: 10px 14px;
+  background: #ffffff !important;
+  color: #111827 !important;
+  font-weight: 950;
+  cursor: pointer;
+}
+
+.mealmap-activity-pager button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+@media (max-width: 768px) {
+  .mealmap-activity-modal {
+    width: 96vw !important;
+    padding: 18px;
+  }
+
+  .mealmap-activity-footer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .mealmap-activity-pager {
+    justify-content: space-between;
+  }
+}

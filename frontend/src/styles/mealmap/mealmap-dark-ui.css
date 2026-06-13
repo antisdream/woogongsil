@@ -1,0 +1,409 @@
+/* 회식맵 모달은 앱 테마가 바뀌어도 입력 컨트롤이 잘 보이도록 밝은 패널을 명시합니다. */
+
+/* 모든 앱 테마에서 필터 모달이 잘 보이도록 밝은 패널을 강제합니다. */
+.mealmap-filter-modal,
+body.wgs-theme-dark .mealmap-filter-modal,
+body.wgs-theme-light .mealmap-filter-modal,
+body.dark .mealmap-filter-modal,
+.dark .mealmap-filter-modal,
+.theme-dark .mealmap-filter-modal,
+[data-theme='dark'] .mealmap-filter-modal {
+  background: #ffffff !important;
+  color: #111827 !important;
+  border: 1px solid rgba(15, 23, 42, 0.10) !important;
+  box-shadow: 0 32px 90px rgba(15, 23, 42, 0.26) !important;
+}
+
+.mealmap-filter-modal .mealmap-modal-head h2,
+.mealmap-filter-modal .mealmap-range-label,
+.mealmap-filter-modal .mealmap-range-label span,
+.mealmap-filter-modal .mealmap-category-grid button,
+.mealmap-filter-modal .mealmap-modal-actions button {
+  color: #111827 !important;
+}
+
+.mealmap-filter-modal .mealmap-range-label strong {
+  color: #ff4f5e !important;
+}
+
+.mealmap-filter-modal .mealmap-modal-head button {
+  color: #64748b !important;
+}
+
+.mealmap-filter-modal input[type='range'] {
+  accent-color: #ff4f5e !important;
+}
+
+.mealmap-filter-modal .mealmap-category-grid button {
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: none !important;
+}
+
+.mealmap-filter-modal .mealmap-category-grid button.mealmap-chip-active,
+.mealmap-filter-modal .mealmap-category-grid .mealmap-chip-active {
+  background: #ff4f5e !important;
+  border-color: #ff4f5e !important;
+  color: #ffffff !important;
+}
+
+.mealmap-filter-modal .mealmap-modal-actions button:not(.mealmap-primary-btn) {
+  background: #eef2f7 !important;
+  color: #111827 !important;
+}
+
+.mealmap-filter-modal .mealmap-modal-actions .mealmap-primary-btn {
+  background: #ff4f5e !important;
+  color: #ffffff !important;
+}
+
+/* 검색 컨트롤 대비는 유지하면서 다크 테마 툴바의 과한 시각 요소를 줄입니다. */
+body.wgs-theme-dark .mealmap-toolbar,
+body.dark .mealmap-toolbar,
+.dark .mealmap-toolbar,
+.theme-dark .mealmap-toolbar,
+[data-theme='dark'] .mealmap-toolbar {
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+
+body.wgs-theme-dark .mealmap-search-inline,
+body.dark .mealmap-search-inline,
+.dark .mealmap-search-inline,
+.theme-dark .mealmap-search-inline,
+[data-theme='dark'] .mealmap-search-inline {
+  background: rgba(10, 20, 38, 0.96) !important;
+  border: 1px solid rgba(148, 163, 184, 0.22) !important;
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.28) !important;
+}
+
+body.wgs-theme-dark .mealmap-search-inline input,
+body.dark .mealmap-search-inline input,
+.dark .mealmap-search-inline input,
+.theme-dark .mealmap-search-inline input,
+[data-theme='dark'] .mealmap-search-inline input {
+  background: #111827 !important;
+  color: #ffffff !important;
+  border-color: rgba(148, 163, 184, 0.30) !important;
+}
+
+body.wgs-theme-dark .mealmap-search-inline input::placeholder,
+body.dark .mealmap-search-inline input::placeholder,
+.dark .mealmap-search-inline input::placeholder,
+.theme-dark .mealmap-search-inline input::placeholder,
+[data-theme='dark'] .mealmap-search-inline input::placeholder {
+  color: rgba(255, 255, 255, 0.78) !important;
+}
+
+body.wgs-theme-dark .mealmap-search-inline button,
+body.dark .mealmap-search-inline button,
+.dark .mealmap-search-inline button,
+.theme-dark .mealmap-search-inline button,
+[data-theme='dark'] .mealmap-search-inline button,
+body.wgs-theme-dark .mealmap-icon-actions button,
+body.dark .mealmap-icon-actions button,
+.dark .mealmap-icon-actions button,
+.theme-dark .mealmap-icon-actions button,
+[data-theme='dark'] .mealmap-icon-actions button {
+  background: #111827 !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(148, 163, 184, 0.24) !important;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.22) !important;
+}
+
+/* 실제 지도 타일과 대체 격자 화면이 모두 읽기 좋도록 지도 영역을 정규화합니다. */
+.mealmap-map-surface {
+  isolation: isolate;
+}
+
+body.wgs-theme-light .mealmap-map-surface,
+body.wgs-theme-dark .mealmap-map-surface,
+body.dark .mealmap-map-surface,
+.dark .mealmap-map-surface,
+.theme-dark .mealmap-map-surface,
+[data-theme='dark'] .mealmap-map-surface {
+  background-color: #eaf3ff !important;
+}
+
+body.wgs-theme-light .mealmap-grid-bg,
+body.wgs-theme-dark .mealmap-grid-bg,
+body.dark .mealmap-grid-bg,
+.dark .mealmap-grid-bg,
+.theme-dark .mealmap-grid-bg,
+[data-theme='dark'] .mealmap-grid-bg {
+  background-image:
+    linear-gradient(rgba(148, 163, 184, 0.28) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(148, 163, 184, 0.28) 1px, transparent 1px) !important;
+  background-size: 24px 24px !important;
+  opacity: 0.55 !important;
+}
+
+.mealmap-floating-help,
+body.wgs-theme-dark .mealmap-floating-help,
+body.wgs-theme-light .mealmap-floating-help,
+body.dark .mealmap-floating-help,
+.dark .mealmap-floating-help,
+.theme-dark .mealmap-floating-help,
+[data-theme='dark'] .mealmap-floating-help {
+  background: rgba(255, 255, 255, 0.94) !important;
+  color: #111827 !important;
+  border: 1px solid rgba(15, 23, 42, 0.08) !important;
+  box-shadow: 0 18px 42px rgba(15, 23, 42, 0.14) !important;
+  user-select: none;
+}
+
+.mealmap-floating-help strong,
+.mealmap-floating-help span,
+body.wgs-theme-dark .mealmap-floating-help strong,
+body.wgs-theme-dark .mealmap-floating-help span,
+body.dark .mealmap-floating-help strong,
+body.dark .mealmap-floating-help span,
+.dark .mealmap-floating-help strong,
+.dark .mealmap-floating-help span,
+.theme-dark .mealmap-floating-help strong,
+.theme-dark .mealmap-floating-help span,
+[data-theme='dark'] .mealmap-floating-help strong,
+[data-theme='dark'] .mealmap-floating-help span {
+  color: #111827 !important;
+}
+
+.mealmap-empty-map,
+body.wgs-theme-dark .mealmap-empty-map,
+body.wgs-theme-light .mealmap-empty-map {
+  background: rgba(255, 255, 255, 0.96) !important;
+  color: #111827 !important;
+}
+
+.mealmap-empty-map strong,
+.mealmap-empty-map span,
+body.wgs-theme-dark .mealmap-empty-map strong,
+body.wgs-theme-dark .mealmap-empty-map span {
+  color: #111827 !important;
+}
+
+/* 다크 상세 패널 안에서도 댓글 카드는 밝게 유지해 텍스트 대비를 일정하게 만듭니다. */
+body.wgs-theme-dark .mealmap-comment-list article,
+body.dark .mealmap-comment-list article,
+.dark .mealmap-comment-list article,
+.theme-dark .mealmap-comment-list article,
+[data-theme='dark'] .mealmap-comment-list article {
+  background: #ffffff !important;
+  color: #111827 !important;
+  border: 1px solid rgba(15, 23, 42, 0.08) !important;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.12) !important;
+}
+
+body.wgs-theme-dark .mealmap-comment-list article strong,
+body.wgs-theme-dark .mealmap-comment-list article p,
+body.dark .mealmap-comment-list article strong,
+body.dark .mealmap-comment-list article p,
+.dark .mealmap-comment-list article strong,
+.dark .mealmap-comment-list article p,
+.theme-dark .mealmap-comment-list article strong,
+.theme-dark .mealmap-comment-list article p,
+[data-theme='dark'] .mealmap-comment-list article strong,
+[data-theme='dark'] .mealmap-comment-list article p {
+  color: #111827 !important;
+}
+
+body.wgs-theme-dark .mealmap-comment-list article span,
+body.dark .mealmap-comment-list article span,
+.dark .mealmap-comment-list article span,
+.theme-dark .mealmap-comment-list article span,
+[data-theme='dark'] .mealmap-comment-list article span {
+  color: #64748b !important;
+}
+
+/* 다크 테마의 등록/수정 모달은 읽기 쉬운 입력 컨트롤을 가진 어두운 패널을 사용합니다. */
+body.wgs-theme-dark .mealmap-add-modal,
+body.wgs-theme-dark .mealmap-edit-modal,
+body.dark .mealmap-add-modal,
+body.dark .mealmap-edit-modal,
+.dark .mealmap-add-modal,
+.dark .mealmap-edit-modal,
+.theme-dark .mealmap-add-modal,
+.theme-dark .mealmap-edit-modal,
+[data-theme='dark'] .mealmap-add-modal,
+[data-theme='dark'] .mealmap-edit-modal {
+  background: #0b1629 !important;
+  color: #f8fafc !important;
+  border: 1px solid rgba(148, 163, 184, 0.24) !important;
+  box-shadow: 0 36px 100px rgba(0, 0, 0, 0.48) !important;
+}
+
+body.wgs-theme-dark .mealmap-add-modal .mealmap-modal-head h2,
+body.wgs-theme-dark .mealmap-edit-modal .mealmap-modal-head h2,
+body.wgs-theme-dark .mealmap-add-modal label,
+body.wgs-theme-dark .mealmap-edit-modal label,
+body.wgs-theme-dark .mealmap-add-modal label span,
+body.wgs-theme-dark .mealmap-edit-modal label span,
+body.dark .mealmap-add-modal .mealmap-modal-head h2,
+body.dark .mealmap-edit-modal .mealmap-modal-head h2,
+body.dark .mealmap-add-modal label,
+body.dark .mealmap-edit-modal label,
+body.dark .mealmap-add-modal label span,
+body.dark .mealmap-edit-modal label span,
+.dark .mealmap-add-modal .mealmap-modal-head h2,
+.dark .mealmap-edit-modal .mealmap-modal-head h2,
+.dark .mealmap-add-modal label,
+.dark .mealmap-edit-modal label,
+.dark .mealmap-add-modal label span,
+.dark .mealmap-edit-modal label span,
+.theme-dark .mealmap-add-modal .mealmap-modal-head h2,
+.theme-dark .mealmap-edit-modal .mealmap-modal-head h2,
+.theme-dark .mealmap-add-modal label,
+.theme-dark .mealmap-edit-modal label,
+.theme-dark .mealmap-add-modal label span,
+.theme-dark .mealmap-edit-modal label span,
+[data-theme='dark'] .mealmap-add-modal .mealmap-modal-head h2,
+[data-theme='dark'] .mealmap-edit-modal .mealmap-modal-head h2,
+[data-theme='dark'] .mealmap-add-modal label,
+[data-theme='dark'] .mealmap-edit-modal label,
+[data-theme='dark'] .mealmap-add-modal label span,
+[data-theme='dark'] .mealmap-edit-modal label span {
+  color: #f8fafc !important;
+}
+
+body.wgs-theme-dark .mealmap-add-modal .mealmap-modal-head p,
+body.wgs-theme-dark .mealmap-edit-modal .mealmap-modal-head p,
+body.dark .mealmap-add-modal .mealmap-modal-head p,
+body.dark .mealmap-edit-modal .mealmap-modal-head p,
+.dark .mealmap-add-modal .mealmap-modal-head p,
+.dark .mealmap-edit-modal .mealmap-modal-head p,
+.theme-dark .mealmap-add-modal .mealmap-modal-head p,
+.theme-dark .mealmap-edit-modal .mealmap-modal-head p,
+[data-theme='dark'] .mealmap-add-modal .mealmap-modal-head p,
+[data-theme='dark'] .mealmap-edit-modal .mealmap-modal-head p {
+  color: #cbd5e1 !important;
+}
+
+body.wgs-theme-dark .mealmap-add-modal input,
+body.wgs-theme-dark .mealmap-add-modal select,
+body.wgs-theme-dark .mealmap-add-modal textarea,
+body.wgs-theme-dark .mealmap-edit-modal input,
+body.wgs-theme-dark .mealmap-edit-modal select,
+body.wgs-theme-dark .mealmap-edit-modal textarea,
+body.dark .mealmap-add-modal input,
+body.dark .mealmap-add-modal select,
+body.dark .mealmap-add-modal textarea,
+body.dark .mealmap-edit-modal input,
+body.dark .mealmap-edit-modal select,
+body.dark .mealmap-edit-modal textarea,
+.dark .mealmap-add-modal input,
+.dark .mealmap-add-modal select,
+.dark .mealmap-add-modal textarea,
+.dark .mealmap-edit-modal input,
+.dark .mealmap-edit-modal select,
+.dark .mealmap-edit-modal textarea,
+.theme-dark .mealmap-add-modal input,
+.theme-dark .mealmap-add-modal select,
+.theme-dark .mealmap-add-modal textarea,
+.theme-dark .mealmap-edit-modal input,
+.theme-dark .mealmap-edit-modal select,
+.theme-dark .mealmap-edit-modal textarea,
+[data-theme='dark'] .mealmap-add-modal input,
+[data-theme='dark'] .mealmap-add-modal select,
+[data-theme='dark'] .mealmap-add-modal textarea,
+[data-theme='dark'] .mealmap-edit-modal input,
+[data-theme='dark'] .mealmap-edit-modal select,
+[data-theme='dark'] .mealmap-edit-modal textarea {
+  background: #ffffff !important;
+  color: #111827 !important;
+  border-color: rgba(15, 23, 42, 0.12) !important;
+  box-shadow: none !important;
+}
+
+body.wgs-theme-dark .mealmap-add-modal input::placeholder,
+body.wgs-theme-dark .mealmap-add-modal textarea::placeholder,
+body.wgs-theme-dark .mealmap-edit-modal input::placeholder,
+body.wgs-theme-dark .mealmap-edit-modal textarea::placeholder,
+body.dark .mealmap-add-modal input::placeholder,
+body.dark .mealmap-add-modal textarea::placeholder,
+body.dark .mealmap-edit-modal input::placeholder,
+body.dark .mealmap-edit-modal textarea::placeholder,
+.dark .mealmap-add-modal input::placeholder,
+.dark .mealmap-add-modal textarea::placeholder,
+.dark .mealmap-edit-modal input::placeholder,
+.dark .mealmap-edit-modal textarea::placeholder,
+.theme-dark .mealmap-add-modal input::placeholder,
+.theme-dark .mealmap-add-modal textarea::placeholder,
+.theme-dark .mealmap-edit-modal input::placeholder,
+.theme-dark .mealmap-edit-modal textarea::placeholder,
+[data-theme='dark'] .mealmap-add-modal input::placeholder,
+[data-theme='dark'] .mealmap-add-modal textarea::placeholder,
+[data-theme='dark'] .mealmap-edit-modal input::placeholder,
+[data-theme='dark'] .mealmap-edit-modal textarea::placeholder {
+  color: #64748b !important;
+}
+
+body.wgs-theme-dark .mealmap-add-modal select option,
+body.wgs-theme-dark .mealmap-edit-modal select option,
+body.dark .mealmap-add-modal select option,
+body.dark .mealmap-edit-modal select option,
+.dark .mealmap-add-modal select option,
+.dark .mealmap-edit-modal select option,
+.theme-dark .mealmap-add-modal select option,
+.theme-dark .mealmap-edit-modal select option,
+[data-theme='dark'] .mealmap-add-modal select option,
+[data-theme='dark'] .mealmap-edit-modal select option {
+  background: #ffffff !important;
+  color: #111827 !important;
+}
+
+body.wgs-theme-dark .mealmap-add-modal .mealmap-modal-head button,
+body.wgs-theme-dark .mealmap-edit-modal .mealmap-modal-head button,
+body.dark .mealmap-add-modal .mealmap-modal-head button,
+body.dark .mealmap-edit-modal .mealmap-modal-head button,
+.dark .mealmap-add-modal .mealmap-modal-head button,
+.dark .mealmap-edit-modal .mealmap-modal-head button,
+.theme-dark .mealmap-add-modal .mealmap-modal-head button,
+.theme-dark .mealmap-edit-modal .mealmap-modal-head button,
+[data-theme='dark'] .mealmap-add-modal .mealmap-modal-head button,
+[data-theme='dark'] .mealmap-edit-modal .mealmap-modal-head button {
+  color: #cbd5e1 !important;
+}
+
+body.wgs-theme-dark .mealmap-add-modal .mealmap-modal-actions button:not(.mealmap-primary-btn),
+body.wgs-theme-dark .mealmap-edit-modal .mealmap-modal-actions button:not([type='submit']),
+body.dark .mealmap-add-modal .mealmap-modal-actions button:not(.mealmap-primary-btn),
+body.dark .mealmap-edit-modal .mealmap-modal-actions button:not([type='submit']),
+.dark .mealmap-add-modal .mealmap-modal-actions button:not(.mealmap-primary-btn),
+.dark .mealmap-edit-modal .mealmap-modal-actions button:not([type='submit']),
+.theme-dark .mealmap-add-modal .mealmap-modal-actions button:not(.mealmap-primary-btn),
+.theme-dark .mealmap-edit-modal .mealmap-modal-actions button:not([type='submit']),
+[data-theme='dark'] .mealmap-add-modal .mealmap-modal-actions button:not(.mealmap-primary-btn),
+[data-theme='dark'] .mealmap-edit-modal .mealmap-modal-actions button:not([type='submit']) {
+  background: #eef2f7 !important;
+  color: #111827 !important;
+}
+
+body.wgs-theme-dark .mealmap-edit-modal .mealmap-modal-actions button[type='submit'],
+body.dark .mealmap-edit-modal .mealmap-modal-actions button[type='submit'],
+.dark .mealmap-edit-modal .mealmap-modal-actions button[type='submit'],
+.theme-dark .mealmap-edit-modal .mealmap-modal-actions button[type='submit'],
+[data-theme='dark'] .mealmap-edit-modal .mealmap-modal-actions button[type='submit'],
+body.wgs-theme-dark .mealmap-add-modal .mealmap-modal-actions .mealmap-primary-btn,
+body.dark .mealmap-add-modal .mealmap-modal-actions .mealmap-primary-btn,
+.dark .mealmap-add-modal .mealmap-modal-actions .mealmap-primary-btn,
+.theme-dark .mealmap-add-modal .mealmap-modal-actions .mealmap-primary-btn,
+[data-theme='dark'] .mealmap-add-modal .mealmap-modal-actions .mealmap-primary-btn {
+  background: #ff4f5e !important;
+  color: #ffffff !important;
+  border-color: #ff4f5e !important;
+  box-shadow: 0 14px 30px rgba(255, 79, 94, 0.22) !important;
+}
+
+body.wgs-theme-dark .mealmap-add-modal .mealmap-modal-actions button:disabled,
+body.wgs-theme-dark .mealmap-edit-modal .mealmap-modal-actions button:disabled,
+body.dark .mealmap-add-modal .mealmap-modal-actions button:disabled,
+body.dark .mealmap-edit-modal .mealmap-modal-actions button:disabled,
+.dark .mealmap-add-modal .mealmap-modal-actions button:disabled,
+.dark .mealmap-edit-modal .mealmap-modal-actions button:disabled,
+.theme-dark .mealmap-add-modal .mealmap-modal-actions button:disabled,
+.theme-dark .mealmap-edit-modal .mealmap-modal-actions button:disabled,
+[data-theme='dark'] .mealmap-add-modal .mealmap-modal-actions button:disabled,
+[data-theme='dark'] .mealmap-edit-modal .mealmap-modal-actions button:disabled {
+  opacity: 0.55 !important;
+  cursor: not-allowed !important;
+}

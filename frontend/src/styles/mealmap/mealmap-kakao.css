@@ -1,0 +1,321 @@
+/* 회식맵 기능 안의 카카오 지도 컨트롤 스타일입니다. */
+.mealmap-map-surface {
+  position: relative;
+  overflow: hidden;
+}
+
+.mealmap-map-surface .wrap_map,
+.mealmap-map-surface .root_daum_roughmap,
+.mealmap-map-surface .kakao-map,
+.mealmap-map-surface > div:not(.mealmap-grid-bg):not(.mealmap-floating-help):not(.mealmap-empty-map) {
+  color: #111827;
+}
+
+.mealmap-kakao-marker-label {
+  border: 0;
+  border-radius: 999px;
+  padding: 7px 11px;
+  background: #dc2626;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1;
+  white-space: nowrap;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.22);
+  cursor: pointer;
+  transform: translateY(-4px);
+}
+
+.mealmap-kakao-marker-label:hover,
+.mealmap-kakao-marker-label:focus-visible {
+  background: #b91c1c;
+  outline: 3px solid rgba(248, 113, 113, 0.28);
+}
+
+.mealmap-address-lookup-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.mealmap-address-lookup-row input {
+  min-width: 0;
+}
+
+.mealmap-address-lookup-row button {
+  border: 0;
+  border-radius: 12px;
+  padding: 11px 12px;
+  background: #0f172a;
+  color: #ffffff;
+  font-weight: 900;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.mealmap-address-lookup-row button:hover:not(:disabled),
+.mealmap-address-lookup-row button:focus-visible:not(:disabled) {
+  background: #1e293b;
+}
+
+.mealmap-address-lookup-row button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+body.wgs-theme-dark .mealmap-address-lookup-row button,
+body.dark .mealmap-address-lookup-row button,
+.dark .mealmap-address-lookup-row button,
+[data-theme='dark'] .mealmap-address-lookup-row button {
+  background: #dc2626;
+  color: #ffffff;
+}
+
+body.wgs-theme-dark .mealmap-address-lookup-row button:hover:not(:disabled),
+body.dark .mealmap-address-lookup-row button:hover:not(:disabled),
+.dark .mealmap-address-lookup-row button:hover:not(:disabled),
+[data-theme='dark'] .mealmap-address-lookup-row button:hover:not(:disabled) {
+  background: #b91c1c;
+}
+
+@media (max-width: 680px) {
+  .mealmap-address-lookup-row {
+    grid-template-columns: 1fr;
+  }
+  .mealmap-address-lookup-row button {
+    width: 100%;
+  }
+}
+
+
+.mealmap-map-surface {
+  position: relative !important;
+}
+
+.mealmap-real-map-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  min-height: 100%;
+  height: 100%;
+  background: #eef6ff;
+}
+
+.mealmap-real-map-layer > div,
+.mealmap-real-map-layer .map_wrap,
+.mealmap-real-map-layer .MapWalker {
+  color: #111827;
+}
+
+.mealmap-kakao-map-message {
+  position: absolute;
+  z-index: 5;
+  left: 22px;
+  top: 22px;
+  max-width: 390px;
+  padding: 16px 18px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid rgba(203, 213, 225, 0.9);
+  color: #111827;
+  box-shadow: 0 18px 42px rgba(15, 23, 42, 0.16);
+  backdrop-filter: blur(8px);
+}
+
+.mealmap-kakao-map-message strong,
+.mealmap-kakao-map-message span {
+  display: block;
+  color: #111827 !important;
+}
+
+.mealmap-kakao-map-message strong {
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.mealmap-kakao-map-message span {
+  margin-top: 6px;
+  font-size: 13px;
+  line-height: 1.55;
+  font-weight: 800;
+}
+
+.mealmap-kakao-map-message-error {
+  border-color: rgba(255, 79, 94, 0.32);
+  box-shadow: 0 18px 42px rgba(255, 79, 94, 0.16);
+}
+
+body.wgs-theme-dark .mealmap-real-map-layer,
+body.dark .mealmap-real-map-layer,
+.dark .mealmap-real-map-layer,
+[data-theme='dark'] .mealmap-real-map-layer {
+  background: #eef6ff !important;
+  background-image: none !important;
+}
+
+body.wgs-theme-dark .mealmap-map-surface,
+body.dark .mealmap-map-surface,
+.dark .mealmap-map-surface,
+[data-theme='dark'] .mealmap-map-surface {
+  background-image: none !important;
+}
+
+body.wgs-theme-dark .mealmap-kakao-map-message,
+body.dark .mealmap-kakao-map-message,
+.dark .mealmap-kakao-map-message,
+[data-theme='dark'] .mealmap-kakao-map-message {
+  background: rgba(255, 255, 255, 0.95) !important;
+  color: #111827 !important;
+  border-color: rgba(203, 213, 225, 0.92) !important;
+}
+
+body.wgs-theme-dark .mealmap-kakao-map-message strong,
+body.wgs-theme-dark .mealmap-kakao-map-message span,
+body.dark .mealmap-kakao-map-message strong,
+body.dark .mealmap-kakao-map-message span,
+.dark .mealmap-kakao-map-message strong,
+.dark .mealmap-kakao-map-message span,
+[data-theme='dark'] .mealmap-kakao-map-message strong,
+[data-theme='dark'] .mealmap-kakao-map-message span {
+  color: #111827 !important;
+}
+
+
+.mealmap-kakao-debug-hint {
+  display: block;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed rgba(148, 163, 184, 0.55);
+  color: #475569 !important;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.45;
+}
+
+body.wgs-theme-dark .mealmap-kakao-debug-hint,
+body.dark .mealmap-kakao-debug-hint,
+.dark .mealmap-kakao-debug-hint,
+[data-theme='dark'] .mealmap-kakao-debug-hint {
+  color: #475569 !important;
+}
+
+
+.mealmap-external {
+  background: #fee500 !important;
+  color: #181600 !important;
+  border-color: rgba(24, 22, 0, 0.12) !important;
+  box-shadow: 0 14px 30px rgba(254, 229, 0, 0.22) !important;
+}
+
+.dark .mealmap-external,
+body.dark .mealmap-external,
+.theme-dark .mealmap-external,
+[data-theme='dark'] .mealmap-external {
+  background: #fee500 !important;
+  color: #181600 !important;
+  border-color: rgba(254, 229, 0, 0.25) !important;
+}
+
+.mealmap-keyword-lookup {
+  gap: 8px;
+}
+
+.mealmap-lookup-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.mealmap-lookup-row input {
+  min-width: 0;
+}
+
+.mealmap-lookup-row button,
+.mealmap-address-lookup-row button {
+  min-height: 42px;
+  border: 0;
+  border-radius: 12px;
+  padding: 0 14px;
+  background: #111827;
+  color: #fff;
+  font-weight: 900;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.mealmap-lookup-row button:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+
+.mealmap-lookup-results {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.mealmap-lookup-result {
+  width: 100%;
+  border: 1px solid rgba(17, 24, 39, 0.12);
+  border-radius: 14px;
+  background: #fffdf2;
+  color: #111827;
+  padding: 10px 12px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.mealmap-lookup-result:hover {
+  border-color: rgba(254, 229, 0, 0.75);
+  box-shadow: 0 8px 22px rgba(17, 24, 39, 0.08);
+}
+
+.mealmap-lookup-result strong,
+.mealmap-lookup-result span {
+  display: block;
+}
+
+.mealmap-lookup-result strong {
+  font-weight: 900;
+  color: #111827;
+}
+
+.mealmap-lookup-result span {
+  margin-top: 3px;
+  color: #475569;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.dark .mealmap-modal .mealmap-lookup-row input,
+.dark .mealmap-modal .mealmap-lookup-result,
+body.dark .mealmap-modal .mealmap-lookup-row input,
+body.dark .mealmap-modal .mealmap-lookup-result,
+.theme-dark .mealmap-modal .mealmap-lookup-row input,
+.theme-dark .mealmap-modal .mealmap-lookup-result,
+[data-theme='dark'] .mealmap-modal .mealmap-lookup-row input,
+[data-theme='dark'] .mealmap-modal .mealmap-lookup-result {
+  background: #fff !important;
+  color: #111827 !important;
+}
+
+.dark .mealmap-modal .mealmap-lookup-result span,
+body.dark .mealmap-modal .mealmap-lookup-result span,
+.theme-dark .mealmap-modal .mealmap-lookup-result span,
+[data-theme='dark'] .mealmap-modal .mealmap-lookup-result span {
+  color: #475569 !important;
+}
+
+.mealmap-map-head {
+  align-items: center;
+}
+
+@media (max-width: 720px) {
+  .mealmap-lookup-row,
+  .mealmap-address-lookup-row {
+    grid-template-columns: 1fr;
+  }
+}
