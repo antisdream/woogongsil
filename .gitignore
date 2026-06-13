@@ -1,0 +1,46 @@
+# 데이터베이스 백업과 운영 내보내기 파일은 저장소 외부에서 관리합니다.
+db_backup/
+*.sql
+*.dump
+*.bak
+
+data
+
+# 전처리 원본 데이터는 저장소 외부에서 관리합니다.
+preprocess/*.xlsx
+
+# 로컬 환경 파일에는 비밀값과 배포 환경별 설정이 들어갑니다.
+.env
+.env.*
+!.env.example
+!backend/.env.example
+!backend/.env.*.example
+!frontend/.env.*.example
+
+# 런타임 JSON 저장소는 서버 실행 또는 DB 마이그레이션 과정에서 생성됩니다.
+backend/users_data.json
+backend/posts_data.json
+backend/ipep_wrong_notes.json
+backend/ipep_rankings.json
+backend/ranking_*.json
+backend/admin_maintenance_mode.json
+
+# 의존성 및 생성 파일
+node_modules/
+backend/node_modules/
+frontend/node_modules/
+frontend/dist/
+dist/
+
+# 로컬 전용 자산과 문제 이미지는 저장소 외부에서 관리합니다.
+frontend/public/AppleSDGothicNeo_Font/
+frontend/public/question_image/
+backend/public/ipep-img/
+
+# 로그
+*.log
+npm-debug.log*
+
+# 로컬 임시 파일
+*_tmp.*
+*.tmp
