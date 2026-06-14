@@ -71,6 +71,7 @@
 
 - AWS Lightsail 배포를 기준으로 로컬 검증, 환경변수 관리, 서버 실행 흐름을 맞춥니다.
 - Docker 기반 부하 테스트 기록을 운영 전 성능 검증 자료로 관리합니다.
+- 성능 테스트 실행 환경과 k6, Prometheus, Grafana 설정은 [antisdream/woogongsil-loadtest-lab](https://github.com/antisdream/woogongsil-loadtest-lab)에서 별도로 관리합니다.
 - `npm run check`, `npm run lint`, `npm run build`를 배포 전 기본 검증 절차로 사용합니다.
 
 ## 프로젝트 구성
@@ -143,6 +144,7 @@ AWS Lightsail 배포 시에는 프론트엔드 빌드 결과와 백엔드 서버
 
 - [PATCH_NOTES.md](./PATCH_NOTES.md): 게시판 공지와 운영 기능 반영 기록을 기준으로 정리한 서비스 변경 이력
 - [docs/performance/README.md](./docs/performance/README.md): Docker 부하 테스트와 성능 검증 기록
+- [antisdream/woogongsil-loadtest-lab](https://github.com/antisdream/woogongsil-loadtest-lab): k6, Prometheus, Grafana 기반 성능 테스트 실행 환경과 회차별 기록
 - [backend/.env.example](./backend/.env.example): 백엔드 운영 환경변수 예시
 - [backend/.env.mealmap.kakao.example](./backend/.env.mealmap.kakao.example): 회식맵 카카오 API 백엔드 설정 예시
 - [frontend/.env.local.mealmap.kakao.example](./frontend/.env.local.mealmap.kakao.example): 회식맵 카카오 API 프론트엔드 설정 예시
