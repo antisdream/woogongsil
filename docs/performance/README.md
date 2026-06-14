@@ -9,6 +9,12 @@
 - 각 테스트는 별도 문서로 관리해 회차별 목적과 확인 항목을 추적할 수 있게 합니다.
 - AWS Lightsail 반영 전에는 이 문서와 실제 서버 검증 결과를 함께 확인합니다.
 
+## 테스트 도구 저장소
+
+성능 테스트 실행 환경과 k6, Prometheus, Grafana 설정은 별도 저장소에서 관리합니다.
+
+- [antisdream/woogongsil-loadtest-lab](https://github.com/antisdream/woogongsil-loadtest-lab)
+
 ## 테스트 기록
 
 | 순서 | 게시일 | 원문 제목 | 저장소 문서 | 원문 |
