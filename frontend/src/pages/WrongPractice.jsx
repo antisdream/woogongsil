@@ -1,7 +1,8 @@
 // 오답노트 라우트 페이지 컴포넌트입니다.
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import useScreenSettings from '../useScreenSettings';
 
 // 오답노트 공통 상수
 // ------------------------------------------------------------
@@ -11,7 +12,8 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom';
 // ipep_random : 실기 문제은행
 // ipep_past : 실기 기출문제
 const API_BASE = '';
-const TAB_LABELS = {
+const WRONG_TABS = ['random', 'past', 'ipep_random', 'ipep_past'];
+const DEFAULT_TAB_LABELS = {
     random: '필기 문제은행',
     past: '필기 기출문제',
     ipep_random: '실기 문제은행',
@@ -23,6 +25,14 @@ const TAB_COLORS = {
     past: '#10b981',
     ipep_random: '#f59e0b',
     ipep_past: '#8b5cf6'
+};
+
+const replaceSettingTokens = (text, values = {}) => {
+    let result = String(text || '');
+    Object.entries(values).forEach(([key, value]) => {
+        result = result.replaceAll(`{${key}}`, String(value ?? ''));
+    });
+    return result;
 };
 
 // 오답노트 탭을 /wrong/written-bank, /wrong/written-past, /wrong/ipep-bank, /wrong/ipep-past 주소와 연결합니다.
@@ -140,7 +150,7 @@ function getExplanation(note) {
     return note?.explanation || note?.explanation_text || note?.explanationText || '';
 }
 
-function getOptions(note) {
+function getOptions(note, formatOptionNumber = (number) => `${number}번`) {
     // 필기 오답노트 선택지 보정 처리합니다
     // ------------------------------------------------------------
     // 일부 필기 문제는 선택지 문장이 DB option_1~option_4에 저장되지 않고,
@@ -162,7 +172,7 @@ function getOptions(note) {
     // 선택지 중 일부만 비어 있어도 버튼 개수는 4개가 유지되어야 합니다.
     // 비어 있는 선택지는 '1번', '2번'처럼 기본 표시명을 넣어줍니다.
     if (hasAnyOptionText) {
-        return rawOptions.map((text, index) => text || `${index + 1}번`);
+        return rawOptions.map((text, index) => text || formatOptionNumber(index + 1));
     }
 
     const correctLabel = String(note?.correct_label || note?.answer || '').trim();
@@ -171,7 +181,7 @@ function getOptions(note) {
 
     // 보기 이미지형 객관식 문제는 선택지 텍스트가 없어도 1~4번 버튼이 필요합니다.
     if (hasFourChoiceCorrectLabel || hasQuestionImage) {
-        return ['1번', '2번', '3번', '4번'];
+        return [1, 2, 3, 4].map(formatOptionNumber);
     }
 
     // 예외적으로 객관식 판단이 어려운 경우에는 현재 방식과 동일하게 선택지를 표시하지 않습니다.
@@ -179,22 +189,22 @@ function getOptions(note) {
 }
 
 // 필기 subject_id는 현재 프로젝트에서 끝자리 0~4로 과목을 구분합니다.
-function getWrittenSubjectInfo(note) {
+function getWrittenSubjectInfo(note, subjectLabels = {}) {
     const subjectId = note?.subject_id || note?.subject || '';
     const explicitName = note?.subject_name || note?.subjectName || '';
     const lastChar = String(subjectId || '').trim().slice(-1);
 
     const map = {
-        0: { no: 1, name: '소프트웨어 설계' },
-        1: { no: 2, name: '소프트웨어 개발' },
-        2: { no: 3, name: '데이터베이스구축' },
-        3: { no: 4, name: '프로그래밍 언어 활용' },
-        4: { no: 5, name: '정보시스템 구축 관리' }
+        0: { no: 1, name: subjectLabels.subject_0 || '소프트웨어 설계' },
+        1: { no: 2, name: subjectLabels.subject_1 || '소프트웨어 개발' },
+        2: { no: 3, name: subjectLabels.subject_2 || '데이터베이스구축' },
+        3: { no: 4, name: subjectLabels.subject_3 || '프로그래밍 언어 활용' },
+        4: { no: 5, name: subjectLabels.subject_4 || '정보시스템 구축 관리' }
     };
 
     const mapped = map[lastChar];
     if (mapped) return { no: mapped.no, name: explicitName || mapped.name };
-    return { no: subjectId || '?', name: explicitName || '과목 정보 없음' };
+    return { no: subjectId || '?', name: explicitName || subjectLabels.unknown || '과목 정보 없음' };
 }
 
 function getWrittenQuestionNo(note) {
@@ -202,17 +212,21 @@ function getWrittenQuestionNo(note) {
     return note?.info_id || note?.qno || note?.question_no || note?.questionNo || getQuestionId(note);
 }
 
-function getIpepSubjectLabel(note) {
+function getIpepSubjectLabel(note, helpers = {}) {
+    const t = helpers.t || ((key, fallback) => fallback);
+    const formatSetting = helpers.formatSetting || ((key, fallback, values) => replaceSettingTokens(fallback, values));
     // 실기 문제은행의 '01. 키워드 찾기'에서 01은 subject_code이고,
     // subject_no는 해당 과목 안의 문제 번호입니다.
     const rawSubjectCode = note?.subject_code || note?.subjectCode || '';
     const subjectCode = rawSubjectCode ? String(rawSubjectCode).padStart(2, '0') : '';
     const subjectName = note?.subject_name || note?.subjectName || note?.subject || '';
 
-    if (subjectCode && subjectName) return `${subjectCode}. ${subjectName}`;
+    if (subjectCode && subjectName) {
+        return formatSetting('source.ipep_subject_with_code', '{code}. {name}', { code: subjectCode, name: subjectName });
+    }
     if (subjectName) return subjectName;
-    if (subjectCode) return `${subjectCode}. 실기 과목`;
-    return '실기 과목 정보 없음';
+    if (subjectCode) return formatSetting('source.ipep_subject_code_only', '{code}. 실기 과목', { code: subjectCode });
+    return t('source.ipep_subject_unknown', '실기 과목 정보 없음');
 }
 
 function getIpepQuestionNo(note, index = 0, activeTab = '') {
@@ -224,25 +238,41 @@ function getIpepQuestionNo(note, index = 0, activeTab = '') {
 }
 
 // 문제 상단 출처 라벨을 요청 형식에 맞게 만든다.
-function getSourceLabel(note, activeTab, index = 0) {
+function getSourceLabel(note, activeTab, index = 0, helpers = {}) {
     if (!note) return '';
+    const t = helpers.t || ((key, fallback) => fallback);
+    const formatSetting = helpers.formatSetting || ((key, fallback, values) => replaceSettingTokens(fallback, values));
+    const subjectLabels = helpers.subjectLabels || {};
 
     if (activeTab === 'random' || activeTab === 'past') {
-        const year = note.year || note.exam_year || '연도미상';
-        const session = note.session || note.exam_session || '회차미상';
-        const subject = getWrittenSubjectInfo(note);
+        const year = note.year || note.exam_year || t('source.unknown_year', '연도미상');
+        const session = note.session || note.exam_session || t('source.unknown_session', '회차미상');
+        const subject = getWrittenSubjectInfo(note, subjectLabels);
         const qno = getWrittenQuestionNo(note);
-        return `${year}년 ${session}회차 ${subject.no}과목 ${subject.name} ${qno}번문제`;
+        return formatSetting('source.written', '{year}년 {session}회차 {subjectNo}과목 {subjectName} {questionNo}번문제', {
+            year,
+            session,
+            subjectNo: subject.no,
+            subjectName: subject.name,
+            questionNo: qno
+        });
     }
 
     if (activeTab === 'ipep_random') {
-        return `${getIpepSubjectLabel(note)} ${getIpepQuestionNo(note, index, activeTab)}번문제`;
+        return formatSetting('source.ipep_random', '{subject} {questionNo}번문제', {
+            subject: getIpepSubjectLabel(note, helpers),
+            questionNo: getIpepQuestionNo(note, index, activeTab)
+        });
     }
 
     if (activeTab === 'ipep_past') {
-        const year = note.year || note.exam_year || '연도미상';
-        const session = note.session || note.exam_session || '회차미상';
-        return `${year}년 ${session}회차 ${getIpepQuestionNo(note, index, activeTab)}번문제`;
+        const year = note.year || note.exam_year || t('source.unknown_year', '연도미상');
+        const session = note.session || note.exam_session || t('source.unknown_session', '회차미상');
+        return formatSetting('source.ipep_past', '{year}년 {session}회차 {questionNo}번문제', {
+            year,
+            session,
+            questionNo: getIpepQuestionNo(note, index, activeTab)
+        });
     }
 
     return '';
@@ -279,7 +309,7 @@ function getIpepChoiceImageUrl(note) {
     return `/ipep-img/${imageType}/${encodeURIComponent(fileName)}`;
 }
 
-function renderIpepChoiceImage(note) {
+function renderIpepChoiceImage(note, imageAlt = '실기 문제 이미지') {
     const imgUrl = getIpepChoiceImageUrl(note);
     if (!imgUrl) return null;
 
@@ -287,7 +317,7 @@ function renderIpepChoiceImage(note) {
         <div style={{ marginTop: '14px' }}>
             <img
                 src={imgUrl}
-                alt="실기 문제 이미지" style={{ maxWidth: '100%', maxHeight: '520px', objectFit: 'contain', background: 'white', borderRadius: '8px', display: 'block' }}
+                alt={imageAlt} style={{ maxWidth: '100%', maxHeight: '520px', objectFit: 'contain', background: 'white', borderRadius: '8px', display: 'block' }}
                 onError={(e) => { e.currentTarget.style.display = 'none'; }}
             />
         </div>
@@ -319,10 +349,41 @@ const WrongPractice = () => {
     const location = useLocation();
     const { wrongTab } = useParams();
     const userId = sessionStorage.getItem('userId') || '';
+    const { getSetting } = useScreenSettings('wrong');
+    const t = useCallback((key, fallback) => getSetting(key, fallback), [getSetting]);
+    const formatSetting = useCallback((key, fallback, values = {}) => (
+        replaceSettingTokens(t(key, fallback), values)
+    ), [t]);
+
+    const tabLabels = useMemo(() => ({
+        random: t('tabs.random', DEFAULT_TAB_LABELS.random),
+        past: t('tabs.past', DEFAULT_TAB_LABELS.past),
+        ipep_random: t('tabs.ipep_random', DEFAULT_TAB_LABELS.ipep_random),
+        ipep_past: t('tabs.ipep_past', DEFAULT_TAB_LABELS.ipep_past)
+    }), [t]);
+
+    const writtenSubjectLabels = useMemo(() => ({
+        subject_0: t('subjects.written_0', '소프트웨어 설계'),
+        subject_1: t('subjects.written_1', '소프트웨어 개발'),
+        subject_2: t('subjects.written_2', '데이터베이스구축'),
+        subject_3: t('subjects.written_3', '프로그래밍 언어 활용'),
+        subject_4: t('subjects.written_4', '정보시스템 구축 관리'),
+        unknown: t('subjects.written_unknown', '과목 정보 없음')
+    }), [t]);
+
+    const sourceLabelHelpers = useMemo(() => ({
+        t,
+        formatSetting,
+        subjectLabels: writtenSubjectLabels
+    }), [formatSetting, t, writtenSubjectLabels]);
+
+    const formatOptionNumber = useCallback((number) => (
+        formatSetting('question.option_number', '{number}번', { number })
+    ), [formatSetting]);
 
     const queryTab = new URLSearchParams(location.search).get('tab');
     const routeTab = WRONG_ROUTE_TO_TAB[wrongTab];
-    const initialTab = TAB_LABELS[routeTab] ? routeTab : (TAB_LABELS[queryTab] ? queryTab : 'random');
+    const initialTab = WRONG_TABS.includes(routeTab) ? routeTab : (WRONG_TABS.includes(queryTab) ? queryTab : 'random');
 
     const [activeTab, setActiveTab] = useState(initialTab);
 
@@ -389,7 +450,7 @@ const WrongPractice = () => {
 
     async function fetchWrongNotes() {
         if (!userId) {
-            alert('로그인이 필요합니다.');
+            alert(t('messages.login_required', '로그인이 필요합니다.'));
             navigate('/');
             return;
         }
@@ -408,7 +469,7 @@ const WrongPractice = () => {
             });
         } catch (error) {
             console.error('오답노트 조회 실패:', error);
-            alert('오답노트를 불러오지 못했습니다. 서버 상태를 확인해 주세요.');
+            alert(t('messages.load_failed', '오답노트를 불러오지 못했습니다. 서버 상태를 확인해 주세요.'));
         } finally {
             setIsLoading(false);
         }
@@ -469,7 +530,7 @@ const WrongPractice = () => {
 
     async function handleDeleteCurrent() {
         if (!currentNote) return;
-        if (!window.confirm('현재 오답 1개를 삭제할까요?')) return;
+        if (!window.confirm(t('messages.confirm_delete_current', '현재 오답 1개를 삭제할까요?'))) return;
 
         try {
             if (isWrittenTab) {
@@ -495,20 +556,36 @@ const WrongPractice = () => {
             setIpepAnswer('');
         } catch (error) {
             console.error('현재 오답 삭제 실패:', error);
-            alert('오답 삭제 중 오류가 발생했습니다.');
+            alert(t('messages.delete_failed', '오답 삭제 중 오류가 발생했습니다.'));
         }
     }
 
     async function handleDeleteAllInTab() {
-        const tabName = TAB_LABELS[activeTab];
+        const tabName = tabLabels[activeTab];
         const isFilteredWrittenPast = activeTab === 'past' && (writtenPastFilter.year !== 'ALL' || writtenPastFilter.session !== 'ALL');
         const isFilteredIpepPast = activeTab === 'ipep_past' && (ipepPastFilter.year !== 'ALL' || ipepPastFilter.session !== 'ALL');
 
         let targetText = tabName;
-        if (isFilteredWrittenPast) targetText += ` ${writtenPastFilter.year === 'ALL'? '전체연도' : `${writtenPastFilter.year}년`} ${writtenPastFilter.session === 'ALL'? '전체회차' : `${writtenPastFilter.session}회차`}`;
-        if (isFilteredIpepPast) targetText += ` ${ipepPastFilter.year === 'ALL'? '전체연도' : `${ipepPastFilter.year}년`} ${ipepPastFilter.session === 'ALL'? '전체회차' : `${ipepPastFilter.session}회차`}`;
+        if (isFilteredWrittenPast) {
+            const yearText = writtenPastFilter.year === 'ALL'
+                ? t('filter.all_year_compact', '전체연도')
+                : formatSetting('filter.year_value', '{year}년', { year: writtenPastFilter.year });
+            const sessionText = writtenPastFilter.session === 'ALL'
+                ? t('filter.all_session_compact', '전체회차')
+                : formatSetting('filter.session_value', '{session}회차', { session: writtenPastFilter.session });
+            targetText += ` ${yearText} ${sessionText}`;
+        }
+        if (isFilteredIpepPast) {
+            const yearText = ipepPastFilter.year === 'ALL'
+                ? t('filter.all_year_compact', '전체연도')
+                : formatSetting('filter.year_value', '{year}년', { year: ipepPastFilter.year });
+            const sessionText = ipepPastFilter.session === 'ALL'
+                ? t('filter.all_session_compact', '전체회차')
+                : formatSetting('filter.session_value', '{session}회차', { session: ipepPastFilter.session });
+            targetText += ` ${yearText} ${sessionText}`;
+        }
 
-        if (!window.confirm(`${targetText} 오답 ${visibleNotes.length}개를 삭제할까요?`)) return;
+        if (!window.confirm(formatSetting('messages.confirm_delete_all', '{target} 오답 {count}개를 삭제할까요?', { target: targetText, count: visibleNotes.length }))) return;
 
         try {
             if (isWrittenTab) {
@@ -534,13 +611,13 @@ const WrongPractice = () => {
             setIpepAnswer('');
         } catch (error) {
             console.error('현재 탭 전체 삭제 실패:', error);
-            alert('전체 삭제 중 오류가 발생했습니다.');
+            alert(t('messages.delete_all_failed', '전체 삭제 중 오류가 발생했습니다.'));
         }
     }
 
     function handleWrittenCheck() {
         if (!currentNote) return;
-        if (!selectedAnswer) return alert('정답을 선택해 주세요.');
+        if (!selectedAnswer) return alert(t('messages.need_written_answer', '정답을 선택해 주세요.'));
 
         const correct = String(selectedAnswer) === String(currentNote.correct_label || currentNote.answer);
         setResult({
@@ -552,7 +629,7 @@ const WrongPractice = () => {
 
     async function handleIpepCheck() {
         if (!currentNote) return;
-        if (!String(ipepAnswer || '').trim()) return alert('실기 답안을 입력해 주세요.');
+        if (!String(ipepAnswer || '').trim()) return alert(t('messages.need_ipep_answer', '실기 답안을 입력해 주세요.'));
 
         setIsChecking(true);
         try {
@@ -565,7 +642,10 @@ const WrongPractice = () => {
             const data = res.data || {};
             if (data.requiresSelfCheck) {
                 const ok = window.confirm(
-                    `[자기채점 필요]\n\n내 답안:\n${ipepAnswer}\n\n정답 예시:\n${data.correctAnswer || getCorrectAnswer(currentNote)}\n\n정답으로 처리할까요?`
+                    formatSetting('messages.self_check_confirm', '[자기채점 필요]\n\n내 답안:\n{userAnswer}\n\n정답 예시:\n{correctAnswer}\n\n정답으로 처리할까요?', {
+                        userAnswer: ipepAnswer,
+                        correctAnswer: data.correctAnswer || getCorrectAnswer(currentNote)
+                    })
                 );
                 setResult({
                     isCorrect: ok,
@@ -585,7 +665,7 @@ const WrongPractice = () => {
             }
         } catch (error) {
             console.error('실기 오답 채점 실패:', error);
-            alert('실기 오답 채점 중 오류가 발생했습니다.');
+            alert(t('messages.ipep_check_failed', '실기 오답 채점 중 오류가 발생했습니다.'));
         } finally {
             setIsChecking(false);
         }
@@ -602,7 +682,7 @@ const WrongPractice = () => {
     }
 
     function renderWrittenQuestion() {
-        const options = getOptions(currentNote);
+        const options = getOptions(currentNote, formatOptionNumber);
         const correctAnswer = String(currentNote?.correct_label || currentNote?.answer || '');
 
         return (
@@ -615,7 +695,7 @@ const WrongPractice = () => {
                     <div style={{ textAlign: 'center', marginBottom: '16px' }}>
                         <img
                             src={`/question_image/${currentNote.question_img}`}
-                            alt="필기 문제 이미지" style={{ maxWidth: '100%', maxHeight: '420px', objectFit: 'contain', background: 'white', borderRadius: '8px' }}
+                            alt={t('image.written_alt', '필기 문제 이미지')} style={{ maxWidth: '100%', maxHeight: '420px', objectFit: 'contain', background: 'white', borderRadius: '8px' }}
                             onError={(e) => { e.currentTarget.style.display = 'none'; }}
                         />
                     </div>
@@ -660,7 +740,7 @@ const WrongPractice = () => {
                     disabled={Boolean(result)}
                     style={{ ...buttonStyle, width: '100%', background: '#059669', marginTop: '18px', opacity: result ? 0.65 : 1 }}
                 >
-                    정답 확인하기
+                    {t('buttons.check_answer', '정답 확인하기')}
                 </button>
             </>
         );
@@ -671,14 +751,14 @@ const WrongPractice = () => {
             <>
                 <div style={{ background: 'var(--wgs-wrong-question-bg)', border: '1px solid var(--wgs-wrong-border)', borderRadius: '10px', padding: '16px', marginBottom: '16px', lineHeight: 1.7 }}>
                     <strong style={{ color: 'var(--wgs-title)' }}>Q. </strong>{getQuestionText(currentNote)}
-                    {renderIpepChoiceImage(currentNote)}
+                    {renderIpepChoiceImage(currentNote, t('image.ipep_alt', '실기 문제 이미지'))}
                 </div>
 
                 <textarea
                     value={ipepAnswer}
                     onChange={(e) => setIpepAnswer(e.target.value)}
                     disabled={Boolean(result) || isChecking}
-                    placeholder="실기 답안을 입력해 주세요." style={{ width: '100%', minHeight: '130px', boxSizing: 'border-box', background: 'var(--wgs-wrong-input-bg)', color: 'var(--wgs-wrong-text)', border: '1px solid var(--wgs-wrong-border)', borderRadius: '10px', padding: '14px', lineHeight: 1.6, resize: 'vertical' }}
+                    placeholder={t('form.ipep_answer_placeholder', '실기 답안을 입력해 주세요.')} style={{ width: '100%', minHeight: '130px', boxSizing: 'border-box', background: 'var(--wgs-wrong-input-bg)', color: 'var(--wgs-wrong-text)', border: '1px solid var(--wgs-wrong-border)', borderRadius: '10px', padding: '14px', lineHeight: 1.6, resize: 'vertical' }}
                 />
 
                 <button
@@ -686,7 +766,7 @@ const WrongPractice = () => {
                     disabled={Boolean(result) || isChecking}
                     style={{ ...buttonStyle, width: '100%', background: '#059669', marginTop: '14px', opacity: result || isChecking ? 0.65 : 1 }}
                 >
-                    {isChecking ? '채점 중...' : '정답 확인하기'}
+                    {isChecking ? t('buttons.checking', '채점 중...') : t('buttons.check_answer', '정답 확인하기')}
                 </button>
             </>
         );
@@ -696,18 +776,18 @@ const WrongPractice = () => {
         if (activeTab === 'past') {
             return (
                 <section style={{ ...boxStyle, marginTop: '14px', marginBottom: '14px' }}>
-                    <h4 style={{ color: 'var(--wgs-title)', margin: '0 0 12px 0' }}>필기 기출 회차 필터</h4>
+                    <h4 style={{ color: 'var(--wgs-title)', margin: '0 0 12px 0' }}>{t('filter.written_past_title', '필기 기출 회차 필터')}</h4>
                     <div className="wrong-note-filter-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '12px' }}>
                         <select value={writtenPastFilter.year} onChange={(e) => setWrittenPastFilter({ year: e.target.value, session: 'ALL' })} style={selectStyle}>
-                            <option value="ALL">전체 연도</option>
-                            {writtenPastYearOptions.map(year => <option key={year} value={year}>{year}년</option>)}
+                            <option value="ALL">{t('filter.all_year', '전체 연도')}</option>
+                            {writtenPastYearOptions.map(year => <option key={year} value={year}>{formatSetting('filter.year_value', '{year}년', { year })}</option>)}
                         </select>
                         <select value={writtenPastFilter.session} onChange={(e) => setWrittenPastFilter(prev => ({ ...prev, session: e.target.value }))} style={selectStyle}>
-                            <option value="ALL">전체 회차</option>
-                            {writtenPastSessionOptions.map(session => <option key={session} value={session}>{session}회차</option>)}
+                            <option value="ALL">{t('filter.all_session', '전체 회차')}</option>
+                            {writtenPastSessionOptions.map(session => <option key={session} value={session}>{formatSetting('filter.session_value', '{session}회차', { session })}</option>)}
                         </select>
                     </div>
-                    <button onClick={() => setWrittenPastFilter({ year: 'ALL', session: 'ALL' })} style={{ ...buttonStyle, background: 'var(--wgs-button-muted)', marginTop: '12px' }}>필터 초기화</button>
+                    <button onClick={() => setWrittenPastFilter({ year: 'ALL', session: 'ALL' })} style={{ ...buttonStyle, background: 'var(--wgs-button-muted)', marginTop: '12px' }}>{t('buttons.reset_filter', '필터 초기화')}</button>
                 </section>
             );
         }
@@ -716,18 +796,18 @@ const WrongPractice = () => {
             const sessions = ipepPastSessionOptions;
             return (
                 <section style={{ ...boxStyle, marginTop: '14px', marginBottom: '14px' }}>
-                    <h4 style={{ color: 'var(--wgs-title)', margin: '0 0 12px 0' }}>실기 기출 회차 필터</h4>
+                    <h4 style={{ color: 'var(--wgs-title)', margin: '0 0 12px 0' }}>{t('filter.ipep_past_title', '실기 기출 회차 필터')}</h4>
                     <div className="wrong-note-filter-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '12px' }}>
                         <select value={ipepPastFilter.year} onChange={(e) => setIpepPastFilter({ year: e.target.value, session: 'ALL' })} style={selectStyle}>
-                            <option value="ALL">전체 연도</option>
-                            {ipepPastYearOptions.map(year => <option key={year} value={year}>{year}년</option>)}
+                            <option value="ALL">{t('filter.all_year', '전체 연도')}</option>
+                            {ipepPastYearOptions.map(year => <option key={year} value={year}>{formatSetting('filter.year_value', '{year}년', { year })}</option>)}
                         </select>
                         <select value={ipepPastFilter.session} onChange={(e) => setIpepPastFilter(prev => ({ ...prev, session: e.target.value }))} style={selectStyle}>
-                            <option value="ALL">전체 회차</option>
-                            {sessions.map(session => <option key={session} value={session}>{session}회차</option>)}
+                            <option value="ALL">{t('filter.all_session', '전체 회차')}</option>
+                            {sessions.map(session => <option key={session} value={session}>{formatSetting('filter.session_value', '{session}회차', { session })}</option>)}
                         </select>
                     </div>
-                    <button onClick={() => setIpepPastFilter({ year: 'ALL', session: 'ALL' })} style={{ ...buttonStyle, background: 'var(--wgs-button-muted)', marginTop: '12px' }}>필터 초기화</button>
+                    <button onClick={() => setIpepPastFilter({ year: 'ALL', session: 'ALL' })} style={{ ...buttonStyle, background: 'var(--wgs-button-muted)', marginTop: '12px' }}>{t('buttons.reset_filter', '필터 초기화')}</button>
                 </section>
             );
         }
@@ -736,36 +816,36 @@ const WrongPractice = () => {
     }
 
     if (isLoading) {
-        return <div className="wrong-note-page wgs-typography-scope" style={{ color: 'var(--wgs-wrong-text)', textAlign: 'center', marginTop: '50px' }}>오답노트를 불러오는 중입니다...</div>;
+        return <div className="wrong-note-page wgs-typography-scope" style={{ color: 'var(--wgs-wrong-text)', textAlign: 'center', marginTop: '50px' }}>{t('messages.loading', '오답노트를 불러오는 중입니다...')}</div>;
     }
 
     return (
         <div
             className="wrong-note-page wgs-typography-scope" style={{ width: '100%', maxWidth: '1100px', margin: '30px auto', color: 'var(--wgs-wrong-text)', boxSizing: 'border-box' }}
         >
-            <button onClick={() => navigate('/mypage')} style={{ ...buttonStyle, background: 'var(--wgs-button-muted)', marginBottom: '18px' }}>마이페이지</button>
+            <button onClick={() => navigate('/mypage')} style={{ ...buttonStyle, background: 'var(--wgs-button-muted)', marginBottom: '18px' }}>{t('buttons.mypage', '마이페이지')}</button>
 
             <section style={{ ...boxStyle, display: 'flex', justifyContent: 'space-between', gap: '14px', alignItems: 'center', flexWrap: 'wrap' }}>
                 <div>
                     {/* 오답노트 제목은 다른 학습 페이지와 같은 제목 체계를 사용합니다. */}
-                    <h2 className="wgs-page-title" style={{ color: 'var(--wgs-blue)', margin: '0 0 12px 0', fontSize: '32px' }}> 오답노트 응시</h2>
-                    <p style={{ color: 'var(--wgs-wrong-muted)', margin: 0 }}>필기/실기, 문제은행/기출문제를 나눠서 복습합니다.</p>
+                    <h2 className="wgs-page-title" style={{ color: 'var(--wgs-blue)', margin: '0 0 12px 0', fontSize: '32px' }}>{t('page.title', ' 오답노트 응시')}</h2>
+                    <p style={{ color: 'var(--wgs-wrong-muted)', margin: 0 }}>{t('page.description', '필기/실기, 문제은행/기출문제를 나눠서 복습합니다.')}</p>
                 </div>
                 <button onClick={handleDeleteAllInTab} disabled={visibleNotes.length === 0} style={{ ...buttonStyle, background: '#ef4444', opacity: visibleNotes.length === 0 ? 0.5 : 1 }}>
-                    현재 탭 전체 삭제
+                    {t('buttons.delete_all_tab', '현재 탭 전체 삭제')}
                 </button>
             </section>
 
             <div
                 className="wrong-note-tabs" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: '12px', marginTop: '18px' }}
             >
-                {Object.keys(TAB_LABELS).map(tab => (
+                {WRONG_TABS.map(tab => (
                     <button
                         key={tab}
                         onClick={() => changeTab(tab)}
                         style={{ ...buttonStyle, background: activeTab === tab ? TAB_COLORS[tab] : 'var(--wgs-button-muted)', fontSize: '16px' }}
                     >
-                        {TAB_LABELS[tab]}
+                        {tabLabels[tab]}
                     </button>
                 ))}
             </div>
@@ -774,37 +854,37 @@ const WrongPractice = () => {
 
             {visibleNotes.length === 0 ? (
                 <section style={{ ...boxStyle, marginTop: '18px', textAlign: 'center', color: 'var(--wgs-wrong-muted)' }}>
-                    <h3 style={{ color: '#10b981' }}>현재 조건에 해당하는 오답이 없습니다.</h3>
-                    <p>문제를 풀고 틀린 문제를 저장하면 이곳에서 복습할 수 있습니다.</p>
+                    <h3 style={{ color: '#10b981' }}>{t('messages.empty_title', '현재 조건에 해당하는 오답이 없습니다.')}</h3>
+                    <p>{t('messages.empty_desc', '문제를 풀고 틀린 문제를 저장하면 이곳에서 복습할 수 있습니다.')}</p>
                 </section>
             ) : (
                 <section style={{ ...boxStyle, marginTop: '18px' }}>
                     <div className="wrong-note-current-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', marginBottom: '18px' }}>
-                        <span style={{ background: TAB_COLORS[activeTab], borderRadius: '999px', padding: '10px 16px', fontWeight: '900' }}>{TAB_LABELS[activeTab]}</span>
+                        <span style={{ background: TAB_COLORS[activeTab], borderRadius: '999px', padding: '10px 16px', fontWeight: '900' }}>{tabLabels[activeTab]}</span>
                         <strong className="wrong-note-muted" style={{ color: 'var(--wgs-wrong-text)' }}>{currentIndex + 1} / {visibleNotes.length}</strong>
                     </div>
 
                     <div className="wrong-note-muted" style={{ color: 'var(--wgs-wrong-muted)', fontWeight: '900', marginBottom: '12px' }}>
-                        {getSourceLabel(currentNote, activeTab, currentIndex)}
+                        {getSourceLabel(currentNote, activeTab, currentIndex, sourceLabelHelpers)}
                     </div>
 
                     {isWrittenTab ? renderWrittenQuestion() : renderIpepQuestion()}
 
                     {result && (
                         <div style={{ marginTop: '18px', padding: '16px', borderRadius: '10px', background: result.isCorrect ? 'rgba(16, 185, 129, 0.18)' : 'rgba(239, 68, 68, 0.18)', border: `1px solid ${result.isCorrect ? '#10b981' : '#ef4444'}` }}>
-                            <h3 style={{ marginTop: 0, color: result.isCorrect ? '#34d399' : '#f87171' }}>{result.isCorrect ? '정답입니다.' : '다시 확인해볼 문제입니다.'}</h3>
-                            <p style={{ margin: '8px 0', color: 'var(--wgs-text)' }}>정답: <strong>{result.correctAnswer}</strong></p>
-                            {typeof result.score !== 'undefined' && <p style={{ margin: '8px 0', color: 'var(--wgs-text)' }}>점수: <strong>{result.score} / {result.maxScore}</strong></p>}
+                            <h3 style={{ marginTop: 0, color: result.isCorrect ? '#34d399' : '#f87171' }}>{result.isCorrect ? t('result.correct_title', '정답입니다.') : t('result.wrong_title', '다시 확인해볼 문제입니다.')}</h3>
+                            <p style={{ margin: '8px 0', color: 'var(--wgs-text)' }}>{t('result.correct_answer_label', '정답:')} <strong>{result.correctAnswer}</strong></p>
+                            {typeof result.score !== 'undefined' && <p style={{ margin: '8px 0', color: 'var(--wgs-text)' }}>{t('result.score_label', '점수:')} <strong>{result.score} / {result.maxScore}</strong></p>}
                             {result.explanation && <p style={{ whiteSpace: 'pre-wrap', color: 'var(--wgs-wrong-muted)', lineHeight: 1.7 }}>{result.explanation}</p>}
                         </div>
                     )}
 
                     <div className="wrong-note-action-row" style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', marginTop: '22px', alignItems: 'center', flexWrap: 'wrap' }}>
                         <div className="wrong-note-prev-next" style={{ display: 'flex', gap: '10px' }}>
-                            <button onClick={() => moveQuestion(-1)} disabled={currentIndex === 0} style={{ ...buttonStyle, background: currentIndex === 0 ? 'var(--wgs-button-muted)' : 'var(--wgs-button-muted)', opacity: currentIndex === 0 ? 0.5 : 1 }}>이전</button>
-                            <button onClick={() => moveQuestion(1)} disabled={currentIndex === visibleNotes.length - 1} style={{ ...buttonStyle, background: currentIndex === visibleNotes.length - 1 ? 'var(--wgs-button-muted)' : 'var(--wgs-button-muted)', opacity: currentIndex === visibleNotes.length - 1 ? 0.5 : 1 }}>다음</button>
+                            <button onClick={() => moveQuestion(-1)} disabled={currentIndex === 0} style={{ ...buttonStyle, background: currentIndex === 0 ? 'var(--wgs-button-muted)' : 'var(--wgs-button-muted)', opacity: currentIndex === 0 ? 0.5 : 1 }}>{t('buttons.prev', '이전')}</button>
+                            <button onClick={() => moveQuestion(1)} disabled={currentIndex === visibleNotes.length - 1} style={{ ...buttonStyle, background: currentIndex === visibleNotes.length - 1 ? 'var(--wgs-button-muted)' : 'var(--wgs-button-muted)', opacity: currentIndex === visibleNotes.length - 1 ? 0.5 : 1 }}>{t('buttons.next', '다음')}</button>
                         </div>
-                        <button onClick={handleDeleteCurrent} style={{ ...buttonStyle, background: '#ef4444' }}>현재 오답 삭제</button>
+                        <button onClick={handleDeleteCurrent} style={{ ...buttonStyle, background: '#ef4444' }}>{t('buttons.delete_current', '현재 오답 삭제')}</button>
                     </div>
                 </section>
             )}

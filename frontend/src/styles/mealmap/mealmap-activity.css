@@ -8,12 +8,6 @@
   line-height: 1.7;
 }
 
-.mealmap-history-btn {
-  background: #fff7ed !important;
-  color: #9a3412 !important;
-  border: 1px solid #fed7aa !important;
-}
-
 .mealmap-activity-modal {
   width: min(1320px, 96vw) !important;
   max-height: 88vh;
@@ -48,11 +42,17 @@
 }
 
 .mealmap-activity-head > button {
-  width: 42px;
-  height: 42px;
+  flex: 0 0 auto;
+  min-width: 72px;
+  min-height: 42px;
   border-radius: 999px;
+  border: 1px solid #cbd5e1 !important;
+  padding: 10px 16px;
   background: #f1f5f9 !important;
   color: #111827 !important;
+  font-weight: 950;
+  line-height: 1.2;
+  white-space: nowrap;
 }
 
 .mealmap-activity-empty {

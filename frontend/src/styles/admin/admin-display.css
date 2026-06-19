@@ -102,6 +102,41 @@
   padding: 4px;
 }
 
+.admin-screen-layout-control {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.admin-screen-layout-control select,
+.admin-screen-layout-control input[type='text'],
+.admin-screen-layout-control input:not([type]),
+.admin-screen-layout-control input[type='range'] {
+  width: 100%;
+}
+
+.admin-screen-layout-control input[type='range'] {
+  min-height: 42px;
+  margin: 0;
+  padding: 0;
+  accent-color: #10b981;
+}
+
+.admin-screen-layout-control strong {
+  min-width: 54px;
+  text-align: right;
+  color: #bbf7d0;
+  font-size: 14px;
+}
+
+.admin-screen-layout-control small {
+  grid-column: 1 / -1;
+  color: #93a4ba;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
 .admin-screen-form-bottom,
 .admin-screen-action-row {
   display: flex;

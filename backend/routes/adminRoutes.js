@@ -1495,6 +1495,7 @@ function registerAdminRoutes(options = {}) {
         validateRealtimeSession,
         notifyMealMapPlaceDecisionV2515,
         notifyMealMapEditDecisionV2515,
+        createAdminApprovalRequest,
     });
 
     // 운영자 쓰기 작업은 먼저 결재 대기 목록에 등록합니다.

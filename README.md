@@ -17,14 +17,14 @@
 - 회원가입, 로그인, 이메일 인증, 세션 관리
 - 게시판, 공지, 댓글, 추천, 공지 순서 관리
 - 홈 화면 달력, 랭킹, 실시간 접속자, 채팅
-- 회식맵 장소 제보, 댓글, 좋아요, 수정 요청, 관리자 검토
+- 회식맵 장소 즉시 제보 등록, 댓글, 좋아요, 수정/삭제 요청, 관리자 결재 검토
 - 관리자 페이지 기반 사용자, 문제, 화면 설정, 일정, 공지, 결재 관리
 
 ## 운영 구조
 
 우공실은 React/Vite 기반 프론트엔드와 Express/MySQL 기반 백엔드로 구성됩니다. 프론트엔드는 사용자 화면과 관리자 화면을 제공하고, 백엔드는 인증, 문제 데이터, 게시판, 랭킹, 회식맵, 멀티플레이, 운영 설정 API를 담당합니다.
 
-관리자 페이지의 주요 변경 작업은 DB와 연결된 CRUD 흐름을 기준으로 동작합니다. 따라서 화면 설정, 문제/해설 수정, 사용자 관리, 회식맵 승인 같은 운영성 기능은 프론트엔드 컴포넌트와 백엔드 라우트가 함께 유지되어야 합니다.
+관리자 페이지의 주요 변경 작업은 DB와 연결된 CRUD 흐름을 기준으로 동작합니다. 따라서 화면 설정, 문제/해설 수정, 사용자 관리, 회식맵 공개 식당 관리와 수정/삭제 결재 같은 운영성 기능은 프론트엔드 컴포넌트와 백엔드 라우트가 함께 유지되어야 합니다. 필기 문제은행, 필기 기출문제, 실기 문제은행/기출문제, 오답노트는 라우팅, 채점, 저장 API는 코드에 유지하고 화면 문구, 버튼명, 결과표/PDF/필터/이미지 안내 문구는 `wgs_screen_settings` 기준으로 관리합니다. 회식맵 화면 문구와 활동 이력/필터/제보/수정 제안/삭제 요청 모달 문구, 지도/상세 패널 상태 메시지는 기존 `mealmap_page_texts` 기준으로 관리합니다.
 
 ## 기술 스택
 
@@ -73,6 +73,7 @@
 - Docker 기반 부하 테스트 기록을 운영 전 성능 검증 자료로 관리합니다.
 - 성능 테스트 실행 환경과 k6, Prometheus, Grafana 설정은 [antisdream/woogongsil-loadtest-lab](https://github.com/antisdream/woogongsil-loadtest-lab)에서 별도로 관리합니다.
 - `npm run check`, `npm run lint`, `npm run build`를 배포 전 기본 검증 절차로 사용합니다.
+- 백엔드 실행 후 `/api/ipep/health`를 호출해 Express, MySQL 연결, 실기 API 라우트가 함께 살아 있는지 확인합니다.
 
 ## 프로젝트 구성
 
@@ -103,6 +104,32 @@ ExamAppProject/
 
 공유용 예시는 `backend/.env.example`, `backend/.env.mealmap.kakao.example`, `frontend/.env.local.mealmap.kakao.example`에만 둡니다. 실제 운영값은 AWS Lightsail 또는 로컬 서버의 환경 설정으로 별도 관리합니다.
 
+## 화면 설정과 테마 운영
+
+우공실의 화면 문구와 일부 레이아웃 값은 관리자 페이지의 `화면 설정 관리` 탭과 기존 `wgs_screen_settings` 테이블을 기준으로 운영합니다. 새 테이블이나 새 컬럼을 만들지 않고 `page_key`, `section_key`, `setting_type`, `setting_key`, `setting_value` 조합으로 값을 관리합니다.
+
+### 테마 모드와 밝기
+
+- 다크/라이트 모드는 `localStorage.wgsThemeMode`에 저장되어 사용자가 다시 접속해도 마지막 선택을 유지합니다.
+- 밝기 조절값은 다크/라이트 모드별로 `sessionStorage`에 저장합니다. 사이트를 닫았다 다시 열면 기본값인 `50%`로 시작하고, 같은 사이트 세션 안에서는 새로고침해도 선택값이 유지됩니다.
+- 밝기 슬라이더는 `10%`부터 `100%`까지 `10%` 단위로 조절합니다.
+- 밝기 조절은 전체 앱에 CSS `filter`를 거는 방식이 아니라 `--wgs-page-bg`, `--wgs-card`, `--wgs-surface`, `--wgs-input-bg` 같은 테마 토큰을 다시 계산하는 방식으로 처리합니다. 그래서 이미지, 지도, 글자까지 함께 흐려지는 문제를 줄이고 라이트모드는 밝은 배경/어두운 글자, 다크모드는 어두운 배경/밝은 글자 원칙을 유지합니다.
+
+### 홈 화면 위치 설정
+
+- 홈 상단 히어로 문구는 기존처럼 `home.hero.hero_title`, `home.hero.hero_desc`로 관리합니다.
+- 위치와 폭은 `setting_type='layout'` 설정으로 관리합니다.
+- 현재 연결된 홈 히어로 layout 키는 `title_align`, `desc_align`, `title_offset_x`, `title_offset_y`, `desc_offset_x`, `desc_offset_y`, `content_width`입니다.
+- 정렬은 `left`, `center`, `right` 중 하나를 사용하고, offset 값은 `-200`부터 `200`까지 10px 단위로 보정됩니다.
+
+### 관리자 화면 설정 관리
+
+- `layout` 타입 설정은 관리자 화면에서 값 종류에 맞는 입력 UI로 보정합니다.
+- `*_align` 계열은 좌/가운데/우 select로 저장합니다.
+- `*_offset_*` 계열은 `-200px ~ 200px` range로 저장합니다.
+- `*_width` 계열은 `60% ~ 100%` range로 저장합니다.
+- 연결되지 않은 layout 값은 DB에 저장할 수 있지만, 실제 화면 반영은 각 페이지 컴포넌트가 해당 키를 읽도록 연결되어 있어야 합니다.
+
 ## 실행 요약
 
 백엔드:
@@ -125,6 +152,18 @@ npm run build
 
 로컬 개발 서버가 필요할 때는 프론트엔드에서 `npm run dev`를 실행하고, API는 Vite 프록시를 통해 `localhost:5000` 백엔드로 전달합니다.
 
+로컬 백엔드 health check:
+
+```bash
+cd backend
+node server.js
+curl http://localhost:5000/api/ipep/health
+```
+
+`/api/ipep/health`는 배포/운영 점검용으로 `GET` 요청만 게이트키퍼 인증 없이 허용합니다.
+
+정상 응답 예시는 `success: true`와 `정보처리기사 실기 API 정상 작동 중` 메시지입니다. 이 확인은 DB 연결 풀을 통해 `SELECT 1`까지 수행하므로, 단순 서버 기동보다 한 단계 더 강한 배포 전 점검입니다.
+
 ## 배포 기준
 
 AWS Lightsail 배포 시에는 프론트엔드 빌드 결과와 백엔드 서버가 함께 동작해야 합니다. 운영 환경에서는 다음 기준을 지킵니다.
@@ -133,7 +172,9 @@ AWS Lightsail 배포 시에는 프론트엔드 빌드 결과와 백엔드 서버
 - `backend/node_modules`, `frontend/node_modules`, `frontend/dist`는 GitHub에 올리지 않습니다.
 - 서버 실행 전 `backend/.env` 값을 운영 환경에 맞게 설정합니다.
 - 배포 전 `backend npm run check`, `frontend npm run lint`, `frontend npm run build`를 통과시킵니다.
+- 백엔드 실행 후 `GET /api/ipep/health`가 정상 응답하는지 확인합니다.
 - 관리자 페이지의 CRUD 흐름은 DB 스키마와 함께 확인합니다.
+- 화면 문구, 버튼명, 링크, 이미지, 일부 안내문은 기존 `wgs_screen_settings`와 `mealmap_page_texts` 기준으로 관리하며, 게시판 같은 사용자 화면도 가능한 범위에서 같은 화면 설정 흐름에 연결합니다.
 - 성능 관련 변경은 Docker 부하 테스트 기록을 참고해 배포 전 확인 항목을 재점검합니다.
 
 ## 저장소 공개 전 확인

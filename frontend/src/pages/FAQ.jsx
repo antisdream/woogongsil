@@ -1,5 +1,6 @@
 // 자주 묻는 질문 라우트 페이지 컴포넌트입니다.
 import React, { useMemo, useState } from 'react';
+import useScreenSettings from '../useScreenSettings';
 
 // 자주 묻는 질문 화면 구성
 // ------------------------------------------------------------
@@ -12,7 +13,7 @@ import React, { useMemo, useState } from 'react';
 // - 문자열 안의 <br />, <br>, <br\> 등을 React 화면에서 실제 줄바꿈으로 렌더링하도록 처리했습니다.
 // - dangerouslySetInnerHTML은 사용하지 않아 XSS 위험을 줄였습니다.
 
-const FAQ_LIST = [
+const DEFAULT_FAQ_LIST = [
     // FAQ 데이터
     // - 화면 로직은 그대로 유지하고, 사용자가 자주 헷갈리는 흐름 중심으로 정리합니다.
     // - answer 안의 \n 또는 <br /> 문자열은 renderAnswerText 함수에서 실제 줄바꿈으로 변환됩니다.
@@ -273,6 +274,8 @@ const FAQ_LIST = [
 
 const ITEMS_PER_PAGE = 10;
 
+const getFaqItemSection = (index) => `item_${String(index + 1).padStart(3, '0')}`;
+
 // 답변 줄바꿈 렌더링 함수
 // ------------------------------------------------------------
 // React는 문자열 안의 "<br />"을 HTML로 해석하지 않습니다.
@@ -283,26 +286,57 @@ const ITEMS_PER_PAGE = 10;
 // 첫 줄
 //  둘째 줄
 // dangerouslySetInnerHTML을 쓰지 않으므로 보안상 더 안전합니다.
+const renderAnswerText = (answerText) => {
+    const safeText = String(answerText || '');
+    const lines = safeText.split(/(?:\r?\n|<br\s*[/\\]?\s*>)/gi);
+
+    return lines.map((line, index) => (
+        <React.Fragment key={`faq-answer-line-${index}`}>
+            {line.trim()}
+            {index < lines.length - 1 && <br />}
+        </React.Fragment>
+    ));
+};
+
 const FAQ = () => {
+    const { getSetting } = useScreenSettings('faq');
     const [currentPage, setCurrentPage] = useState(1);
     const [openIdx, setOpenIdx] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [submittedSearch, setSubmittedSearch] = useState('');
 
+    const faqList = useMemo(() => DEFAULT_FAQ_LIST.map((item, index) => {
+        const sectionKey = getFaqItemSection(index);
+
+        return {
+            category: getSetting(`${sectionKey}.category`, item.category),
+            question: getSetting(`${sectionKey}.question`, item.question),
+            answer: getSetting(`${sectionKey}.answer`, item.answer),
+        };
+    }).filter((item) => item.category && item.question && item.answer), [getSetting]);
+
+    const formatSetting = (key, fallback, values = {}) => {
+        let text = getSetting(key, fallback);
+        Object.entries(values).forEach(([name, value]) => {
+            text = text.replaceAll(`{${name}}`, String(value));
+        });
+        return text;
+    };
+
     const filteredList = useMemo(() => {
         const keyword = submittedSearch.trim().toLowerCase();
-        if (!keyword) return FAQ_LIST;
+        if (!keyword) return faqList;
 
         // 검색 대상: 분류, 질문, 답변
         // 중요: FAQ_LIST 데이터 키가 question/answer이므로 q/a로 접근하면 화면 공백 및 검색 오류가 발생합니다.
-        return FAQ_LIST.filter((item) => {
+        return faqList.filter((item) => {
             return (
                 String(item.category || '').toLowerCase().includes(keyword) ||
                 String(item.question || '').toLowerCase().includes(keyword) ||
                 String(item.answer || '').toLowerCase().includes(keyword)
             );
         });
-    }, [submittedSearch]);
+    }, [faqList, submittedSearch]);
 
     const totalPages = Math.max(1, Math.ceil(filteredList.length / ITEMS_PER_PAGE));
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
@@ -334,48 +368,30 @@ const FAQ = () => {
         setOpenIdx(null);
     };
 
-    // FAQ 답변 줄바꿈 렌더링 함수
-// - 문자열 안에 작성한 <br />, <br>, <br \> 등을 실제 줄바꿈으로 변환합니다.
-// - dangerouslySetInnerHTML을 쓰지 않아 XSS 위험 없이 안전하게 처리합니다.
-// - FAQ 데이터 구조(question, answer)에 맞춰 안전하게 처리합니다.
-const renderAnswerText = (answerText) => {
-    const safeText = String(answerText || '');
-
-    // <br />, <br>, <br \> 모두 줄바꿈 구분자로 인식
-    const lines = safeText.split(/<br\s*[/\\]?\s*>/gi);
-
-    return lines.map((line, index) => (
-        <React.Fragment key={`faq-answer-line-${index}`}>
-            {line.trim()}
-            {index < lines.length - 1 && <br />}
-        </React.Fragment>
-    ));
-};
-
     return (
         <div className="faq-page-wrap wgs-typography-scope">
             <section className="faq-card">
                 <div className="faq-header">
-                    <h2> 자주 묻는 질문 (FAQ)</h2>
+                    <h2>{getSetting('page.title', '자주 묻는 질문 (FAQ)')}</h2>
                     <p>
-                        직접 정보를 찾아보거나 하단의 검색창에 분류 또는 키워드를 입력하여 원하는 정보를 찾을 수 있습니다.
+                        {getSetting('page.desc', '직접 정보를 찾아보거나 하단의 검색창에 분류 또는 키워드를 입력하여 원하는 정보를 찾을 수 있습니다.')}
                     </p>
                 </div>
                 <div className="faq-table-wrap">
                     <table className="faq-table">
                         <thead>
                             <tr>
-                                <th style={{ width: '70px' }}>No</th>
-                                <th style={{ width: '140px' }}>분류</th>
-                                <th>질문</th>
-                                <th style={{ width: '90px' }}>보기</th>
+                                <th style={{ width: '70px' }}>{getSetting('table.no_header', 'No')}</th>
+                                <th style={{ width: '140px' }}>{getSetting('table.category_header', '분류')}</th>
+                                <th>{getSetting('table.question_header', '질문')}</th>
+                                <th style={{ width: '90px' }}>{getSetting('table.action_header', '보기')}</th>
                             </tr>
                         </thead>
                         <tbody>
                             {currentItems.length === 0 ? (
                                 <tr>
                                     <td colSpan="4" className="faq-empty-cell">
-                                        검색 결과가 없습니다. 다른 검색어로 다시 시도해 주세요.
+                                        {getSetting('search.empty_result', '검색 결과가 없습니다. 다른 검색어로 다시 시도해 주세요.')}
                                     </td>
                                 </tr>
                             ) : (
@@ -397,7 +413,7 @@ const renderAnswerText = (answerText) => {
                                                         type="button" onClick={() => handleToggle(actualIdx)}
                                                     >
                                                         {/* question 키를 사용해야 질문 문구가 화면에 정상 출력됩니다. */}
-                                                        Q. {item.question}
+                                                        {getSetting('table.question_prefix', 'Q.')} {item.question}
                                                     </button>
                                                 </td>
                                                 <td>
@@ -405,14 +421,14 @@ const renderAnswerText = (answerText) => {
                                                         type="button" className="faq-open-btn" onClick={() => handleToggle(actualIdx)}
                                                         aria-expanded={isOpen}
                                                     >
-                                                        {isOpen ? '닫기' : '열기'}
+                                                        {isOpen ? getSetting('table.close_button', '닫기') : getSetting('table.open_button', '열기')}
                                                     </button>
                                                 </td>
                                             </tr>
 
                                             {isOpen && (
                                                 <tr className="faq-answer-row">
-                                                    <td>A.</td>
+                                                    <td>{getSetting('table.answer_prefix', 'A.')}</td>
                                                     <td colSpan="3" className="faq-answer-cell" style={{ textAlign: "left" }}>
                                                         {/* 
                                                              수정 핵심:
@@ -432,7 +448,7 @@ const renderAnswerText = (answerText) => {
                     </table>
                 </div>
 
-                <div className="faq-pagination" aria-label="FAQ 페이지 이동">
+                <div className="faq-pagination" aria-label={getSetting('pagination.aria_label', 'FAQ 페이지 이동')}>
                     <button
                         type="button" onClick={() => handlePageMove(currentPage - 1)}
                         disabled={currentPage === 1}
@@ -463,24 +479,24 @@ const renderAnswerText = (answerText) => {
                     <input
                         type="text" value={searchTerm}
                         onChange={(event) => setSearchTerm(event.target.value)}
-                        placeholder="검색어를 입력하세요. 예: 오답노트, 기출문제, 로그인, 게시판"
+                        placeholder={getSetting('search.placeholder', '검색어를 입력하세요. 예: 오답노트, 기출문제, 로그인, 게시판')}
                     />
                     <button type="submit" className="faq-search-btn">
-                        검색
+                        {getSetting('search.submit_button', '검색')}
                     </button>
 
                     {submittedSearch && (
                         <button
                             type="button" className="faq-reset-btn" onClick={handleClearSearch}
                         >
-                            초기화
+                            {getSetting('search.reset_button', '초기화')}
                         </button>
                     )}
                 </form>
 
                 {submittedSearch && (
                     <div className="faq-search-result">
-                        “{submittedSearch}” 검색 결과: {filteredList.length}건
+                        {formatSetting('search.result_text', '“{keyword}” 검색 결과: {count}건', { keyword: submittedSearch, count: filteredList.length })}
                     </div>
                 )}
             </section>

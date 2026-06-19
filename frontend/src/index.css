@@ -1,21 +1,22 @@
-/* 전역 진입점 스타일입니다. */
+/* 전역 진입점 스타일입니다.
+   화면 색상은 App.css의 --wgs-* 테마 토큰을 기준으로 맞춥니다. */
 :root {
-  --bg-color: #121620;
-  --card-bg: #2a3042;
-  --text-main: #f8fafc;
-  --text-muted: #94a3b8;
-  --border-color: #3b4256;
-  --primary: #3b82f6;
-  --primary-hover: #2563eb;
-  --danger: #ef4444;
-  --danger-hover: #dc2828;
-  --success: #10b981;
+  --bg-color: var(--wgs-page-bg, #f7fbff);
+  --card-bg: var(--wgs-card, #ffffff);
+  --text-main: var(--wgs-text-main, #182234);
+  --text-muted: var(--wgs-text-muted, #64748b);
+  --border-color: var(--wgs-border, rgba(148, 163, 184, 0.34));
+  --primary: var(--wgs-primary, #2563eb);
+  --primary-hover: var(--wgs-primary-strong, #1d4ed8);
+  --danger: var(--wgs-danger, #ef4444);
+  --danger-hover: #dc2626;
+  --success: var(--wgs-success, #10b981);
 }
 
 body {
   margin: 0;
-  background-color: var(--bg-color);
-  color: var(--text-main);
+  background-color: var(--wgs-page-bg, var(--bg-color));
+  color: var(--wgs-text, var(--text-main));
   font-family: var(--wgs-font-body, 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif);
   line-height: 1.6;
 }
@@ -66,9 +67,9 @@ body {
 
 /* 버튼 */
 button {
-  background-color: var(--bg-color);
-  color: var(--text-main);
-  border: 1px solid var(--border-color);
+  background-color: var(--wgs-button-muted, var(--bg-color));
+  color: var(--wgs-text, var(--text-main));
+  border: 1px solid var(--wgs-border, var(--border-color));
   padding: 12px 20px;
   border-radius: 8px;
   font-size: 16px;
@@ -95,7 +96,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
   margin-bottom: 10px;
   padding: 15px;
   font-size: 16px;
-  background-color: var(--bg-color);
+  background-color: var(--wgs-choice-bg, var(--bg-color));
 }
 .option-btn.selected {
   border: 2px solid var(--primary);
@@ -107,13 +108,13 @@ input, select {
   width: 100%;
   padding: 12px;
   margin-bottom: 15px;
-  background-color: var(--bg-color);
-  border: 1px solid var(--border-color);
-  color: white;
+  background-color: var(--wgs-input-bg, var(--bg-color));
+  border: 1px solid var(--wgs-border, var(--border-color));
+  color: var(--wgs-text, var(--text-main));
   border-radius: 8px;
   box-sizing: border-box;
 }
 
 table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-th, td { border: 1px solid var(--border-color); padding: 12px; text-align: center; }
-th { background-color: var(--bg-color); }
+th, td { border: 1px solid var(--wgs-border, var(--border-color)); padding: 12px; text-align: center; }
+th { background-color: var(--wgs-surface-2, var(--bg-color)); }

@@ -35,6 +35,27 @@ function cleanText(value) {
     return String(value).trim();
 }
 
+function parseRandomCsv(value, maxItems = 80) {
+    const raw = Array.isArray(value) ? value.join(',') : String(value || '');
+    const seen = new Set();
+    return raw
+        .split(',')
+        .map((item) => item.trim())
+        .filter(Boolean)
+        .filter((item) => {
+            if (seen.has(item)) return false;
+            seen.add(item);
+            return true;
+        })
+        .slice(0, maxItems);
+}
+
+function parseRandomIdCsv(value, maxItems = 80) {
+    return parseRandomCsv(value, maxItems)
+        .map((item) => Number(item))
+        .filter((item) => Number.isInteger(item) && item >0);
+}
+
 
 // 2. 채점용 정규화 함수
 // 실기 문제는 용어형, SQL형, 코드 출력형이 섞여 있습니다.
@@ -370,32 +391,60 @@ function createIpepRouter(pool) {
     // ------------------------------------------------------
     router.get('/random-question', asyncHandler(async (req, res) => {
         const subjectCode = cleanText(req.query.subjectCode || 'ALL').toUpperCase();
+        const normalizedSubjectCode = subjectCode === 'ALL' ? 'ALL' : subjectCode.padStart(2, '0');
+        const excludeIds = parseRandomIdCsv(req.query.excludeIds, 120);
+        const excludeSubjects = normalizedSubjectCode === 'ALL'
+            ? parseRandomCsv(req.query.excludeSubjects, 8).map((item) => item.padStart(2, '0'))
+            : [];
 
-        let rows;
+        const buildRandomQuery = ({ useIds = true, useSubjects = true } = {}) => {
+            const clauses = ['q.is_active = 1'];
+            const params = [];
 
-        if (subjectCode === 'ALL') {
-            [rows] = await pool.query(`SELECT
+            if (normalizedSubjectCode !== 'ALL') {
+                clauses.push('q.subject_code = ?');
+                params.push(normalizedSubjectCode);
+            }
+
+            if (useIds && excludeIds.length >0) {
+                clauses.push(`q.question_id NOT IN (${excludeIds.map(() => '?').join(',')})`);
+                params.push(...excludeIds);
+            }
+
+            if (useSubjects && excludeSubjects.length >0) {
+                clauses.push(`q.subject_code NOT IN (${excludeSubjects.map(() => '?').join(',')})`);
+                params.push(...excludeSubjects);
+            }
+
+            return {
+                sql: `SELECT
                     q.*,
                     s.subject_name
                 FROM ipep_random_questions q
                 LEFT JOIN ipep_subjects s
                     ON q.subject_code = s.subject_code
-                WHERE q.is_active = 1
+                WHERE ${clauses.join(' AND ')}
                 ORDER BY RAND()
                 LIMIT 1
-            `);
-        } else {
-            [rows] = await pool.query(`SELECT
-                    q.*,
-                    s.subject_name
-                FROM ipep_random_questions q
-                LEFT JOIN ipep_subjects s
-                    ON q.subject_code = s.subject_code
-                WHERE q.is_active = 1
-                  AND q.subject_code = ?
-                ORDER BY RAND()
-                LIMIT 1
-            `, [subjectCode.padStart(2, '0')]);
+            `,
+                params,
+            };
+        };
+
+        const attempts = [
+            { useIds: true, useSubjects: true, mode: 'avoid-question-and-subject' },
+            { useIds: true, useSubjects: false, mode: 'avoid-question' },
+            { useIds: false, useSubjects: false, mode: 'full-random' },
+        ];
+
+        let rows = [];
+        let selectionMode = 'full-random';
+
+        for (const attempt of attempts) {
+            const query = buildRandomQuery(attempt);
+            [rows] = await pool.query(query.sql, query.params);
+            selectionMode = attempt.mode;
+            if (rows.length >0) break;
         }
 
         if (rows.length === 0) {
@@ -407,7 +456,12 @@ function createIpepRouter(pool) {
 
         res.json({
             success: true,
-            data: toPublicQuestion(rows[0], 'ipep_random')
+            data: toPublicQuestion(rows[0], 'ipep_random'),
+            randomMeta: {
+                selectionMode,
+                excludedQuestionCount: excludeIds.length,
+                excludedSubjectCount: excludeSubjects.length,
+            }
         });
     }));
 

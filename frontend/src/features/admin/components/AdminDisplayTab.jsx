@@ -6,6 +6,100 @@ import {
     formatDateTime,
 } from '../adminUtils.js';
 
+const LAYOUT_ALIGN_OPTIONS = [
+    { value: 'left', label: '왼쪽' },
+    { value: 'center', label: '가운데' },
+    { value: 'right', label: '오른쪽' },
+];
+
+const normalizeLayoutNumber = (value, fallback) => {
+    const numericValue = Number(String(value || '').replace('%', ''));
+    return Number.isFinite(numericValue) ? numericValue : fallback;
+};
+
+const getLayoutControlType = (settingKey = '') => {
+    const key = String(settingKey).toLowerCase();
+    if (key.endsWith('_align') || key.includes('align')) return 'align';
+    if (key.includes('offset')) return 'offset';
+    if (key.includes('width')) return 'percent';
+    return 'text';
+};
+
+function ScreenSettingValueControl({ screenForm, handleScreenFormChange }) {
+    if (screenForm.setting_type === 'color') {
+        return (
+            <div className="admin-screen-color-row">
+                <input type="color" value={/^#[0-9A-Fa-f]{6}$/.test(screenForm.setting_value) ? screenForm.setting_value : '#38bdf8'} onChange={(event) => handleScreenFormChange('setting_value', event.target.value)} />
+                <input value={screenForm.setting_value} onChange={(event) => handleScreenFormChange('setting_value', event.target.value)} placeholder="#38bdf8 또는 CSS 색상값" />
+            </div>
+        );
+    }
+
+    if (screenForm.setting_type === 'layout') {
+        const controlType = getLayoutControlType(screenForm.setting_key);
+
+        if (controlType === 'align') {
+            return (
+                <div className="admin-screen-layout-control">
+                    <select value={screenForm.setting_value || 'center'} onChange={(event) => handleScreenFormChange('setting_value', event.target.value)}>
+                        {LAYOUT_ALIGN_OPTIONS.map((option) => (
+                            <option key={option.value} value={option.value}>{option.label}</option>
+                        ))}
+                    </select>
+                    <small>위치 정렬은 left, center, right 값으로 저장됩니다.</small>
+                </div>
+            );
+        }
+
+        if (controlType === 'offset') {
+            const offsetValue = normalizeLayoutNumber(screenForm.setting_value, 0);
+            return (
+                <div className="admin-screen-layout-control">
+                    <input
+                        type="range"
+                        min="-200"
+                        max="200"
+                        step="10"
+                        value={Math.min(200, Math.max(-200, offsetValue))}
+                        onChange={(event) => handleScreenFormChange('setting_value', event.target.value)}
+                    />
+                    <strong>{Math.min(200, Math.max(-200, offsetValue))}px</strong>
+                    <small>음수는 왼쪽/위쪽, 양수는 오른쪽/아래쪽으로 이동합니다.</small>
+                </div>
+            );
+        }
+
+        if (controlType === 'percent') {
+            const widthValue = Math.min(100, Math.max(60, normalizeLayoutNumber(screenForm.setting_value, 100)));
+            return (
+                <div className="admin-screen-layout-control">
+                    <input
+                        type="range"
+                        min="60"
+                        max="100"
+                        step="10"
+                        value={widthValue}
+                        onChange={(event) => handleScreenFormChange('setting_value', `${event.target.value}%`)}
+                    />
+                    <strong>{widthValue}%</strong>
+                    <small>콘텐츠 너비는 60%부터 100%까지 10% 단위로 저장됩니다.</small>
+                </div>
+            );
+        }
+
+        return (
+            <div className="admin-screen-layout-control">
+                <input value={screenForm.setting_value} onChange={(event) => handleScreenFormChange('setting_value', event.target.value)} placeholder="예: 24px, 100%, center" />
+                <small>위치/간격/크기값은 연결된 화면에서 허용한 값만 실제로 반영됩니다.</small>
+            </div>
+        );
+    }
+
+    return (
+        <textarea value={screenForm.setting_value} onChange={(event) => handleScreenFormChange('setting_value', event.target.value)} placeholder={screenForm.setting_type === 'image'? '예: /images/banner.png 또는 https://...' : '관리할 문구, 크기값, CSS값 등을 입력'} rows={5} />
+    );
+}
+
 export default function AdminDisplayTab({
     fetchScreenSettings,
     loadingScreenSettings,
@@ -117,14 +211,7 @@ export default function AdminDisplayTab({
 
           <label className="admin-screen-full-label">
             설정 값
-            {screenForm.setting_type === 'color'? (
-              <div className="admin-screen-color-row">
-                <input type="color" value={/^#[0-9A-Fa-f]{6}$/.test(screenForm.setting_value) ? screenForm.setting_value : '#38bdf8'} onChange={(event) => handleScreenFormChange('setting_value', event.target.value)} />
-                <input value={screenForm.setting_value} onChange={(event) => handleScreenFormChange('setting_value', event.target.value)} placeholder="#38bdf8 또는 CSS 색상값" />
-              </div>
-            ) : (
-              <textarea value={screenForm.setting_value} onChange={(event) => handleScreenFormChange('setting_value', event.target.value)} placeholder={screenForm.setting_type === 'image'? '예: /images/banner.png 또는 https://...' : '관리할 문구, 크기값, CSS값 등을 입력'} rows={5} />
-            )}
+            <ScreenSettingValueControl screenForm={screenForm} handleScreenFormChange={handleScreenFormChange} />
           </label>
 
           <label className="admin-screen-full-label">

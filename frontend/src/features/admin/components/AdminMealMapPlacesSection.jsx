@@ -20,7 +20,7 @@ export default function AdminMealMapPlacesSection({
       <div className="admin-panel-head">
         <div>
           <h2>회식맵 관리</h2>
-          <p>사용자들이 제보한 회식 장소를 확인하고 승인/반려/삭제합니다. 승인된 장소만 회식맵 페이지에 공개됩니다.</p>
+          <p>사용자가 제보한 회식 장소는 바로 공개됩니다. 공개 식당을 확인하고, 삭제가 필요한 항목은 결재 요청으로 숨김 처리합니다.</p>
         </div>
         <button type="button" className="admin-secondary-button" onClick={fetchMealMapAdminPlaces} disabled={mealMapLoading}>
           {mealMapLoading ? '불러오는 중...' : '새로고침'}
@@ -51,7 +51,7 @@ export default function AdminMealMapPlacesSection({
           />
           <button type="button" className="admin-secondary-button" onClick={fetchMealMapAdminPlaces}>검색</button>
         </div>
-        <p>카카오 지도 API 키가 없어도 제보 DB는 먼저 쌓이고, 승인된 데이터만 회식맵에 공개됩니다.</p>
+        <p>카카오 지도 API 키가 없어도 제보 DB는 먼저 쌓이고, 공개된 데이터는 회식맵에 바로 표시됩니다.</p>
       </div>
 
       {mealMapError && <p className="admin-error-message">{mealMapError}</p>}
@@ -93,9 +93,15 @@ export default function AdminMealMapPlacesSection({
                 </td>
                 <td>
                   <div className="admin-mealmap-actions">
-                    <button type="button" className="approve" disabled={mealMapSavingId === place.id} onClick={() => runMealMapAdminAction(place, 'approve')}>승인</button>
-                    <button type="button" className="reject" disabled={mealMapSavingId === place.id} onClick={() => runMealMapAdminAction(place, 'reject')}>반려</button>
-                    <button type="button" className="danger" disabled={mealMapSavingId === place.id} onClick={() => runMealMapAdminAction(place, 'delete')}>삭제</button>
+                    {place.status === 'pending' && (
+                      <>
+                        <button type="button" className="approve" disabled={mealMapSavingId === place.id} onClick={() => runMealMapAdminAction(place, 'approve')}>승인</button>
+                        <button type="button" className="reject" disabled={mealMapSavingId === place.id} onClick={() => runMealMapAdminAction(place, 'reject')}>반려</button>
+                      </>
+                    )}
+                    {place.status !== 'hidden' && (
+                      <button type="button" className="danger" disabled={mealMapSavingId === place.id} onClick={() => runMealMapAdminAction(place, 'delete')}>삭제 요청</button>
+                    )}
                   </div>
                 </td>
               </tr>

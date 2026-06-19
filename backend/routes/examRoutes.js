@@ -1,6 +1,47 @@
 // 필기 문제와 채점 API를 제공합니다.
 'use strict';
 
+function parseRandomCsv(value, maxItems = 80) {
+    const raw = Array.isArray(value) ? value.join(',') : String(value || '');
+    const seen = new Set();
+    return raw
+        .split(',')
+        .map((item) => item.trim())
+        .filter(Boolean)
+        .filter((item) => {
+            if (seen.has(item)) return false;
+            seen.add(item);
+            return true;
+        })
+        .slice(0, maxItems);
+}
+
+function parseRandomIdCsv(value, maxItems = 80) {
+    return parseRandomCsv(value, maxItems)
+        .map((item) => Number(item))
+        .filter((item) => Number.isInteger(item) && item >0);
+}
+
+function buildWrittenRandomWhere({ excludeIds = [], excludeSubjects = [] } = {}) {
+    const clauses = [];
+    const params = [];
+
+    if (excludeIds.length >0) {
+        clauses.push(`q.question_id NOT IN (${excludeIds.map(() => '?').join(',')})`);
+        params.push(...excludeIds);
+    }
+
+    if (excludeSubjects.length >0) {
+        clauses.push(`q.subject NOT IN (${excludeSubjects.map(() => '?').join(',')})`);
+        params.push(...excludeSubjects);
+    }
+
+    return {
+        whereClause: clauses.length >0 ? ` WHERE ${clauses.join(' AND ')}` : '',
+        params,
+    };
+}
+
 function registerExamRoutes(options = {}) {
     const app = options.app;
     const pool = options.pool;
@@ -13,11 +54,34 @@ function registerExamRoutes(options = {}) {
     // 9. 문제은행 / 기출문제 API
     app.get('/api/random-question', async (req, res) => {
         try {
-            const rows = await buildQuestionSelect('', [], ' ORDER BY RAND() LIMIT 1');
+            const excludeIds = parseRandomIdCsv(req.query.excludeIds, 120);
+            const excludeSubjects = parseRandomCsv(req.query.excludeSubjects, 5);
+            const attempts = [
+                { excludeIds, excludeSubjects, mode: 'avoid-question-and-subject' },
+                { excludeIds, excludeSubjects: [], mode: 'avoid-question' },
+                { excludeIds: [], excludeSubjects: [], mode: 'full-random' },
+            ];
+
+            let rows = [];
+            let selectionMode = 'full-random';
+
+            for (const attempt of attempts) {
+                const { whereClause, params } = buildWrittenRandomWhere(attempt);
+                rows = await buildQuestionSelect(whereClause, params, ' ORDER BY RAND() LIMIT 1');
+                selectionMode = attempt.mode;
+                if (rows.length >0) break;
+            }
 
             if (rows.length === 0) return res.status(404).json({ success: false, msg: '문제 없음' });
 
-            return res.json(rows[0]);
+            return res.json({
+                ...rows[0],
+                random_meta: {
+                    selectionMode,
+                    excludedQuestionCount: excludeIds.length,
+                    excludedSubjectCount: excludeSubjects.length,
+                },
+            });
         } catch (error) {
             console.error('랜덤 문제 조회 오류:', error);
             return res.status(500).json({ success: false, error: error.message });

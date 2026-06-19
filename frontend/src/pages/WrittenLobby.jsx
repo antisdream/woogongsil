@@ -50,6 +50,21 @@ function WrittenLobby() {
     );
     const writtenRandomTitle = getWrittenScreenSetting('cards.random_title', '필기 문제은행');
     const writtenPastTitle = getWrittenScreenSetting('cards.past_title', '필기 기출문제');
+    const writtenRandomDesc = getWrittenScreenSetting(
+        'cards.random_desc',
+        '과목별 랜덤 문제를 풀면서 개념을 빠르게 확인하는 학습모드입니다.\n답안을 제출하면 즉시 채점 결과와 정답을 확인할 수 있습니다.'
+    );
+    const writtenRandomButtonLabel = getWrittenScreenSetting('cards.random_button_label', '문제은행 입장하기');
+    const writtenPastDesc = getWrittenScreenSetting(
+        'cards.past_desc',
+        '연도와 회차를 선택해 실제 시험처럼 풀 수 있는 모드입니다.\n제한시간, OMR 이동, 최종 결과표, PDF 출력 기능을 제공합니다.'
+    );
+    const writtenPastButtonLabel = getWrittenScreenSetting('cards.past_button_label', '기출문제 입장하기');
+    const writtenMenuNotice = getWrittenScreenSetting('notice.menu_notice', '멀티플레이는 상단의 “멀티플레이” 메뉴에서 별도로 이용할 수 있습니다.');
+    const writtenBottomNotice = getWrittenScreenSetting(
+        'notice.bottom_notice',
+        '랜덤 CBT 멀티플레이는 상단 ‘멀티플레이’ 메뉴에서 이용할 수 있습니다.\n필기 문제은행과 필기 기출문제 기능은 동일하게 이용할 수 있습니다.'
+    );
 
     return (
         <div
@@ -81,7 +96,7 @@ function WrittenLobby() {
             >
                 {writtenLobbyDesc}
                 <br />
-                멀티플레이는 상단의 “멀티플레이” 메뉴에서 별도로 이용할 수 있습니다.
+                {writtenMenuNotice}
             </p>
 
             <div
@@ -110,12 +125,11 @@ function WrittenLobby() {
                             style={{
                                 color: 'var(--wgs-muted)',
                                 lineHeight: 1.7,
-                                margin: 0
+                                margin: 0,
+                                whiteSpace: 'pre-line'
                             }}
                         >
-                            과목별 랜덤 문제를 풀면서 개념을 빠르게 확인하는 학습모드입니다.
-                            <br />
-                            답안을 제출하면 즉시 채점 결과와 정답을 확인할 수 있습니다.
+                            {writtenRandomDesc}
                         </p>
                     </div>
 
@@ -127,7 +141,7 @@ function WrittenLobby() {
                             marginTop: '20px'
                         }}
                     >
-                        문제은행 입장하기
+                        {writtenRandomButtonLabel}
                     </button>
                 </section>
 
@@ -150,12 +164,11 @@ function WrittenLobby() {
                             style={{
                                 color: 'var(--wgs-muted)',
                                 lineHeight: 1.7,
-                                margin: 0
+                                margin: 0,
+                                whiteSpace: 'pre-line'
                             }}
                         >
-                            연도와 회차를 선택해 실제 시험처럼 풀 수 있는 모드입니다.
-                            <br />
-                            제한시간, OMR 이동, 최종 결과표, PDF 출력 기능을 제공합니다.
+                            {writtenPastDesc}
                         </p>
                     </div>
 
@@ -167,7 +180,7 @@ function WrittenLobby() {
                             marginTop: '20px'
                         }}
                     >
-                        기출문제 입장하기
+                        {writtenPastButtonLabel}
                     </button>
                 </section>
             </div>
@@ -185,9 +198,7 @@ function WrittenLobby() {
                     lineHeight: 1.6
                 }}
             >
-                 랜덤 CBT 멀티플레이는 상단 ‘멀티플레이’ 메뉴에서 이용할 수 있습니다.
-                <br />
-                필기 문제은행과 필기 기출문제 기능은 동일하게 이용할 수 있습니다.
+                 <span style={{ whiteSpace: 'pre-line' }}>{writtenBottomNotice}</span>
             </div>
         </div>
     );

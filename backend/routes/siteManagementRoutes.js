@@ -27,7 +27,7 @@ function registerSiteManagementRoutes(options = {}) {
 // 색상, 이미지 경로를 CRUD로 관리하기 위한 API입니다.
 // 기존 문제 풀이, 로그인, 게시판 로직과 분리된 wgs_screen_settings 테이블만 사용합니다.
 
-const SCREEN_SETTING_PAGE_KEYS = ['all', 'home', 'written', 'past', 'random', 'ipep', 'wrong', 'mypage', 'board', 'faq', 'fortune', 'exam', 'admin'];
+const SCREEN_SETTING_PAGE_KEYS = ['all', 'home', 'cert_ipe', 'written', 'past', 'random', 'ipep', 'wrong', 'mypage', 'board', 'faq', 'fortune', 'exam', 'mealmap', 'multiplayer', 'login', 'signup', 'find_auth', 'change_pw', 'admin'];
 const SCREEN_SETTING_TYPES = ['text', 'layout', 'color', 'image', 'link'];
 
 function cleanScreenSettingText(value, fallback = '') {
@@ -69,8 +69,8 @@ function validateScreenSetting(payload) {
         return `setting_type은 ${SCREEN_SETTING_TYPES.join(', ')} 중 하나여야 합니다.`;
     }
     if (!payload.setting_key) return '설정 키(setting_key)를 입력해주세요.';
-    if (!/^[a-zA-Z0-9_\-]{2,100}$/.test(payload.setting_key)) {
-        return '설정 키는 영문, 숫자, _, - 조합 2~100자로 입력해주세요.';
+    if (!/^[a-zA-Z0-9_.\-]{2,100}$/.test(payload.setting_key)) {
+        return '설정 키는 영문, 숫자, _, -, . 조합 2~100자로 입력해주세요.';
     }
     if (!payload.setting_label) return '관리자 화면에 표시될 설정 이름을 입력해주세요.';
     return null;

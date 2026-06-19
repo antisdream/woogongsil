@@ -49,6 +49,15 @@ const Home = () => {
     // 관리자 화면 설정값을 홈 실시간 영역 문구에만 연결합니다.
     const homeHeroTitle = getHomeScreenSetting('hero.hero_title', '정보 처리 기사');
     const homeHeroDesc = getHomeScreenSetting('hero.hero_desc', '정보처리기사 필기·실기 학습과 오답 관리를 한 화면에서 이용할 수 있습니다.');
+    const homeHeroLayout = {
+        titleAlign: getHomeScreenSetting('hero.title_align', 'center'),
+        descAlign: getHomeScreenSetting('hero.desc_align', 'center'),
+        titleOffsetX: getHomeScreenSetting('hero.title_offset_x', '0'),
+        titleOffsetY: getHomeScreenSetting('hero.title_offset_y', '0'),
+        descOffsetX: getHomeScreenSetting('hero.desc_offset_x', '0'),
+        descOffsetY: getHomeScreenSetting('hero.desc_offset_y', '0'),
+        contentWidth: getHomeScreenSetting('hero.content_width', '100%'),
+    };
     const homeExamButtonLabel = getHomeScreenSetting('quick_links.exam_button_label', '시험 접수');
     const homeNotionButtonLabel = getHomeScreenSetting('quick_links.notion_button_label', 'Notion');
     const homeDeveloperButtonLabel = getHomeScreenSetting('quick_links.developer_button_label', '개발자');
@@ -828,6 +837,7 @@ const Home = () => {
                 homeDeveloperButtonUrl={homeDeveloperButtonUrl}
                 homeDeveloperButtonLabel={homeDeveloperButtonLabel}
                 homeMobileButtonLabel={homeMobileButtonLabel}
+                homeHeroLayout={homeHeroLayout}
                 onShowQr={() => setShowQR(true)}
             />
 

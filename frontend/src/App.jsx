@@ -25,6 +25,8 @@ import './styles/mealmap/mealmap-admin.css';
 import './styles/mealmap/mealmap-dark-ui.css';
 import './styles/mealmap/mealmap-kakao.css';
 import './styles/mealmap/mealmap-activity.css';
+import './styles/mealmap/mealmap-tone-fixes.css';
+import './styles/admin/admin-theme-fixes.css';
 
 import Home from './pages/Home';
 import Login from './pages/Login';
@@ -118,6 +120,153 @@ const LOGOUT_NOTICE_MESSAGES = {
 
 const getToastTheme = () => (localStorage.getItem('wgsThemeMode') === 'light'? 'light' : 'dark');
 
+const THEME_TONE_MIN = 10;
+const THEME_TONE_MAX = 100;
+const THEME_TONE_STEP = 10;
+const THEME_TONE_DEFAULT = 50;
+const THEME_TONE_STORAGE_KEYS = {
+    light: 'wgsSessionThemeToneLight',
+    dark: 'wgsSessionThemeToneDark',
+};
+
+// 밝기 조절은 전체 filter 대신 주요 배경/UI 토큰만 다시 계산합니다.
+const THEME_TONE_BASE_TOKENS = {
+    light: {
+        '--wgs-page-bg': '#f7fbff',
+        '--wgs-panel': '#ffffff',
+        '--wgs-card': '#ffffff',
+        '--wgs-card-soft': '#f8fafc',
+        '--wgs-surface': '#ffffff',
+        '--wgs-surface-2': '#f3f7ff',
+        '--wgs-deep-bg': '#eaf3ff',
+        '--wgs-neutral-bg': '#f8fafc',
+        '--wgs-panel-soft': '#f0f7ff',
+        '--wgs-panel-strong': '#ffffff',
+        '--wgs-button-muted': '#ebf4ff',
+        '--wgs-input-bg': '#ffffff',
+        '--wgs-choice-bg': '#ffffff',
+        '--wgs-question-bg': '#ffffff',
+        '--wgs-exam-card': '#ffffff',
+    },
+    dark: {
+        '--wgs-page-bg': '#061321',
+        '--wgs-panel': '#0f1e31',
+        '--wgs-card': '#0d1b2d',
+        '--wgs-card-soft': '#122338',
+        '--wgs-surface': '#0e1d31',
+        '--wgs-surface-2': '#12243a',
+        '--wgs-deep-bg': '#020817',
+        '--wgs-neutral-bg': '#0b1727',
+        '--wgs-panel-soft': '#0f1e31',
+        '--wgs-panel-strong': '#0d1b2d',
+        '--wgs-button-muted': '#111f33',
+        '--wgs-input-bg': '#020a17',
+        '--wgs-choice-bg': '#071426',
+        '--wgs-question-bg': '#071426',
+        '--wgs-exam-card': '#0b1727',
+    },
+};
+
+const THEME_TONE_ALPHA_TOKENS = {
+    light: {
+        '--wgs-panel': 0.86,
+        '--wgs-card': 0.92,
+        '--wgs-card-soft': 0.92,
+        '--wgs-panel-soft': 0.88,
+        '--wgs-button-muted': 0.88,
+        '--wgs-input-bg': 0.96,
+    },
+    dark: {
+        '--wgs-panel': 0.88,
+        '--wgs-card': 0.92,
+        '--wgs-card-soft': 0.82,
+        '--wgs-panel-soft': 0.72,
+        '--wgs-button-muted': 0.92,
+        '--wgs-input-bg': 0.92,
+    },
+};
+
+const THEME_TONE_MIX_LIMITS = {
+    light: { dim: 0.24, brighten: 0.10 },
+    dark: { dim: 0.72, brighten: 0.36 },
+};
+
+const clampThemeTone = (value) => {
+    const numericValue = Number(value);
+    if (!Number.isFinite(numericValue)) return THEME_TONE_DEFAULT;
+
+    const steppedValue = Math.round(numericValue / THEME_TONE_STEP) * THEME_TONE_STEP;
+    return Math.min(THEME_TONE_MAX, Math.max(THEME_TONE_MIN, steppedValue));
+};
+
+const getThemeToneStorageKey = (mode) => THEME_TONE_STORAGE_KEYS[mode === 'dark'? 'dark' : 'light'];
+
+const getStoredThemeTone = (mode) => {
+    const savedValue = sessionStorage.getItem(getThemeToneStorageKey(mode));
+    return clampThemeTone(savedValue ?? THEME_TONE_DEFAULT);
+};
+
+const hexToRgb = (hexColor) => {
+    const cleanHex = String(hexColor || '').replace('#', '');
+    const fullHex = cleanHex.length === 3
+        ? cleanHex.split('').map((char) => `${char}${char}`).join('')
+        : cleanHex;
+    const parsedValue = Number.parseInt(fullHex, 16);
+
+    if (!Number.isFinite(parsedValue)) return [0, 0, 0];
+    return [
+        (parsedValue >> 16) & 255,
+        (parsedValue >> 8) & 255,
+        parsedValue & 255,
+    ];
+};
+
+const mixRgb = (baseRgb, targetRgb, ratio) => (
+    baseRgb.map((channel, index) => Math.round(channel + (targetRgb[index] - channel) * ratio))
+);
+
+const toRgbText = ([red, green, blue], alpha) => (
+    alpha === undefined
+        ? `rgb(${red}, ${green}, ${blue})`
+        : `rgba(${red}, ${green}, ${blue}, ${alpha})`
+);
+
+const adjustThemeRgb = (hexColor, tone, mode) => {
+    const toneDelta = clampThemeTone(tone) - THEME_TONE_DEFAULT;
+    const baseRgb = hexToRgb(hexColor);
+    if (toneDelta === 0) return baseRgb;
+
+    const normalizedMode = mode === 'dark' ? 'dark' : 'light';
+    const limit = toneDelta > 0
+        ? THEME_TONE_MIX_LIMITS[normalizedMode].brighten
+        : THEME_TONE_MIX_LIMITS[normalizedMode].dim;
+    const range = toneDelta > 0
+        ? THEME_TONE_MAX - THEME_TONE_DEFAULT
+        : THEME_TONE_DEFAULT - THEME_TONE_MIN;
+    const targetRgb = toneDelta > 0 ? [255, 255, 255] : [0, 0, 0];
+    const mixRatio = (Math.abs(toneDelta) / range) * limit;
+
+    return mixRgb(baseRgb, targetRgb, mixRatio);
+};
+
+const buildThemeToneVariables = (mode, tone) => {
+    const normalizedMode = mode === 'dark' ? 'dark' : 'light';
+    const baseTokens = THEME_TONE_BASE_TOKENS[normalizedMode];
+    const alphaTokens = THEME_TONE_ALPHA_TOKENS[normalizedMode];
+
+    return Object.entries(baseTokens).reduce((nextTokens, [tokenName, tokenValue]) => {
+        const adjustedRgb = adjustThemeRgb(tokenValue, tone, normalizedMode);
+        const alpha = alphaTokens[tokenName];
+
+        nextTokens[tokenName] = alpha === undefined
+            ? toRgbText(adjustedRgb)
+            : toRgbText(adjustedRgb, alpha);
+        return nextTokens;
+    }, {
+        '--wgs-theme-tone': String(clampThemeTone(tone)),
+    });
+};
+
 const showWgsToast = (message, type = 'info') => {
     const toastByType = toast[type] || toast.info;
     toastByType(message, {
@@ -185,6 +334,17 @@ window.alert = (message) => {
 function App() {
     // 관리자페이지 > 화면 설정 관리의 전체 사이트명 값을 실제 헤더에 연결합니다.
     const { getSetting: getGlobalScreenSetting } = useScreenSettings('all');
+    const navHomeLabel = getGlobalScreenSetting('nav.home_label', '홈');
+    const navCertIpeLabel = getGlobalScreenSetting('nav.cert_ipe_label', '정보처리기사');
+    const navMultiplayerLabel = getGlobalScreenSetting('nav.multiplayer_label', '멀티플레이');
+    const navMealMapLabel = getGlobalScreenSetting('nav.mealmap_label', '회식맵');
+    const navMyPageLabel = getGlobalScreenSetting('nav.mypage_label', '마이페이지');
+    const navBoardLabel = getGlobalScreenSetting('nav.board_label', '게시판');
+    const navFaqLabel = getGlobalScreenSetting('nav.faq_label', 'FAQ');
+    const navFortuneLabel = getGlobalScreenSetting('nav.fortune_label', '운세');
+    const navAdminLabel = getGlobalScreenSetting('nav.admin_label', '관리자');
+    const navLoginLabel = getGlobalScreenSetting('nav.login_label', '로그인');
+    const navLogoutLabel = getGlobalScreenSetting('nav.logout_label', '로그아웃');
 
     const navigate = useNavigate();
     const location = useLocation();
@@ -240,14 +400,22 @@ function App() {
         const savedThemeMode = localStorage.getItem('wgsThemeMode');
         return savedThemeMode === 'dark'? 'dark' : 'light';
     });
+    const [themeTone, setThemeTone] = useState(() => getStoredThemeTone(themeMode));
 
     useEffect(() => {
         const isLight = themeMode === 'light';
+        const toneVariables = buildThemeToneVariables(themeMode, themeTone);
+
         document.body.classList.toggle('wgs-theme-light', isLight);
         document.body.classList.toggle('wgs-theme-dark', !isLight);
         document.documentElement.setAttribute('data-wgs-theme', themeMode);
+        document.documentElement.setAttribute('data-wgs-theme-tone', String(themeTone));
+        Object.entries(toneVariables).forEach(([tokenName, tokenValue]) => {
+            document.body.style.setProperty(tokenName, tokenValue);
+        });
         localStorage.setItem('wgsThemeMode', themeMode);
-    }, [themeMode]);
+        sessionStorage.setItem(getThemeToneStorageKey(themeMode), String(themeTone));
+    }, [themeMode, themeTone]);
 
     useEffect(() => {
         // reload 이후에도 로그아웃 사유 toast가 보이도록 복구하는 부분입니다.
@@ -276,7 +444,13 @@ function App() {
     }, []);
 
     const handleThemeChange = useCallback((nextMode) => {
-        setThemeMode(nextMode === 'light'? 'light' : 'dark');
+        const normalizedMode = nextMode === 'light'? 'light' : 'dark';
+        setThemeMode(normalizedMode);
+        setThemeTone(getStoredThemeTone(normalizedMode));
+    }, []);
+
+    const handleThemeToneChange = useCallback((nextTone) => {
+        setThemeTone(clampThemeTone(nextTone));
     }, []);
 
     // 필기 기출/실기 기출 시험 응시 중 이탈 방지 상태입니다.
@@ -675,7 +849,12 @@ function App() {
                         기존 제목 문구와 라우팅/로그인 로직은 유지합니다. */}
                     <h1 className="wgs-site-logo wgs-type-logo" style={{ color: 'var(--wgs-title)', padding: '10px 0', margin: '0 0 15px 0', fontSize: '26px', textAlign: 'center', fontWeight: '900', letterSpacing: '1px' }}>{getGlobalScreenSetting('global.site_title', 'SKN29th_우공실')}</h1>
 
-                    <ThemeModeToggle themeMode={themeMode} onChangeTheme={handleThemeChange} />
+                    <ThemeModeToggle
+                        themeMode={themeMode}
+                        themeTone={themeTone}
+                        onChangeTheme={handleThemeChange}
+                        onChangeThemeTone={handleThemeToneChange}
+                    />
 
                     <RealTimeClock loggedInUser={loggedInUser} handleLogout={handleLogout} isExamActive={isExamActive} examWarningCount={examWarningCount} />
 
@@ -695,30 +874,30 @@ function App() {
                         {/*  우공실의 핵심 흐름에 맞춰 메뉴 순서를 재정렬했습니다.
                             메뉴 순서는 홈, 필기, 실기, 마이페이지, 게시판, FAQ, 운세입니다.
                             학습 기능을 먼저 배치하고, 커뮤니티/안내/부가기능은 뒤로 배치했습니다. */}
-                        <NavItem path="/" color="#2dd4bf">홈</NavItem>
+                        <NavItem path="/" color="#2dd4bf">{navHomeLabel}</NavItem>
                         {/*  [멀티플레이 1단계 분리]
                         필기문제 메뉴는 이제 문제은행(/practice)과 기출문제(/exam)만 같은 영역으로 강조합니다.
                         멀티플레이(/multiplayer)는 별도 메뉴로 분리해 필기문제 페이지와 시각적으로 구분합니다. */}
                         <NavItem
                             path="/cert/ipe" color="#60a5fa" activePaths={['/cert/ipe/*', '/written', '/practice', '/exam', '/ipep']}
                         >
-                            정보처리기사
+                            {navCertIpeLabel}
                         </NavItem>
                         {/*  [멀티플레이 1단계 분리]
                         기존 /multiplayer 라우트와 기능은 그대로 두고, 상단 메뉴에서 바로 들어갈 수 있는 독립 입구만 추가합니다.
                         백엔드 멀티플레이 로직은 유지합니다. */}
-                        <NavItem path="/multiplayer" color="#8b5cf6">멀티플레이</NavItem>
-                        <NavItem path="/mealmap" color="#fb7185">회식맵</NavItem>
-                        {loggedInUser && <NavItem path="/mypage" color="#a78bfa">마이페이지</NavItem>}
-                        <NavItem path="/board" color="#f97316">게시판</NavItem>
-                        <NavItem path="/faq" color="#facc15">FAQ</NavItem>
-                        <NavItem path="/fortune" color="#fb7185">운세</NavItem>
+                        <NavItem path="/multiplayer" color="#8b5cf6">{navMultiplayerLabel}</NavItem>
+                        <NavItem path="/mealmap" color="#fb7185">{navMealMapLabel}</NavItem>
+                        {loggedInUser && <NavItem path="/mypage" color="#a78bfa">{navMyPageLabel}</NavItem>}
+                        <NavItem path="/board" color="#f97316">{navBoardLabel}</NavItem>
+                        <NavItem path="/faq" color="#facc15">{navFaqLabel}</NavItem>
+                        <NavItem path="/fortune" color="#fb7185">{navFortuneLabel}</NavItem>
                         {/*  [관리자 Step1 메뉴]
                             DB에서 확인된 관리자 권한 사용자에게만 운세와 로그아웃 사이에 관리자 버튼을 노출한다.
                             일반 사용자는 버튼 자체가 보이지 않으며, /admin 직접 접근도 Admin.jsx에서 한 번 더 차단한다. */}
-                        {isAdminUser && <NavItem path="/admin" color="#22c55e" activePaths={['/admin/*']}>관리자</NavItem>}
+                        {isAdminUser && <NavItem path="/admin" color="#22c55e" activePaths={['/admin/*']}>{navAdminLabel}</NavItem>}
                         {!loggedInUser ? (
-                            <NavItem path="/login" color="#f8fafc">로그인</NavItem>
+                            <NavItem path="/login" color="#f8fafc">{navLoginLabel}</NavItem>
                         ) : (
                             <button
                                 className="wgs-nav-item wgs-type-nav wgs-logout-nav-item" onClick={() => handleLogout(false)}
@@ -734,7 +913,7 @@ function App() {
                                     borderBottom: '3px solid transparent'
                                 }}
                             >
-                                 로그아웃
+                                 {navLogoutLabel}
                             </button>
                         )}
                     </nav>

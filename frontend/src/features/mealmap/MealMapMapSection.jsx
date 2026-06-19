@@ -2,6 +2,14 @@
 import React from 'react';
 import { formatPrice, getMarkerPosition, getPlaceMarkerText } from './mealMapUtils.js';
 
+function formatMapText(mt, key, fallback, values = {}) {
+    const source = typeof mt === 'function' ? mt(key) || fallback : fallback;
+    return Object.entries(values).reduce(
+        (text, [name, value]) => text.replaceAll(`{${name}}`, String(value)),
+        source,
+    );
+}
+
 export default function MealMapMapSection({
     config,
     mt,
@@ -19,38 +27,47 @@ export default function MealMapMapSection({
     openExternalMap,
     toggleLike,
     openEditRequest,
-    openActivityHistory,
+    requestDeletePlace,
     commentsLoading,
     comments,
     commentText,
     setCommentText,
     submitComment,
 }) {
+    const emptyValue = mt('detailEmptyValue') || '-';
+    const unknownCategory = mt('detailUnknownCategory') || '식당';
+
     return (
         <section className="mealmap-layout">
             <div className="mealmap-map-card">
                 <div className="mealmap-map-head">
                     <div>
-                        <strong>{config.mapEnabled ? '카카오 지도 모드' : mt('mapTitle')}</strong>
-                        <span>{loading ? '불러오는 중...' : `공개 장소 ${places.length}개`}</span>
+                        <strong>{config.mapEnabled ? mt('kakaoMapModeTitle') : mt('mapTitle')}</strong>
+                        <span>
+                            {loading
+                                ? mt('loadingText')
+                                : formatMapText(mt, 'mapCountText', `${mt('mapCountPrefix')} {count}개`, {
+                                    count: places.length.toLocaleString('ko-KR'),
+                                })}
+                        </span>
                     </div>
                 </div>
 
                 <div className="mealmap-map-surface" ref={mapRef}>
                     {(config.mapEnabled && config.mapClientId) && (
                         <>
-                            <div className="mealmap-real-map-layer" ref={kakaoMapCanvasRef} aria-label="카카오 지도" />
+                            <div className="mealmap-real-map-layer" ref={kakaoMapCanvasRef} aria-label={mt('kakaoMapAriaLabel')} />
                             {mapStatus === 'loading' && (
                                 <div className="mealmap-kakao-map-message">
-                                    <strong>카카오 지도를 불러오는 중입니다.</strong>
-                                    <span>잠시 후에도 보이지 않으면 카카오 JavaScript 키와 Web 플랫폼 도메인을 확인해주세요.</span>
+                                    <strong>{mt('kakaoMapLoadingTitle')}</strong>
+                                    <span>{mt('kakaoMapLoadingBody')}</span>
                                 </div>
                             )}
                             {mapStatus === 'error' && (
                                 <div className="mealmap-kakao-map-message mealmap-kakao-map-message-error">
-                                    <strong>카카오 지도를 불러오지 못했습니다.</strong>
-                                    <span>{mapDebug || '카카오 Developers의 Web 플랫폼 도메인에 현재 주소가 등록되어 있는지, JavaScript 키가 맞는지 확인해주세요.'}</span>
-                                    <small className="mealmap-kakao-debug-hint">점검 주소: /api/mealmap/kakao/js-test</small>
+                                    <strong>{mt('kakaoMapErrorTitle')}</strong>
+                                    <span>{mapDebug || mt('kakaoMapErrorBody')}</span>
+                                    <small className="mealmap-kakao-debug-hint">{mt('kakaoMapDebugHint')}</small>
                                 </div>
                             )}
                         </>
@@ -59,7 +76,7 @@ export default function MealMapMapSection({
                         <>
                             <div className="mealmap-grid-bg" />
                             <div className="mealmap-floating-help">
-                                <strong>{isClusterMode ? '줌아웃: 등록 개수 표시' : '줌인: 가격/식당명 표시'}</strong>
+                                <strong>{isClusterMode ? mt('clusterZoomOutTitle') : mt('clusterZoomInTitle')}</strong>
                                 <span>{mt('mapGuideBody')}</span>
                             </div>
 
@@ -97,32 +114,32 @@ export default function MealMapMapSection({
                     <>
                         <div className="mealmap-detail-head">
                             <div>
-                                <span>{selectedPlace.category || '식당'}</span>
+                                <span>{selectedPlace.category || unknownCategory}</span>
                                 <h2>{selectedPlace.name}</h2>
-                                <p>{selectedPlace.address || selectedPlace.road_address || '-'}</p>
+                                <p>{selectedPlace.address || selectedPlace.road_address || emptyValue}</p>
                             </div>
-                            <button type="button" onClick={() => setSelectedPlace(null)} aria-label="상세 닫기">닫기</button>
+                            <button type="button" onClick={() => setSelectedPlace(null)} aria-label={mt('detailCloseAria')}>{mt('closeButton')}</button>
                         </div>
 
                         <div className="mealmap-detail-meta">
-                            <div><strong>가격</strong><span>{formatPrice(selectedPlace.min_price)} ~ {formatPrice(selectedPlace.max_price)}</span></div>
-                            <div><strong>영업시간</strong><span>{selectedPlace.opening_hours || '-'}</span></div>
-                            <div><strong>대표메뉴</strong><span>{selectedPlace.main_menu || '-'}</span></div>
-                            <div><strong>제보자</strong><span>{selectedPlace.reporter_name || selectedPlace.reporter_id || '-'}</span></div>
+                            <div><strong>{mt('priceLabel')}</strong><span>{formatPrice(selectedPlace.min_price)} ~ {formatPrice(selectedPlace.max_price)}</span></div>
+                            <div><strong>{mt('openingHoursLabel')}</strong><span>{selectedPlace.opening_hours || emptyValue}</span></div>
+                            <div><strong>{mt('mainMenuLabel')}</strong><span>{selectedPlace.main_menu || emptyValue}</span></div>
+                            <div><strong>{mt('reporterLabel')}</strong><span>{selectedPlace.reporter_name || selectedPlace.reporter_id || emptyValue}</span></div>
                         </div>
 
                         {selectedPlace.report_note && <p className="mealmap-report-note">{selectedPlace.report_note}</p>}
 
                         <div className="mealmap-detail-actions">
-                            <button type="button" className="mealmap-naver-btn" onClick={() => openExternalMap(selectedPlace)}>카카오맵/후기 보기</button>
+                            <button type="button" className="mealmap-naver-btn" onClick={() => openExternalMap(selectedPlace)}>{mt('naverButton')}</button>
                             <button type="button" className={`mealmap-like-btn ${selectedPlace?.liked_by_me ? 'is-liked' : ''}`} onClick={() => toggleLike(selectedPlace)}>{mt('likeButton')} {selectedPlace.like_count || 0}</button>
                             <button type="button" className="mealmap-action" onClick={() => openEditRequest(selectedPlace)}>{mt('editSuggestButton')}</button>
-                            <button type="button" className="mealmap-action mealmap-history-btn" onClick={openActivityHistory}>활동 이력</button>
+                            <button type="button" className="mealmap-action mealmap-danger-action" onClick={() => requestDeletePlace(selectedPlace)}>{mt('deleteSuggestButton')}</button>
                         </div>
 
                         <section className="mealmap-comments">
                             <h3>{mt('commentTitle')}</h3>
-                            {commentsLoading ? <p>댓글 불러오는 중...</p> : comments.length === 0 ? <p>아직 등록된 댓글이 없습니다.</p> : (
+                            {commentsLoading ? <p>{mt('commentLoadingText')}</p> : comments.length === 0 ? <p>{mt('commentEmptyText')}</p> : (
                                 <div className="mealmap-comment-list">
                                     {comments.map((comment) => (
                                         <article key={comment.id}>

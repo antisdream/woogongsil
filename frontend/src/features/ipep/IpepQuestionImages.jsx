@@ -7,7 +7,13 @@ import {
 } from './ipepPracticeUtils.js';
 import { baseButtonStyle } from './ipepPracticeStyles.js';
 
-export function IpepQuestionImages({ question, openImageViewer }) {
+export function IpepQuestionImages({
+    question,
+    openImageViewer,
+    choiceAlt = '보기 이미지',
+    choiceViewerTitle = '보기 이미지 크게 보기',
+    choiceButtonLabel = ' 보기 이미지 크게 보기'
+}) {
         if (!question) return null;
 
         const choiceImgPath = getQuestionChoiceImgPath(question);
@@ -17,22 +23,22 @@ export function IpepQuestionImages({ question, openImageViewer }) {
             <div style={{ margin: '18px 0', textAlign: 'center' }}>
                 <img
                     src={getImgSrc(choiceImgPath)}
-                    alt="보기 이미지" style={{
+                    alt={choiceAlt} style={{
                         maxWidth: '100%',
                         maxHeight: '420px',
                         borderRadius: '8px',
                         border: '1px solid var(--wgs-border)',
                         background: '#ffffff'
                     }}
-                    onClick={() => openImageViewer(choiceImgPath, '보기 이미지 크게 보기')}
+                    onClick={() => openImageViewer(choiceImgPath, choiceViewerTitle)}
                     onError={(e) => { e.currentTarget.style.display = 'none'; }}
                 />
                 <div style={{ marginTop: '8px' }}>
                     <button
-                        type="button" onClick={() => openImageViewer(choiceImgPath, '보기 이미지 크게 보기')}
+                        type="button" onClick={() => openImageViewer(choiceImgPath, choiceViewerTitle)}
                         style={{ ...baseButtonStyle, padding: '8px 12px', background: 'var(--wgs-button-muted)', fontSize: '13px' }}
                     >
-                         보기 이미지 크게 보기
+                         {choiceButtonLabel}
                     </button>
                 </div>
             </div>
@@ -40,7 +46,14 @@ export function IpepQuestionImages({ question, openImageViewer }) {
     
 }
 
-export function IpepExplanationImage({ question, openImageViewer }) {
+export function IpepExplanationImage({
+    question,
+    openImageViewer,
+    explanationTitle = ' 해설 이미지',
+    explanationAlt = '해설 이미지',
+    explanationViewerTitle = '해설 이미지 크게 보기',
+    explanationButtonLabel = ' 해설 이미지 확대해서 보기'
+}) {
         if (!question) return null;
 
         const explanationImgPath = getQuestionExplanationImgPath(question);
@@ -49,27 +62,27 @@ export function IpepExplanationImage({ question, openImageViewer }) {
         return (
             <div style={{ marginTop: '16px', paddingTop: '14px', borderTop: '1px solid var(--wgs-border)' }}>
                 <div style={{ color: 'var(--wgs-title)', fontWeight: '900', marginBottom: '10px', textAlign: 'left' }}>
-                     해설 이미지
+                     {explanationTitle}
                 </div>
                 <div style={{ maxHeight: '520px', overflow: 'auto', textAlign: 'center', background: 'rgba(255,255,255,0.04)', borderRadius: '10px', padding: '10px', border: '1px solid var(--wgs-border)' }}>
                     <img
                         src={getImgSrc(explanationImgPath)}
-                        alt="해설 이미지" style={{
+                        alt={explanationAlt} style={{
                             maxWidth: '100%',
                             height: 'auto',
                             borderRadius: '8px',
                             border: '1px solid var(--wgs-border)',
                             background: '#ffffff'
                         }}
-                        onClick={() => openImageViewer(explanationImgPath, '해설 이미지 크게 보기')}
+                        onClick={() => openImageViewer(explanationImgPath, explanationViewerTitle)}
                         onError={(e) => { e.currentTarget.style.display = 'none'; }}
                     />
                 </div>
                 <button
-                    type="button" onClick={() => openImageViewer(explanationImgPath, '해설 이미지 크게 보기')}
+                    type="button" onClick={() => openImageViewer(explanationImgPath, explanationViewerTitle)}
                     style={{ ...baseButtonStyle, width: '100%', marginTop: '10px', background: '#8b5cf6' }}
                 >
-                     해설 이미지 확대해서 보기
+                     {explanationButtonLabel}
                 </button>
             </div>
         );

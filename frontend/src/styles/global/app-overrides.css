@@ -7,14 +7,15 @@
      선택자를 좁혀 !important를 사용했습니다.
    ===================================================================== */
 
-/* 1) 테마 토글: 감싸는 캡슐 블록은 제거하고 버튼 2개만 표시합니다. */
+/* 1) 테마 토글: 모드 버튼과 10% 단위 밝기 슬라이더를 한 영역에 정리합니다. */
 .theme-switch-wrap {
   background: transparent !important;
   border: 0 !important;
   box-shadow: none !important;
   padding: 0 !important;
-  gap: 8px !important;
+  gap: 10px !important;
   backdrop-filter: none !important;
+  flex-wrap: wrap !important;
 }
 body.wgs-theme-dark .theme-switch-wrap {
   background: transparent !important;
@@ -59,6 +60,45 @@ body.wgs-theme-dark .wgs-theme-toggle button {
 body.wgs-theme-dark .wgs-theme-toggle button.is-active {
   background: linear-gradient(135deg, #10b981, #047857) !important;
   color: #ffffff !important;
+}
+.wgs-theme-tone-control {
+  min-height: 44px !important;
+  padding: 0 12px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  border: 1px solid var(--wgs-border) !important;
+  border-radius: 12px !important;
+  background: var(--wgs-panel) !important;
+  color: var(--wgs-title) !important;
+  font-family: var(--wgs-font-h3) !important;
+  font-weight: 900 !important;
+  box-shadow: none !important;
+}
+.wgs-theme-tone-label,
+.wgs-theme-tone-value {
+  font-size: 13px !important;
+  line-height: 1 !important;
+  white-space: nowrap !important;
+}
+.wgs-theme-tone-value {
+  min-width: 40px !important;
+  text-align: right !important;
+  color: var(--wgs-muted) !important;
+}
+.wgs-theme-tone-slider {
+  width: 120px !important;
+  min-width: 100px !important;
+  height: 4px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  accent-color: var(--wgs-success) !important;
+  cursor: pointer !important;
+}
+body.wgs-theme-dark .wgs-theme-tone-control {
+  background: rgba(15, 23, 42, 0.48) !important;
+  color: #f8fafc !important;
+  border-color: rgba(148, 163, 184, 0.28) !important;
 }
 
 /* 2) 필기/실기 문제은행: 라이트모드에서 흰 글씨가 흰 카드 위에 묻히는 문제를 보정합니다. */
@@ -181,11 +221,27 @@ body.wgs-theme-light .wrong-note-page button[style*="background: #8b5cf6"] {
 }
 
 /* 6) 홈 히어로: 시험 관련 문구와 환영 카드가 배경 이미지와 어색하게 겹치지 않도록 위치를 보정합니다. */
+.home-hero.wgs-landing-hero {
+  display: grid !important;
+  grid-template-rows: auto 1fr auto !important;
+  align-items: stretch !important;
+  justify-items: center !important;
+  text-align: center !important;
+}
+.home-hero-title-zone {
+  width: 100% !important;
+}
 .home-hero .wgs-page-title {
   color: var(--wgs-title-strong) !important;
+  margin: 0 !important;
+  max-width: 100% !important;
 }
 body.wgs-theme-dark .home-hero .wgs-page-title {
   color: #ffffff !important;
+}
+.home-hero .wgs-home-hero-desc {
+  margin: 16px auto 0 !important;
+  max-width: 780px !important;
 }
 .wgs-home-welcome-card {
   transform: translateY(-14px) !important;
@@ -206,6 +262,13 @@ body.wgs-theme-dark .home-hero .wgs-page-title {
     min-height: 38px !important;
     padding: 0 12px !important;
     font-size: 13px !important;
+  }
+  .wgs-theme-tone-control {
+    min-height: 38px !important;
+    padding: 0 10px !important;
+  }
+  .wgs-theme-tone-slider {
+    width: 96px !important;
   }
   .exam-question-title-row {
     flex-wrap: wrap !important;

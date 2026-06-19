@@ -1,6 +1,40 @@
 // Home page feature module for HomeHero.
 import React from 'react';
 
+const HERO_ALIGN_TO_FLEX = {
+    left: 'flex-start',
+    center: 'center',
+    right: 'flex-end',
+};
+
+const normalizeHeroAlign = (value, fallback = 'center') => {
+    const normalizedValue = String(value || '').trim().toLowerCase();
+    return HERO_ALIGN_TO_FLEX[normalizedValue] ? normalizedValue : fallback;
+};
+
+const normalizeHeroOffset = (value) => {
+    const numericValue = Number(value);
+    if (!Number.isFinite(numericValue)) return 0;
+    return Math.min(200, Math.max(-200, Math.round(numericValue / 10) * 10));
+};
+
+const normalizeHeroContentWidth = (value) => {
+    const numericValue = Number(String(value || '').replace('%', ''));
+    if (!Number.isFinite(numericValue)) return '100%';
+    return `${Math.min(100, Math.max(60, Math.round(numericValue / 10) * 10))}%`;
+};
+
+// Shared quick-link shape; color is controlled by theme-aware CSS classes.
+const quickLinkBaseStyle = {
+    padding: '12px 20px',
+    textDecoration: 'none',
+    borderRadius: '12px',
+    fontWeight: 'bold',
+    fontSize: '15px',
+    boxShadow: '0 8px 18px rgba(0,0,0,0.16)',
+    whiteSpace: 'nowrap',
+};
+
 export default function HomeHero({
     homeDefaultBanner,
     homeHeroTitle,
@@ -22,8 +56,17 @@ export default function HomeHero({
     homeDeveloperButtonUrl,
     homeDeveloperButtonLabel,
     homeMobileButtonLabel,
+    homeHeroLayout,
     onShowQr,
 }) {
+    const titleAlign = normalizeHeroAlign(homeHeroLayout?.titleAlign);
+    const descAlign = normalizeHeroAlign(homeHeroLayout?.descAlign);
+    const titleOffsetX = normalizeHeroOffset(homeHeroLayout?.titleOffsetX);
+    const titleOffsetY = normalizeHeroOffset(homeHeroLayout?.titleOffsetY);
+    const descOffsetX = normalizeHeroOffset(homeHeroLayout?.descOffsetX);
+    const descOffsetY = normalizeHeroOffset(homeHeroLayout?.descOffsetY);
+    const contentWidth = normalizeHeroContentWidth(homeHeroLayout?.contentWidth);
+
     return (
         <div
             className="home-hero wgs-landing-hero" style={{
@@ -39,19 +82,24 @@ export default function HomeHero({
                 display: 'grid',
                 gridTemplateRows: 'auto 1fr auto',
                 alignItems: 'stretch',
+                justifyItems: 'center',
                 overflow: 'hidden'
             }}
         >
             <div
                 className="home-hero-title-zone" style={{
                     alignSelf: 'start',
+                    width: '100%',
                     display: 'flex',
-                    justifyContent: 'center',
-                    alignItems: 'flex-start'
+                    justifyContent: HERO_ALIGN_TO_FLEX[titleAlign],
+                    alignItems: 'flex-start',
+                    textAlign: titleAlign,
+                    transform: `translate(${titleOffsetX}px, ${titleOffsetY}px)`
                 }}
             >
                 <h1
                     className="wgs-page-title" style={{
+                        width: `min(${contentWidth}, 100%)`,
                         fontSize: 'clamp(38px, 5vw, 76px)',
                         color: 'var(--wgs-title)',
                         margin: 0,
@@ -66,6 +114,7 @@ export default function HomeHero({
 
             <p
                 className="wgs-home-hero-desc" style={{
+                    width: `min(${contentWidth}, 100%)`,
                     color: 'var(--wgs-muted)',
                     fontSize: 'clamp(16px, 1.6vw, 22px)',
                     fontWeight: 700,
@@ -73,6 +122,8 @@ export default function HomeHero({
                     margin: '16px auto 0',
                     maxWidth: '780px',
                     wordBreak: 'keep-all',
+                    textAlign: descAlign,
+                    transform: `translate(${descOffsetX}px, ${descOffsetY}px)`,
                     textShadow: '0 3px 14px rgba(255,255,255,0.35)'
                 }}
             >
@@ -164,16 +215,16 @@ export default function HomeHero({
                         margin: '0 auto'
                     }}
                 >
-                    <a href={homeExamButtonUrl} target="_blank" rel="noopener noreferrer" style={{ padding: '12px 20px', background: '#3b82f6', color: 'white', textDecoration: 'none', borderRadius: '12px', fontWeight: 'bold', fontSize: '15px', boxShadow: '0 8px 18px rgba(0,0,0,0.16)', whiteSpace: 'nowrap' }}>
+                    <a className="home-quick-link home-quick-link-blue" href={homeExamButtonUrl} target="_blank" rel="noopener noreferrer" style={quickLinkBaseStyle}>
                         {homeExamButtonLabel}
                     </a>
-                    <a href={homeNotionButtonUrl} target="_blank" rel="noopener noreferrer" style={{ padding: '12px 20px', background: '#10b981', color: 'white', textDecoration: 'none', borderRadius: '12px', fontWeight: 'bold', fontSize: '15px', boxShadow: '0 8px 18px rgba(0,0,0,0.16)', whiteSpace: 'nowrap' }}>
+                    <a className="home-quick-link home-quick-link-green" href={homeNotionButtonUrl} target="_blank" rel="noopener noreferrer" style={quickLinkBaseStyle}>
                         {homeNotionButtonLabel}
                     </a>
-                    <a href={homeDeveloperButtonUrl} target="_blank" rel="noopener noreferrer" style={{ padding: '12px 20px', background: '#f59e0b', color: 'white', textDecoration: 'none', borderRadius: '12px', fontWeight: 'bold', fontSize: '15px', boxShadow: '0 8px 18px rgba(0,0,0,0.16)', whiteSpace: 'nowrap' }}>
+                    <a className="home-quick-link home-quick-link-yellow" href={homeDeveloperButtonUrl} target="_blank" rel="noopener noreferrer" style={quickLinkBaseStyle}>
                         {homeDeveloperButtonLabel}
                     </a>
-                    <button onClick={onShowQr} style={{ padding: '12px 20px', background: '#8b5cf6', color: 'white', border: 'none', borderRadius: '12px', fontWeight: 'bold', fontSize: '15px', boxShadow: '0 8px 18px rgba(0,0,0,0.16)', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                    <button className="home-quick-link home-quick-link-purple" onClick={onShowQr} style={{ ...quickLinkBaseStyle, border: 'none', cursor: 'pointer' }}>
                         {homeMobileButtonLabel}
                     </button>
                 </div>

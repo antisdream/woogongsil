@@ -64,7 +64,7 @@ function MealMap() {
       alive = false;
     };
   }, []);
-const mt = (key) => pageTexts?.[key] || DEFAULT_MEALMAP_TEXTS[key] || '';
+  const mt = useCallback((key) => pageTexts?.[key] || DEFAULT_MEALMAP_TEXTS[key] || '', [pageTexts]);
   const [error, setError] = useState('');
   const [zoomLevel, setZoomLevel] = useState(11);
   const [selectedPlace, setSelectedPlace] = useState(null);
@@ -207,16 +207,16 @@ const mt = (key) => pageTexts?.[key] || DEFAULT_MEALMAP_TEXTS[key] || '';
         headers: authHeaders(),
       });
       const data = await response.json().catch(() => ({}));
-      if (!response.ok || !data.success) throw new Error(data.message || data.msg || '회식맵 장소를 불러오지 못했습니다.');
+      if (!response.ok || !data.success) throw new Error(data.message || data.msg || mt('placeLoadFailMessage'));
       const nextPlaces = Array.isArray(data.places) ? data.places : [];
       setPlaces(nextPlaces);
       setSelectedPlace((prev) => prev || nextPlaces[0] || null);
     } catch (err) {
-      setError(err.message || '회식맵 장소를 불러오지 못했습니다.');
+      setError(err.message || mt('placeLoadFailMessage'));
     } finally {
       setLoading(false);
     }
-  }, [appliedFilters, categoriesForQuery, keyword]);
+  }, [appliedFilters, categoriesForQuery, keyword, mt]);
 
   const fetchComments = useCallback(async (placeId) => {
     if (!placeId) return;
@@ -226,7 +226,7 @@ const mt = (key) => pageTexts?.[key] || DEFAULT_MEALMAP_TEXTS[key] || '';
         headers: authHeaders(),
       });
       const data = await response.json().catch(() => ({}));
-      if (!response.ok || !data.success) throw new Error(data.message || data.msg || '댓글을 불러오지 못했습니다.');
+      if (!response.ok || !data.success) throw new Error(data.message || data.msg || mt('commentLoadFailMessage'));
       setComments(Array.isArray(data.comments) ? data.comments : []);
     } catch (err) {
       console.warn('[mealmap] comment load failed:', err);
@@ -234,7 +234,7 @@ const mt = (key) => pageTexts?.[key] || DEFAULT_MEALMAP_TEXTS[key] || '';
     } finally {
       setCommentsLoading(false);
     }
-  }, []);
+  }, [mt]);
 
   useEffect(() => {
     let alive = true;
@@ -293,14 +293,14 @@ const mt = (key) => pageTexts?.[key] || DEFAULT_MEALMAP_TEXTS[key] || '';
 
   const geocodeAddress = async (address) => {
     const trimmed = String(address || '').trim();
-    if (!trimmed) throw new Error('주소를 먼저 입력해주세요.');
+    if (!trimmed) throw new Error(mt('geocodeAddressRequiredMessage'));
 
     const response = await fetch(`${API_BASE}/api/mealmap/geocode?address=${encodeURIComponent(trimmed)}`, {
       headers: authHeaders(),
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok || !data.success) {
-      throw new Error(data.message || data.msg || '주소 좌표를 찾지 못했습니다.');
+      throw new Error(data.message || data.msg || mt('geocodeFailMessage'));
     }
     return data.result || {};
   };
@@ -318,9 +318,9 @@ const mt = (key) => pageTexts?.[key] || DEFAULT_MEALMAP_TEXTS[key] || '';
         lat: result.lat ?? prev.lat,
         lng: result.lng ?? prev.lng,
       }));
-      setMessage('주소 기준 좌표를 찾았습니다. 내용을 확인한 뒤 관리자 승인 요청을 보내주세요.');
+      setMessage(mt('geocodeFormSuccessMessage'));
     } catch (err) {
-      setError(err.message || '주소 좌표를 찾지 못했습니다.');
+      setError(err.message || mt('geocodeFailMessage'));
     } finally {
       setGeocoding(false);
     }
@@ -338,9 +338,9 @@ const mt = (key) => pageTexts?.[key] || DEFAULT_MEALMAP_TEXTS[key] || '';
         lat: result.lat ?? prev.lat,
         lng: result.lng ?? prev.lng,
       }));
-      setMessage('주소 기준 좌표를 찾았습니다. 수정 내용을 확인한 뒤 제안해주세요.');
+      setMessage(mt('geocodeEditSuccessMessage'));
     } catch (err) {
-      setMessage(err.message || '주소 좌표를 찾지 못했습니다.');
+      setMessage(err.message || mt('geocodeFailMessage'));
     } finally {
       setEditGeocoding(false);
     }
@@ -364,7 +364,7 @@ const mt = (key) => pageTexts?.[key] || DEFAULT_MEALMAP_TEXTS[key] || '';
     const state = getLookupState(target);
     const keyword = (state.keyword || state.fallbackKeyword || '').trim();
     if (!keyword) {
-      setMessage('카카오 장소 검색어를 입력해주세요.');
+      setMessage(mt('keywordRequiredMessage'));
       return;
     }
 
@@ -377,11 +377,11 @@ const mt = (key) => pageTexts?.[key] || DEFAULT_MEALMAP_TEXTS[key] || '';
       const results = Array.isArray(data.results) ? data.results.slice(0, 7) : [];
       state.setResults(results);
       if (!results.length) {
-        setMessage('카카오 장소 검색 결과가 없습니다. 주소 검색을 함께 사용해주세요.');
+        setMessage(mt('keywordEmptyMessage'));
       }
     } catch (err) {
       console.error(err);
-      setMessage('카카오 장소 검색 중 오류가 발생했습니다.');
+      setMessage(mt('keywordErrorMessage'));
     } finally {
       state.setSearching(false);
     }
@@ -391,21 +391,35 @@ const mt = (key) => pageTexts?.[key] || DEFAULT_MEALMAP_TEXTS[key] || '';
     if (!item) return;
 
     const nextName = String(item.name || item.title || '').trim();
+    const nextCategory = String(item.category || '').trim();
     const nextAddress = String(item.roadAddress || item.address || '').trim();
     const nextRoadAddress = String(item.roadAddress || '').trim();
     const nextLat = item.lat != null ? String(item.lat) : '';
     const nextLng = item.lng != null ? String(item.lng) : '';
     const nextUrl = String(item.kakaoUrl || item.url || item.link || '').trim();
+    const nextMainMenu = String(item.mainMenu || item.main_menu || '').trim();
+    const nextOpeningHours = String(item.openingHours || item.opening_hours || '').trim();
+    const nextMinPrice = item.minPrice ?? item.min_price ?? '';
+    const nextMaxPrice = item.maxPrice ?? item.max_price ?? '';
+    const nextSourceType = String(item.source || item.sourceType || '').trim();
+    const nextExternalPlaceId = String(item.externalPlaceId || item.external_place_id || '').trim();
 
     const apply = (prev) => ({
       ...prev,
       name: nextName || prev.name,
+      category: nextCategory || prev.category,
       address: nextAddress || prev.address,
       roadAddress: nextRoadAddress || prev.roadAddress,
       lat: nextLat || prev.lat,
       lng: nextLng || prev.lng,
+      minPrice: nextMinPrice !== '' && nextMinPrice !== null ? nextMinPrice : prev.minPrice,
+      maxPrice: nextMaxPrice !== '' && nextMaxPrice !== null ? nextMaxPrice : prev.maxPrice,
+      mainMenu: nextMainMenu || prev.mainMenu,
+      openingHours: nextOpeningHours || prev.openingHours,
       kakaoUrl: nextUrl || prev.kakaoUrl,
       naverUrl: nextUrl || prev.naverUrl,
+      sourceType: nextSourceType || prev.sourceType,
+      externalPlaceId: nextExternalPlaceId || prev.externalPlaceId,
     });
 
     if (target === 'edit') {
@@ -418,7 +432,7 @@ const mt = (key) => pageTexts?.[key] || DEFAULT_MEALMAP_TEXTS[key] || '';
       setFormLookupKeyword(nextName || nextAddress || '');
     }
 
-    setMessage('카카오 장소 검색 결과가 입력되었습니다. 필요하면 내용을 확인 후 수정해주세요.');
+    setMessage(mt('keywordAppliedMessage'));
   };
 
   const submitPlace = async (event) => {
@@ -427,12 +441,12 @@ const mt = (key) => pageTexts?.[key] || DEFAULT_MEALMAP_TEXTS[key] || '';
     setError('');
 
     if (!isLoggedIn) {
-      setError('로그인 후 장소를 제보할 수 있습니다.');
+      setError(mt('reportLoginRequiredMessage'));
       return;
     }
 
     if (!form.name.trim() || !form.address.trim()) {
-      setError('식당명과 주소는 필수입니다.');
+      setError(mt('reportRequiredFieldsMessage'));
       return;
     }
 
@@ -449,14 +463,14 @@ const mt = (key) => pageTexts?.[key] || DEFAULT_MEALMAP_TEXTS[key] || '';
         }),
       });
       const data = await response.json().catch(() => ({}));
-      if (!response.ok || !data.success) throw new Error(data.message || data.msg || '장소 제보에 실패했습니다.');
-      setMessage(data.message || '장소 제보가 접수되었습니다. 관리자 승인 후 공개됩니다.');
+      if (!response.ok || !data.success) throw new Error(data.message || data.msg || mt('reportSubmitFailMessage'));
+      setMessage(data.message || mt('reportSubmitSuccessMessage'));
       setForm(EMPTY_FORM);
       setAddOpen(false);
       closeMealMapModal();
       fetchPlaces();
     } catch (err) {
-      setError(err.message || '장소 제보에 실패했습니다.');
+      setError(err.message || mt('reportSubmitFailMessage'));
     } finally {
       setSubmitting(false);
     }
@@ -465,7 +479,7 @@ const mt = (key) => pageTexts?.[key] || DEFAULT_MEALMAP_TEXTS[key] || '';
   const submitComment = async () => {
     if (!selectedPlace?.id) return;
     if (!isLoggedIn) {
-      setError('로그인 후 댓글을 남길 수 있습니다.');
+      setError(mt('commentLoginRequiredMessage'));
       return;
     }
     const text = commentText.trim();
@@ -478,22 +492,22 @@ const mt = (key) => pageTexts?.[key] || DEFAULT_MEALMAP_TEXTS[key] || '';
         body: JSON.stringify({ id: auth.userId, sessionToken: auth.sessionToken, text }),
       });
       const data = await response.json().catch(() => ({}));
-      if (!response.ok || !data.success) throw new Error(data.message || '댓글 등록에 실패했습니다.');
+      if (!response.ok || !data.success) throw new Error(data.message || mt('commentSubmitFailMessage'));
       setCommentText('');
-      setMessage('댓글이 등록되었습니다.');
+      setMessage(mt('commentSubmitSuccessMessage'));
       setSelectedPlace((prev) => (prev && prev.id === selectedPlace.id
         ? { ...prev, comment_count: Number(prev.comment_count || 0) + 1 }
         : prev));
       await fetchComments(selectedPlace.id);
     } catch (err) {
-      setError(err.message || '댓글 등록에 실패했습니다.');
+      setError(err.message || mt('commentSubmitFailMessage'));
     }
   };
 
   const toggleLike = async (place) => {
     if (!place?.id) return;
     if (!isLoggedIn) {
-      setError('로그인 후 좋아요를 누를 수 있습니다.');
+      setError(mt('likeLoginRequiredMessage'));
       return;
     }
 
@@ -506,7 +520,7 @@ const mt = (key) => pageTexts?.[key] || DEFAULT_MEALMAP_TEXTS[key] || '';
 
       const data = await response.json().catch(() => ({}));
       if (!response.ok || !data.success) {
-        throw new Error(data.message || data.msg || '좋아요 처리에 실패했습니다.');
+        throw new Error(data.message || data.msg || mt('likeFailMessage'));
       }
 
       const nextLiked = typeof data.liked === 'boolean'? data.liked
@@ -526,13 +540,47 @@ const mt = (key) => pageTexts?.[key] || DEFAULT_MEALMAP_TEXTS[key] || '';
 
       setPlaces((prev) => prev.map(applyLikeState));
       setSelectedPlace((prev) => applyLikeState(prev));
-      setMessage(nextLiked ? '좋아요가 반영되었습니다.' : '좋아요가 취소되었습니다.');
+      setMessage(nextLiked ? mt('likeSuccessMessage') : mt('likeCancelMessage'));
 
       await fetchPlaces();
     } catch (err) {
-      setError(err.message || '좋아요 처리에 실패했습니다.');
+      setError(err.message || mt('likeFailMessage'));
     }
   };
+
+  const requestDeletePlace = async (place) => {
+    if (!place?.id) return;
+    if (!isLoggedIn) {
+      setError(mt('reportLoginRequiredMessage'));
+      return;
+    }
+
+    const reason = window.prompt(mt('deleteRequestPrompt'), '');
+    if (reason === null) return;
+    if (!window.confirm(mt('deleteRequestConfirm'))) return;
+
+    setError('');
+    setMessage('');
+    try {
+      const response = await fetch(`${API_BASE}/api/mealmap/places/${place.id}/delete-request`, {
+        method: 'POST',
+        headers: authHeaders(),
+        credentials: 'include',
+        body: JSON.stringify({
+          ...getStoredAuth(),
+          reason: reason.trim(),
+        }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || data.msg || mt('deleteRequestFailMessage'));
+      }
+      setMessage(data.message || mt('deleteRequestSuccessMessage'));
+    } catch (err) {
+      setError(err.message || mt('deleteRequestFailMessage'));
+    }
+  };
+
     const openEditRequest = useCallback((place) => {
         if (!place) return;
         setEditPlace(place);
@@ -559,11 +607,11 @@ const mt = (key) => pageTexts?.[key] || DEFAULT_MEALMAP_TEXTS[key] || '';
         e.preventDefault();
         if (!editPlace) return;
         if (!editForm.name.trim() || !editForm.address.trim()) {
-            setMessage('식당명과 주소를 입력해주세요.');
+            setMessage(mt('editRequiredFieldsMessage'));
             return;
         }
         if (Number(editForm.maxPrice) < Number(editForm.minPrice)) {
-            setMessage('최대 가격은 최소 가격보다 작을 수 없어.');
+            setMessage(mt('editPriceRangeMessage'));
             return;
         }
 
@@ -576,7 +624,7 @@ const mt = (key) => pageTexts?.[key] || DEFAULT_MEALMAP_TEXTS[key] || '';
                 credentials: 'include',
                 body: JSON.stringify({
                     ...getStoredAuth(),
-                    reason: (editForm.reason || '사용자가 식당 정보 수정을 제안했습니다.').trim(),
+                    reason: (editForm.reason || mt('editDefaultReason')).trim(),
                     name: editForm.name,
                     category: editForm.category,
                     minPrice: Number(editForm.minPrice),
@@ -592,12 +640,12 @@ const mt = (key) => pageTexts?.[key] || DEFAULT_MEALMAP_TEXTS[key] || '';
                 }),
             });
             const data = await res.json();
-            if (!data.success) throw new Error(data.msg || '수정 제안 접수 실패');
-            setMessage(data.msg || '수정 제안이 접수되었습니다.');
+            if (!data.success) throw new Error(data.msg || mt('editSubmitFailShortMessage'));
+            setMessage(data.msg || mt('editSubmitSuccessMessage'));
             setEditOpen(false);
             closeMealMapModal();
         } catch (err) {
-            setMessage(err.message || '수정 제안 접수에 실패했습니다.');
+            setMessage(err.message || mt('editSubmitFailMessage'));
         } finally {
             setEditLoading(false);
         }
@@ -639,7 +687,7 @@ const mt = (key) => pageTexts?.[key] || DEFAULT_MEALMAP_TEXTS[key] || '';
         fetchActivityHistory(1);
       } else {
         setActivityOpen(false);
-        setError('로그인 후 활동 이력을 확인할 수 있습니다.');
+        setError(mt('activityLoginRequiredMessage'));
       }
       return;
     }
@@ -658,7 +706,7 @@ const mt = (key) => pageTexts?.[key] || DEFAULT_MEALMAP_TEXTS[key] || '';
     setFilterOpen(false);
     setActivityOpen(false);
     setEditOpen(false);
-  }, [editOpen, fetchActivityHistory, isLoggedIn, mealMapRouteMode, openEditRequest, selectedPlace, setActivityOpen]);
+  }, [editOpen, fetchActivityHistory, isLoggedIn, mealMapRouteMode, mt, openEditRequest, selectedPlace, setActivityOpen]);
 
   const clusterGroups = useMemo(() => {
     const count = places.length;
@@ -676,10 +724,13 @@ const mt = (key) => pageTexts?.[key] || DEFAULT_MEALMAP_TEXTS[key] || '';
       <section className="mealmap-hero">
         <div>
           <p className="mealmap-kicker">{mt('heroEyebrow')}</p>
-          <h1>회식맵</h1>
-          <p>당신의 식당을 추천해주세요!</p>
+          <h1>{mt('heroTitle')}</h1>
+          <p>{mt('heroSubtitle')}</p>
         </div>
-        <button type="button" className="mealmap-primary-btn" onClick={openMealMapReport}>{mt('submitButton')}</button>
+        <div className="mealmap-hero-actions">
+          <button type="button" className="mealmap-primary-btn" onClick={openMealMapReport}>{mt('submitButton')}</button>
+          <button type="button" className="mealmap-hero-history-btn" onClick={openActivityHistory}>{mt('activityHistoryButton')}</button>
+        </div>
       </section>
 
       {(message || error) && (
@@ -699,7 +750,7 @@ const mt = (key) => pageTexts?.[key] || DEFAULT_MEALMAP_TEXTS[key] || '';
           <button type="button" onClick={fetchPlaces}>{mt('searchButton')}</button>
         </div>
         <div className="mealmap-icon-actions">
-          <button type="button" onClick={openMealMapFilter} title="필터"> {mt('filterButton')}</button>
+          <button type="button" onClick={openMealMapFilter} title={mt('filterButton')}> {mt('filterButton')}</button>
         </div>
       </section>
 
@@ -720,7 +771,7 @@ const mt = (key) => pageTexts?.[key] || DEFAULT_MEALMAP_TEXTS[key] || '';
         openExternalMap={openExternalMap}
         toggleLike={toggleLike}
         openEditRequest={openEditRequest}
-        openActivityHistory={openActivityHistory}
+        requestDeletePlace={requestDeletePlace}
         commentsLoading={commentsLoading}
         comments={comments}
         commentText={commentText}
@@ -738,6 +789,7 @@ const mt = (key) => pageTexts?.[key] || DEFAULT_MEALMAP_TEXTS[key] || '';
         activityTotalPages={activityTotalPages}
         fetchActivityHistory={fetchActivityHistory}
         handleActivityResubmit={handleActivityResubmit}
+        mt={mt}
       />
 
       <MealMapFilterModal
@@ -748,6 +800,7 @@ const mt = (key) => pageTexts?.[key] || DEFAULT_MEALMAP_TEXTS[key] || '';
         toggleDraftCategory={toggleDraftCategory}
         resetFilters={resetFilters}
         applyFilters={applyFilters}
+        mt={mt}
       />
 
       <MealMapAddModal

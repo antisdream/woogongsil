@@ -9,7 +9,7 @@ export default function useAdminMealMap({
 }) {
   const [mealMapPlaces, setMealMapPlaces] = useState([]);
   const [mealMapStats, setMealMapStats] = useState({});
-  const [mealMapStatusFilter, setMealMapStatusFilter] = useState('pending');
+  const [mealMapStatusFilter, setMealMapStatusFilter] = useState('approved');
   const [mealMapKeyword, setMealMapKeyword] = useState('');
   const [mealMapLoading, setMealMapLoading] = useState(false);
   const [mealMapSavingId, setMealMapSavingId] = useState(null);
@@ -90,8 +90,8 @@ export default function useAdminMealMap({
 
   const runMealMapAdminAction = useCallback(async (place, action) => {
     if (!place?.id) return;
-    const label = action === 'approve'? '승인' : action === 'reject'? '반려' : '삭제';
-    const ok = window.confirm(`'${place.name}' 회식맵 제보를 ${label}할까요?`);
+    const label = action === 'approve'? '승인' : action === 'reject'? '반려' : '삭제 요청';
+    const ok = window.confirm(`'${place.name}' 회식맵 식당을 ${label}할까요?`);
     if (!ok) return;
 
     setMealMapSavingId(place.id);

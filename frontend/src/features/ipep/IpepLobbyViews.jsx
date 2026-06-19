@@ -11,16 +11,17 @@ import {
     panelStyle,
 } from './ipepPracticeStyles.js';
 
-export function IpepGuide() {
+export function IpepGuide({
+    guideTitle = '답안 작성 가이드',
+    guideText = '용어형: 영어 대소문자, 앞뒤 공백, 일부 문장부호는 완화하여 채점합니다.\n여러 답안형: 쉼표(,) 또는 줄바꿈으로 구분하여 입력합니다. 예: 원자성, 독립성\nSQL형: 대소문자와 불필요한 공백은 완화하지만 SQL 문법 기호는 정확히 작성해야 합니다.\n코드 출력형: 대소문자, 공백, 줄바꿈이 중요하므로 출력 결과를 최대한 정확히 입력해야 합니다.\n긴 서술형: 자동채점이 어려운 문항은 최종 제출 시 정답 예시를 보고 직접 맞음/틀림을 선택합니다.'
+}) {
+        const guideItems = String(guideText || '').split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+
         return (
             <section style={{ ...panelStyle, marginBottom: '18px' }}>
-                <h3 style={{ color: '#38bdf8', fontSize: '22px', margin: '0 0 14px 0' }}>답안 작성 가이드</h3>
+                <h3 style={{ color: '#38bdf8', fontSize: '22px', margin: '0 0 14px 0' }}>{guideTitle}</h3>
                 <ul style={{ color: 'var(--wgs-muted)', lineHeight: 1.9, margin: 0, paddingLeft: '20px' }}>
-                    <li>용어형: 영어 대소문자, 앞뒤 공백, 일부 문장부호는 완화하여 채점합니다.</li>
-                    <li>여러 답안형: 쉼표(,) 또는 줄바꿈으로 구분하여 입력합니다. 예: 원자성, 독립성</li>
-                    <li>SQL형: 대소문자와 불필요한 공백은 완화하지만 SQL 문법 기호는 정확히 작성해야 합니다.</li>
-                    <li>코드 출력형: 대소문자, 공백, 줄바꿈이 중요하므로 출력 결과를 최대한 정확히 입력해야 합니다.</li>
-                    <li>긴 서술형: 자동채점이 어려운 문항은 최종 제출 시 정답 예시를 보고 직접 맞음/틀림을 선택합니다.</li>
+                    {guideItems.map((line, index) => <li key={`${line}-${index}`}>{line}</li>)}
                 </ul>
             </section>
         );
@@ -84,26 +85,32 @@ export function IpepLobby({
     
 }
 
-export function IpepModeButtons({ mode, goIpepMode }) {
+export function IpepModeButtons({
+    mode,
+    goIpepMode,
+    lobbyButtonLabel = '실기 로비',
+    randomButtonLabel = '실기 문제은행',
+    pastButtonLabel = '실기 기출문제',
+}) {
         return (
             <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '18px' }}>
                 <button
                     onClick={() => goIpepMode('lobby')}
                     style={{ ...baseButtonStyle, background: 'var(--wgs-button-muted)' }}
                 >
-                    실기 로비
+                    {lobbyButtonLabel}
                 </button>
                 <button
                     onClick={() => goIpepMode('random')}
                     style={{ ...baseButtonStyle, background: mode === 'random'? '#3b82f6' : 'var(--wgs-button-muted)' }}
                 >
-                     실기 문제은행
+                     {randomButtonLabel}
                 </button>
                 <button
                     onClick={() => goIpepMode('past')}
                     style={{ ...baseButtonStyle, background: mode === 'past'? '#3b82f6' : 'var(--wgs-button-muted)' }}
                 >
-                     실기 기출문제
+                     {pastButtonLabel}
                 </button>
             </div>
         );

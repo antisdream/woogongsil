@@ -218,6 +218,18 @@ body.wgs-theme-light .mealmap-comment-form input {
   border-color: rgba(15, 23, 42, 0.10) !important;
 }
 
+body.wgs-theme-dark .mealmap-detail-actions .mealmap-danger-action {
+  background: rgba(239, 68, 68, 0.18) !important;
+  color: #fecaca !important;
+  border-color: rgba(248, 113, 113, 0.32) !important;
+}
+
+body.wgs-theme-light .mealmap-detail-actions .mealmap-danger-action {
+  background: #fee2e2 !important;
+  color: #991b1b !important;
+  border-color: #fecaca !important;
+}
+
 body.wgs-theme-dark .mealmap-comment-form button,
 body.wgs-theme-light .mealmap-comment-form button {
   background: #111827 !important;

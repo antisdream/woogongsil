@@ -1,0 +1,177 @@
+/* 회식맵 최종 톤 보정: 전역 밝기 토큰을 회식맵의 카드, 입력, 모달까지 일관되게 적용합니다. */
+body.wgs-theme-light .mealmap-page,
+body.wgs-theme-dark .mealmap-page {
+  --mealmap-page-bg: linear-gradient(135deg, var(--wgs-page-bg) 0%, var(--wgs-deep-bg) 100%);
+  --mealmap-surface: color-mix(in srgb, var(--wgs-card) 88%, var(--wgs-page-bg));
+  --mealmap-surface-strong: color-mix(in srgb, var(--wgs-surface) 92%, var(--wgs-page-bg));
+  --mealmap-surface-soft: color-mix(in srgb, var(--wgs-surface-2) 82%, var(--wgs-page-bg));
+  --mealmap-field-bg: var(--wgs-input-bg);
+  --mealmap-button-bg: var(--wgs-button-muted);
+  --mealmap-text: var(--wgs-text);
+  --mealmap-title: var(--wgs-title);
+  --mealmap-muted: var(--wgs-muted);
+  --mealmap-subtle: var(--wgs-subtle);
+  --mealmap-border: var(--wgs-border);
+  --mealmap-shadow: var(--wgs-shadow);
+  --mealmap-accent: #ff4f5e;
+  --mealmap-kakao: #fee500;
+
+  background: var(--mealmap-page-bg) !important;
+  color: var(--mealmap-text) !important;
+}
+
+/* 밝기 슬라이더가 10%일 때도 카드와 입력창만 과하게 떠 보이지 않도록 표면색을 토큰화합니다. */
+body.wgs-theme-light .mealmap-page :is(
+  .mealmap-hero,
+  .mealmap-toolbar,
+  .mealmap-search-inline,
+  .mealmap-search-box,
+  .mealmap-map-card,
+  .mealmap-map-head,
+  .mealmap-detail-card,
+  .mealmap-detail-panel,
+  .mealmap-empty-card,
+  .mealmap-modal,
+  .mealmap-modal-card,
+  .mealmap-report-card,
+  .mealmap-comment-item,
+  .mealmap-comment-list article,
+  .mealmap-detail-note,
+  .mealmap-map-guide,
+  .mealmap-floating-help,
+  .mealmap-empty-map,
+  .mealmap-lookup-result,
+  .mealmap-category-suggestions
+),
+body.wgs-theme-dark .mealmap-page :is(
+  .mealmap-hero,
+  .mealmap-toolbar,
+  .mealmap-search-inline,
+  .mealmap-search-box,
+  .mealmap-map-card,
+  .mealmap-map-head,
+  .mealmap-detail-card,
+  .mealmap-detail-panel,
+  .mealmap-empty-card,
+  .mealmap-modal,
+  .mealmap-modal-card,
+  .mealmap-report-card,
+  .mealmap-comment-item,
+  .mealmap-comment-list article,
+  .mealmap-detail-note,
+  .mealmap-map-guide,
+  .mealmap-floating-help,
+  .mealmap-empty-map,
+  .mealmap-lookup-result,
+  .mealmap-category-suggestions
+) {
+  background: var(--mealmap-surface) !important;
+  color: var(--mealmap-text) !important;
+  border-color: var(--mealmap-border) !important;
+  box-shadow: var(--mealmap-shadow) !important;
+}
+
+body.wgs-theme-light .mealmap-page .mealmap-category-suggestions button,
+body.wgs-theme-dark .mealmap-page .mealmap-category-suggestions button {
+  background: var(--mealmap-button-bg) !important;
+  color: var(--mealmap-title) !important;
+}
+
+body.wgs-theme-light .mealmap-page .mealmap-category-suggestions button:hover,
+body.wgs-theme-light .mealmap-page .mealmap-category-suggestions button:focus-visible,
+body.wgs-theme-dark .mealmap-page .mealmap-category-suggestions button:hover,
+body.wgs-theme-dark .mealmap-page .mealmap-category-suggestions button:focus-visible {
+  background: color-mix(in srgb, var(--mealmap-accent) 16%, var(--mealmap-surface)) !important;
+  color: var(--mealmap-title) !important;
+}
+
+body.wgs-theme-light .mealmap-page :is(h1, h2, h3, strong, .mealmap-title, .mealmap-detail-title),
+body.wgs-theme-dark .mealmap-page :is(h1, h2, h3, strong, .mealmap-title, .mealmap-detail-title) {
+  color: var(--mealmap-title) !important;
+}
+
+body.wgs-theme-light .mealmap-page :is(p, span, small, .mealmap-muted, .mealmap-row-label),
+body.wgs-theme-dark .mealmap-page :is(p, span, small, .mealmap-muted, .mealmap-row-label) {
+  color: var(--mealmap-muted) !important;
+}
+
+body.wgs-theme-light .mealmap-page .mealmap-detail-head > div > span,
+body.wgs-theme-dark .mealmap-page .mealmap-detail-head > div > span {
+  color: var(--mealmap-accent) !important;
+}
+
+body.wgs-theme-light .mealmap-page :is(input, select, textarea),
+body.wgs-theme-dark .mealmap-page :is(input, select, textarea) {
+  background: var(--mealmap-field-bg) !important;
+  color: var(--mealmap-text) !important;
+  border-color: var(--mealmap-border) !important;
+  box-shadow: none !important;
+}
+
+body.wgs-theme-light .mealmap-page :is(input, textarea)::placeholder,
+body.wgs-theme-dark .mealmap-page :is(input, textarea)::placeholder {
+  color: var(--mealmap-subtle) !important;
+}
+
+body.wgs-theme-light .mealmap-page :is(
+  .mealmap-search-inline button,
+  .mealmap-icon-actions button,
+  .mealmap-search-box button,
+  .mealmap-hero-history-btn,
+  .mealmap-detail-actions button:not(.mealmap-primary-btn):not(.mealmap-naver-btn):not(.mealmap-danger-action),
+  .mealmap-modal-actions button:not(.mealmap-primary-btn),
+  .mealmap-lookup-row button,
+  .mealmap-address-lookup-row button,
+  .mealmap-comment-form button
+),
+body.wgs-theme-dark .mealmap-page :is(
+  .mealmap-search-inline button,
+  .mealmap-icon-actions button,
+  .mealmap-search-box button,
+  .mealmap-hero-history-btn,
+  .mealmap-detail-actions button:not(.mealmap-primary-btn):not(.mealmap-naver-btn):not(.mealmap-danger-action),
+  .mealmap-modal-actions button:not(.mealmap-primary-btn),
+  .mealmap-lookup-row button,
+  .mealmap-address-lookup-row button,
+  .mealmap-comment-form button
+) {
+  background: var(--mealmap-button-bg) !important;
+  color: var(--mealmap-title) !important;
+  border: 1px solid var(--mealmap-border) !important;
+  box-shadow: none !important;
+}
+
+body.wgs-theme-light .mealmap-page :is(.mealmap-primary-btn, .mealmap-submit-btn, .mealmap-apply-btn),
+body.wgs-theme-dark .mealmap-page :is(.mealmap-primary-btn, .mealmap-submit-btn, .mealmap-apply-btn) {
+  background: var(--mealmap-accent) !important;
+  color: #ffffff !important;
+  border-color: var(--mealmap-accent) !important;
+}
+
+body.wgs-theme-light .mealmap-page .mealmap-naver-btn,
+body.wgs-theme-dark .mealmap-page .mealmap-naver-btn {
+  background: var(--mealmap-kakao) !important;
+  color: #181600 !important;
+  border: 1px solid color-mix(in srgb, var(--mealmap-kakao) 72%, #181600) !important;
+  box-shadow: none !important;
+}
+
+body.wgs-theme-light .mealmap-page .mealmap-danger-action,
+body.wgs-theme-dark .mealmap-page .mealmap-danger-action {
+  background: color-mix(in srgb, var(--wgs-danger) 18%, var(--mealmap-surface)) !important;
+  color: color-mix(in srgb, var(--wgs-danger) 78%, var(--mealmap-title)) !important;
+  border: 1px solid color-mix(in srgb, var(--wgs-danger) 42%, var(--mealmap-border)) !important;
+}
+
+body.wgs-theme-light .mealmap-page :is(.mealmap-map-surface, .mealmap-fake-map),
+body.wgs-theme-dark .mealmap-page :is(.mealmap-map-surface, .mealmap-fake-map) {
+  background-color: var(--mealmap-surface-soft) !important;
+}
+
+body.wgs-theme-light .mealmap-page .mealmap-grid-bg,
+body.wgs-theme-dark .mealmap-page .mealmap-grid-bg {
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--mealmap-border) 72%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--mealmap-border) 72%, transparent) 1px, transparent 1px) !important;
+  opacity: 0.72 !important;
+}

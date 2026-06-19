@@ -282,7 +282,8 @@ body.wgs-theme-dark {
   background:
     radial-gradient(circle at 16% -4%, rgba(37, 99, 235, 0.22), transparent 34%),
     radial-gradient(circle at 80% 10%, rgba(16, 185, 129, 0.12), transparent 24%),
-    linear-gradient(180deg, #061321 0%, #020817 100%);
+    linear-gradient(180deg, var(--wgs-page-bg) 0%, var(--wgs-deep-bg) 100%);
+  background-color: var(--wgs-page-bg);
 }
 button, input, select, textarea { font-family: inherit; }
 button { transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease, background .18s ease; }
@@ -552,6 +553,17 @@ td {
    --------------------------------------------------------------------- */
 .home-page { max-width: 1480px !important; }
 .wgs-landing-hero {
+  --wgs-home-hero-top: color-mix(in srgb, var(--wgs-surface) 78%, var(--wgs-page-bg));
+  --wgs-home-hero-mid: color-mix(in srgb, var(--wgs-surface-2) 68%, var(--wgs-page-bg));
+  --wgs-home-hero-sky: color-mix(in srgb, var(--wgs-blue) 34%, var(--wgs-deep-bg));
+  --wgs-home-hero-sea: color-mix(in srgb, var(--wgs-primary) 42%, var(--wgs-deep-bg));
+  --wgs-home-hero-ground: color-mix(in srgb, var(--wgs-warning) 24%, var(--wgs-page-bg));
+  --wgs-home-hero-overlay-strong: color-mix(in srgb, var(--wgs-card) 88%, transparent);
+  --wgs-home-hero-overlay-soft: color-mix(in srgb, var(--wgs-card) 48%, transparent);
+  --wgs-home-hero-overlay-clear: color-mix(in srgb, var(--wgs-card) 16%, transparent);
+  --wgs-home-hero-wave-light: color-mix(in srgb, var(--wgs-card) 70%, transparent);
+  --wgs-home-hero-wave-blue: color-mix(in srgb, var(--wgs-blue) 44%, var(--wgs-deep-bg));
+  --wgs-home-hero-wave-fill: color-mix(in srgb, var(--wgs-primary) 20%, var(--wgs-deep-bg));
   position: relative !important;
   overflow: hidden !important;
   min-height: clamp(320px, 42vw, 520px) !important;
@@ -564,17 +576,24 @@ td {
   border-radius: 30px !important;
   border: 1px solid var(--wgs-border) !important;
   background:
-    linear-gradient(180deg, rgba(255,255,255,.92) 0%, rgba(255,255,255,.56) 38%, rgba(255,255,255,.18) 100%),
-    radial-gradient(circle at 80% 18%, rgba(255,255,255,.78), transparent 20%),
-    linear-gradient(180deg, #f8fbff 0%, #dbeafe 39%, #60a5fa 58%, #0ea5e9 72%, #fef3c7 100%) !important;
+    linear-gradient(180deg, var(--wgs-home-hero-overlay-strong) 0%, var(--wgs-home-hero-overlay-soft) 38%, var(--wgs-home-hero-overlay-clear) 100%),
+    radial-gradient(circle at 80% 18%, var(--wgs-home-hero-overlay-soft), transparent 20%),
+    linear-gradient(180deg, var(--wgs-home-hero-top) 0%, var(--wgs-home-hero-mid) 39%, var(--wgs-home-hero-sky) 58%, var(--wgs-home-hero-sea) 72%, var(--wgs-home-hero-ground) 100%) !important;
   box-shadow: var(--wgs-shadow) !important;
   text-align: center !important;
 }
 body.wgs-theme-dark .wgs-landing-hero {
-  background:
-    linear-gradient(180deg, rgba(2,8,23,.62) 0%, rgba(2,8,23,.46) 42%, rgba(2,8,23,.70) 100%),
-    radial-gradient(circle at 78% 20%, rgba(96,165,250,.35), transparent 22%),
-    linear-gradient(180deg, #061321 0%, #0f2744 42%, #164e79 60%, #0c4a6e 73%, #111827 100%) !important;
+  --wgs-home-hero-top: color-mix(in srgb, var(--wgs-deep-bg) 82%, var(--wgs-surface));
+  --wgs-home-hero-mid: color-mix(in srgb, var(--wgs-card) 74%, var(--wgs-deep-bg));
+  --wgs-home-hero-sky: color-mix(in srgb, var(--wgs-blue) 36%, var(--wgs-deep-bg));
+  --wgs-home-hero-sea: color-mix(in srgb, var(--wgs-primary) 42%, var(--wgs-deep-bg));
+  --wgs-home-hero-ground: color-mix(in srgb, var(--wgs-deep-bg) 82%, var(--wgs-warning));
+  --wgs-home-hero-overlay-strong: color-mix(in srgb, var(--wgs-deep-bg) 64%, transparent);
+  --wgs-home-hero-overlay-soft: color-mix(in srgb, var(--wgs-card) 42%, transparent);
+  --wgs-home-hero-overlay-clear: color-mix(in srgb, var(--wgs-deep-bg) 70%, transparent);
+  --wgs-home-hero-wave-light: color-mix(in srgb, var(--wgs-card) 50%, transparent);
+  --wgs-home-hero-wave-blue: color-mix(in srgb, var(--wgs-blue) 40%, var(--wgs-deep-bg));
+  --wgs-home-hero-wave-fill: color-mix(in srgb, var(--wgs-primary) 24%, var(--wgs-deep-bg));
 }
 .wgs-landing-hero::before {
   content: '';
@@ -582,9 +601,9 @@ body.wgs-theme-dark .wgs-landing-hero {
   inset: auto -5% 0 -5%;
   height: 36%;
   background:
-    radial-gradient(ellipse at 50% 0%, rgba(255,255,255,.56), transparent 46%),
-    repeating-linear-gradient(175deg, rgba(255,255,255,.55) 0 18px, rgba(125,211,252,.42) 18px 36px),
-    linear-gradient(180deg, rgba(14,165,233,.20), rgba(14,165,233,.38));
+    radial-gradient(ellipse at 50% 0%, var(--wgs-home-hero-wave-light), transparent 46%),
+    repeating-linear-gradient(175deg, var(--wgs-home-hero-wave-light) 0 18px, var(--wgs-home-hero-wave-blue) 18px 36px),
+    linear-gradient(180deg, color-mix(in srgb, var(--wgs-home-hero-wave-fill) 55%, transparent), color-mix(in srgb, var(--wgs-home-hero-wave-fill) 86%, transparent));
   transform: skewY(-2deg);
   opacity: .88;
   pointer-events: none;
@@ -596,7 +615,7 @@ body.wgs-theme-dark .wgs-landing-hero {
   right: -6%;
   bottom: -3%;
   height: 13%;
-  background: linear-gradient(90deg, #fde68a, #fef3c7, #fde68a);
+  background: linear-gradient(90deg, var(--wgs-home-hero-ground), color-mix(in srgb, var(--wgs-home-hero-ground) 72%, var(--wgs-card)), var(--wgs-home-hero-ground));
   opacity: .92;
   pointer-events: none;
 }
@@ -613,14 +632,21 @@ body.wgs-theme-dark .wgs-landing-hero {
   font-size: clamp(16px, 1.55vw, 22px) !important;
   font-family: var(--wgs-font-h3) !important;
 }
-body.wgs-theme-dark .wgs-landing-hero p { color: #dbeafe !important; }
+body.wgs-theme-dark .wgs-landing-hero p { color: var(--wgs-muted) !important; }
 .home-quick-links {
   width: min(100%, 720px) !important;
   grid-template-columns: repeat(4, minmax(130px, 1fr)) !important;
   gap: 14px !important;
 }
+.home-quick-link-blue { --wgs-home-link-bg: color-mix(in srgb, var(--wgs-action-blue) 82%, var(--wgs-page-bg)); }
+.home-quick-link-green { --wgs-home-link-bg: color-mix(in srgb, var(--wgs-action-green) 82%, var(--wgs-page-bg)); }
+.home-quick-link-yellow { --wgs-home-link-bg: color-mix(in srgb, var(--wgs-action-yellow) 82%, var(--wgs-page-bg)); }
+.home-quick-link-purple { --wgs-home-link-bg: color-mix(in srgb, var(--wgs-action-purple) 82%, var(--wgs-page-bg)); }
 .home-quick-links a,
 .home-quick-links button {
+  background: var(--wgs-home-link-bg, var(--wgs-primary)) !important;
+  border: 1px solid color-mix(in srgb, var(--wgs-home-link-bg, var(--wgs-primary)) 72%, var(--wgs-card)) !important;
+  color: var(--wgs-solid-white) !important;
   min-height: 48px !important;
   border-radius: 15px !important;
   display: inline-flex !important;

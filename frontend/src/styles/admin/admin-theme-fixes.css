@@ -1,0 +1,256 @@
+/* =====================================================================
+   Admin Theme Fixes
+   ---------------------------------------------------------------------
+   This file is imported after the older admin CSS files. It keeps the
+   existing admin layout intact while reconnecting colors to the active
+   Woogongsil light/dark theme tokens.
+   ===================================================================== */
+
+/* Theme tokens */
+body.wgs-theme-light .admin-page {
+  --admin-page-bg: color-mix(in srgb, var(--wgs-page-bg) 86%, #ffffff);
+  --admin-panel-bg: color-mix(in srgb, var(--wgs-card) 94%, #ffffff);
+  --admin-card-bg: color-mix(in srgb, var(--wgs-surface) 96%, #f8fafc);
+  --admin-soft-bg: color-mix(in srgb, var(--wgs-surface-2) 86%, #ffffff);
+  --admin-head-bg: color-mix(in srgb, var(--wgs-surface-2) 72%, #ffffff);
+  --admin-input-bg: #ffffff;
+  --admin-text: #0f172a;
+  --admin-title: #07111f;
+  --admin-muted: #475569;
+  --admin-subtle: #64748b;
+  --admin-border: rgba(15, 23, 42, 0.14);
+  --admin-border-strong: rgba(15, 23, 42, 0.22);
+  --admin-primary: #2563eb;
+  --admin-primary-soft: rgba(37, 99, 235, 0.12);
+  --admin-success-soft: #dcfce7;
+  --admin-success-text: #166534;
+  --admin-danger-soft: #fee2e2;
+  --admin-danger-text: #991b1b;
+  --admin-warning-soft: #fef3c7;
+  --admin-warning-text: #92400e;
+}
+
+body.wgs-theme-dark .admin-page {
+  --admin-page-bg: color-mix(in srgb, var(--wgs-page-bg) 86%, #020617);
+  --admin-panel-bg: color-mix(in srgb, var(--wgs-card) 92%, #020617);
+  --admin-card-bg: color-mix(in srgb, var(--wgs-surface) 88%, #020617);
+  --admin-soft-bg: color-mix(in srgb, var(--wgs-surface-2) 82%, #020617);
+  --admin-head-bg: color-mix(in srgb, var(--wgs-surface-2) 72%, #020617);
+  --admin-input-bg: color-mix(in srgb, var(--wgs-input-bg) 88%, #020617);
+  --admin-text: #f8fafc;
+  --admin-title: #ffffff;
+  --admin-muted: #cbd5e1;
+  --admin-subtle: #94a3b8;
+  --admin-border: rgba(148, 163, 184, 0.24);
+  --admin-border-strong: rgba(148, 163, 184, 0.38);
+  --admin-primary: #60a5fa;
+  --admin-primary-soft: rgba(96, 165, 250, 0.18);
+  --admin-success-soft: rgba(34, 197, 94, 0.18);
+  --admin-success-text: #bbf7d0;
+  --admin-danger-soft: rgba(248, 113, 113, 0.20);
+  --admin-danger-text: #fecaca;
+  --admin-warning-soft: rgba(245, 158, 11, 0.20);
+  --admin-warning-text: #fde68a;
+}
+
+/* Page and typography */
+body.wgs-theme-light .admin-page,
+body.wgs-theme-dark .admin-page {
+  background: transparent !important;
+  color: var(--admin-text) !important;
+}
+
+.admin-page :is(h1, h2, h3, h4, h5, strong, b, .admin-card-title, .admin-section-title, .admin-stat-value) {
+  color: var(--admin-title) !important;
+}
+
+.admin-page :is(p, label, small, span, div, td, th):not(button):not(button *):not(.admin-badge):not(.admin-status-badge) {
+  color: var(--admin-text) !important;
+}
+
+.admin-page :is(.admin-muted, .admin-muted-text, .admin-summary, .admin-help, .admin-stat-label, .admin-panel-head p, .admin-card-title-row p, .admin-row-note, .admin-small-status) {
+  color: var(--admin-muted) !important;
+}
+
+/* Shared panels and cards */
+.admin-page :is(
+  .admin-hero-card,
+  .admin-panel,
+  .admin-feature-section,
+  .admin-next-card,
+  .admin-section,
+  .admin-card,
+  .admin-table-card,
+  .admin-log-card,
+  .admin-dashboard-card,
+  .admin-screen-form-card,
+  .admin-screen-preview-card,
+  .admin-question-list-card,
+  .admin-question-summary-grid article,
+  .admin-notice-panel,
+  .admin-notice-form-card,
+  .admin-maintenance-box,
+  .admin-operation-log-summary,
+  .admin-operation-log-table-wrap
+) {
+  background: var(--admin-panel-bg) !important;
+  border-color: var(--admin-border) !important;
+  color: var(--admin-text) !important;
+}
+
+.admin-page :is(.admin-stat-card, .admin-dashboard-card, .admin-online-count-card, .admin-online-list-card, .admin-summary-card) {
+  background: var(--admin-card-bg) !important;
+  border-color: var(--admin-border) !important;
+  color: var(--admin-text) !important;
+}
+
+.admin-page :is(.admin-panel-head, .admin-card-title-row, .admin-section-title-row, .admin-question-toolbar, .admin-mealmap-toolbar) {
+  background: var(--admin-head-bg) !important;
+  border-color: var(--admin-border) !important;
+  color: var(--admin-text) !important;
+}
+
+/* Inputs and form controls */
+.admin-page :is(input, select, textarea) {
+  background: var(--admin-input-bg) !important;
+  border-color: var(--admin-border-strong) !important;
+  color: var(--admin-text) !important;
+}
+
+.admin-page :is(input, textarea)::placeholder {
+  color: var(--admin-subtle) !important;
+}
+
+.admin-page :is(input, select, textarea):focus {
+  border-color: var(--admin-primary) !important;
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--admin-primary) 18%, transparent) !important;
+}
+
+/* Admin tab navigation */
+.admin-page .admin-tab-nav {
+  background: color-mix(in srgb, var(--admin-panel-bg) 94%, transparent) !important;
+  border-color: var(--admin-border) !important;
+}
+
+.admin-page .admin-tab-button {
+  background: var(--admin-card-bg) !important;
+  border-color: var(--admin-border) !important;
+  color: var(--admin-text) !important;
+}
+
+.admin-page .admin-tab-button:hover {
+  background: var(--admin-head-bg) !important;
+  border-color: var(--admin-border-strong) !important;
+}
+
+.admin-page .admin-tab-button-active {
+  background: linear-gradient(135deg, var(--admin-primary-soft), color-mix(in srgb, var(--admin-card-bg) 82%, var(--admin-primary))) !important;
+  border-color: var(--admin-primary) !important;
+}
+
+.admin-page .admin-tab-text strong {
+  color: var(--admin-title) !important;
+}
+
+.admin-page .admin-tab-text small {
+  color: var(--admin-muted) !important;
+}
+
+/* Tables */
+.admin-page :is(.admin-table-wrap, .admin-table-scroll) {
+  background: var(--admin-card-bg) !important;
+  border-color: var(--admin-border) !important;
+}
+
+.admin-page table {
+  color: var(--admin-text) !important;
+}
+
+.admin-page thead,
+.admin-page th {
+  background: var(--admin-head-bg) !important;
+  color: var(--admin-title) !important;
+  border-color: var(--admin-border) !important;
+}
+
+.admin-page tbody,
+.admin-page tr,
+.admin-page td {
+  background: transparent !important;
+  color: var(--admin-text) !important;
+  border-color: var(--admin-border) !important;
+}
+
+.admin-page tr:hover td {
+  background: color-mix(in srgb, var(--admin-primary) 8%, transparent) !important;
+}
+
+/* Action colors */
+.admin-page :is(.admin-primary-mini-btn, .admin-mini-btn, .admin-table-action-btn, .admin-search-form button, .admin-card-title-row button) {
+  background: var(--admin-primary) !important;
+  color: #ffffff !important;
+}
+
+.admin-page :is(.admin-secondary-btn, .admin-secondary-button, .admin-secondary-mini-btn, .admin-user-page-btn, .admin-sort-btn) {
+  background: var(--admin-soft-bg) !important;
+  color: var(--admin-title) !important;
+  border-color: var(--admin-border) !important;
+}
+
+.admin-page :is(.admin-alert-error, .admin-error-message, .admin-error-text) {
+  background: var(--admin-danger-soft) !important;
+  color: var(--admin-danger-text) !important;
+  border-color: color-mix(in srgb, var(--admin-danger-text) 28%, transparent) !important;
+}
+
+.admin-page :is(.admin-success-message, .admin-alert-success) {
+  background: var(--admin-success-soft) !important;
+  color: var(--admin-success-text) !important;
+  border-color: color-mix(in srgb, var(--admin-success-text) 28%, transparent) !important;
+}
+
+.admin-page :is(.admin-badge, .admin-status-badge, .admin-small-status) {
+  background: var(--admin-soft-bg) !important;
+  color: var(--admin-title) !important;
+  border-color: var(--admin-border) !important;
+}
+
+/* Mealmap admin status actions */
+.admin-page :is(.admin-mealmap-actions, .admin-mealmap-edit-actions) .approve {
+  background: var(--admin-success-soft) !important;
+  color: var(--admin-success-text) !important;
+}
+
+.admin-page :is(.admin-mealmap-actions, .admin-mealmap-edit-actions) .reject,
+.admin-page .admin-mealmap-actions .danger {
+  background: var(--admin-danger-soft) !important;
+  color: var(--admin-danger-text) !important;
+}
+
+/* Calendar tab stays scoped to the calendar section. */
+body.wgs-theme-light .admin-page .admin-calendar-section,
+body.wgs-theme-dark .admin-page .admin-calendar-section {
+  background: var(--admin-panel-bg) !important;
+  color: var(--admin-text) !important;
+}
+
+body.wgs-theme-light .admin-page .admin-calendar-section :is(input, select, textarea),
+body.wgs-theme-dark .admin-page .admin-calendar-section :is(input, select, textarea) {
+  background: var(--admin-input-bg) !important;
+  color: var(--admin-text) !important;
+  border-color: var(--admin-border-strong) !important;
+}
+
+/* Approval detail modal */
+html body .admin-modal-backdrop[aria-label="결재 상세 내용"] .admin-approval-detail-modal {
+  background: var(--admin-panel-bg, var(--wgs-card)) !important;
+  color: var(--admin-text, var(--wgs-text)) !important;
+  border-color: var(--admin-border, var(--wgs-border)) !important;
+}
+
+html body .admin-modal-backdrop[aria-label="결재 상세 내용"] .admin-approval-detail-pre,
+html body .admin-modal-backdrop[aria-label="결재 상세 내용"] pre {
+  background: var(--admin-input-bg, var(--wgs-input-bg)) !important;
+  color: var(--admin-text, var(--wgs-text)) !important;
+  border-color: var(--admin-border, var(--wgs-border)) !important;
+}

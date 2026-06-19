@@ -1,9 +1,10 @@
 // 필기 기출문제 라우트 페이지 컴포넌트입니다.
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import DrawingBoard from './DrawingBoard';
 import ErrorReportButton from "../components/ErrorReportButton";
+import useScreenSettings from '../useScreenSettings';
 
 const API_BASE = "";
 
@@ -63,19 +64,6 @@ const getSubjectName = (id) => {
     }
 };
 
-//  날짜 포맷팅 함수 추가 (YYYY년 MM월 DD일 HH:mm:ss)
-const formatDateTime = (date) => {
-    if (!date) return '';
-    const y = date.getFullYear();
-    const m = String(date.getMonth() + 1).padStart(2, '0');
-    const d = String(date.getDate()).padStart(2, '0');
-    const h = String(date.getHours()).padStart(2, '0');
-    const min = String(date.getMinutes()).padStart(2, '0');
-    const s = String(date.getSeconds()).padStart(2, '0');
-    return `${y}년 ${m}월 ${d}일 ${h}:${min}:${s}`;
-};
-
-
 // 필기 해설 텍스트 추출 유틸
 // ------------------------------------------------------------
 // 문제은행/기출/오답노트 API 응답에서 해설 컬럼명이 조금씩 달라도
@@ -105,6 +93,14 @@ const escapeHtml = (value) => {
         .replace(/'/g, '&#039;');
 };
 
+const replaceSettingTokens = (text, values = {}) => {
+    let result = String(text || '');
+    Object.entries(values).forEach(([key, value]) => {
+        result = result.replaceAll(`{${key}}`, String(value ?? ''));
+    });
+    return result;
+};
+
 // 시험 시작 버튼 클릭 직후 전체화면을 요청합니다.
 // 브라우저 정책상 전체화면은 사용자 클릭 이벤트 안에서만 허용되므로 App.jsx가 아니라 시험 시작 함수에서 호출합니다.
 const requestExamFullscreen = () => {
@@ -119,6 +115,12 @@ const requestExamFullscreen = () => {
 };
 
 const PastExam = ({ isExamActive, setIsExamActive }) => {
+    const { getSetting } = useScreenSettings('past');
+    const t = useCallback((key, fallback) => getSetting(key, fallback), [getSetting]);
+    const formatSetting = useCallback((key, fallback, values = {}) => (
+        replaceSettingTokens(t(key, fallback), values)
+    ), [t]);
+
     // 필기 기출문제에서 필기 로비(/cert/ipe/written)로 돌아가기 위해 사용합니다.
     const navigate = useNavigate();
     const [step, setStep] = useState(1); 
@@ -144,6 +146,46 @@ const PastExam = ({ isExamActive, setIsExamActive }) => {
 
     const userId = sessionStorage.getItem('userId');
     const userName = sessionStorage.getItem('userName');
+
+    const displayUserName = userName || t('user.default_name', '사용자');
+
+    const getSubjectNameLabel = useCallback((id) => {
+        const fallback = getSubjectName(id);
+        try {
+            if (id === undefined || id === null || id === '') return t('subjects.unknown', fallback);
+            const strId = String(id).trim();
+            const lastChar = strId.charAt(strId.length - 1);
+            if (['0', '1', '2', '3', '4'].includes(lastChar)) {
+                return t(`subjects.subject_${lastChar}`, fallback);
+            }
+            return formatSetting('subjects.default', '과목 : {id}', { id: strId });
+        } catch (error) {
+            return t('subjects.unknown', fallback);
+        }
+    }, [formatSetting, t]);
+
+    const formatDateTimeLabel = useCallback((date) => {
+        if (!date) return '';
+        return formatSetting('time.datetime', '{year}년 {month}월 {day}일 {hour}:{minute}:{second}', {
+            year: date.getFullYear(),
+            month: String(date.getMonth() + 1).padStart(2, '0'),
+            day: String(date.getDate()).padStart(2, '0'),
+            hour: String(date.getHours()).padStart(2, '0'),
+            minute: String(date.getMinutes()).padStart(2, '0'),
+            second: String(date.getSeconds()).padStart(2, '0')
+        });
+    }, [formatSetting]);
+
+    const formatDurationLabel = useCallback((seconds) => {
+        const h = Math.floor(seconds / 3600);
+        const m = Math.floor((seconds % 3600) / 60);
+        const s = seconds % 60;
+        return formatSetting('time.duration', '{hours}시간 {minutes}분 {seconds}초', {
+            hours: h,
+            minutes: `${m < 10 ? '0' : ''}${m}`,
+            seconds: `${s < 10 ? '0' : ''}${s}`
+        });
+    }, [formatSetting]);
 
     // - 2026년 1회차처럼 새 데이터가 추가되면 프론트 코드를 다시 수정하지 않아도 자동으로 표시됩니다.
     // - API 실패 시에는 선택창을 비워서 유효하지 않은 기본값으로 시험을 시작하지 않게 합니다.
@@ -201,7 +243,7 @@ const PastExam = ({ isExamActive, setIsExamActive }) => {
         // 필기 기출 시험 중에는 제출 전까지 로비 버튼으로 빠져나가지 못하게 막습니다.
         // 상단 네비게이션/브라우저 뒤로가기/새로고침은 App.jsx의 공통 시험 보호 로직이 한 번 더 막습니다.
         if (isExamActive && !isSubmitted && step === 2) {
-            alert('필기 기출 시험 응시 중입니다. 제출 및 채점하기 전에는 필기 로비로 이동할 수 없습니다.');
+            alert(t('messages.block_lobby_during_exam', '필기 기출 시험 응시 중입니다. 제출 및 채점하기 전에는 필기 로비로 이동할 수 없습니다.'));
             return;
         }
         navigate('/cert/ipe/written');
@@ -209,7 +251,7 @@ const PastExam = ({ isExamActive, setIsExamActive }) => {
 
     const handleStartExam = async () => {
         if (!selectedYear || !selectedSession) {
-            alert("연도와 회차를 선택해 주세요.");
+            alert(t('messages.need_year_session', '연도와 회차를 선택해 주세요.'));
             return;
         }
 
@@ -244,10 +286,10 @@ const PastExam = ({ isExamActive, setIsExamActive }) => {
                 // 새로고침/뒤로가기/메뉴 이동/탭 이탈 감지는 App.jsx의 공통 보호 로직이 담당합니다.
                 requestExamFullscreen();
             } else { 
-                alert("해당 기출문제 데이터가 없습니다."); 
+                alert(t('messages.no_exam_data', '해당 기출문제 데이터가 없습니다.'));
             }
         } catch (e) { 
-            alert("서버 오류가 발생했습니다."); 
+            alert(t('messages.server_error', '서버 오류가 발생했습니다.'));
         }
     };
 
@@ -274,19 +316,8 @@ const PastExam = ({ isExamActive, setIsExamActive }) => {
         return () => clearInterval(timer);
     }, [step, isSubmitted]);
 
-    useEffect(() => {
-        if (step === 2 && timeLeft === 0 && !isSubmitted) {
-            alert("150분의 시험 시간이 종료되었습니다. 자동으로 답안이 제출됩니다.");
-            executeGradeExam();
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [timeLeft, step, isSubmitted]);
-
     const formatTime = (seconds) => {
-        const h = Math.floor(seconds / 3600);
-        const m = Math.floor((seconds % 3600) / 60);
-        const s = seconds % 60;
-        return `${h}시간 ${m < 10 ? '0' : ''}${m}분 ${s < 10 ? '0' : ''}${s}초`;
+        return formatDurationLabel(seconds);
     };
 
     async function executeGradeExam() {
@@ -328,17 +359,17 @@ const PastExam = ({ isExamActive, setIsExamActive }) => {
 
         if (failedSubjects.length >0) {
             isPass = false;
-            failReason = `${failedSubjects.join(', ')}과목 과락`;
+            failReason = formatSetting('result.fail_reason_subject', '{subjects}과목 과락', { subjects: failedSubjects.join(', ') });
         } else if (avgScore < 60) {
             isPass = false;
-            failReason = `평균 점수 미달`;
+            failReason = t('result.fail_reason_average', '평균 점수 미달');
         }
 
         setSubjectScores(subScores);
         setExamResult({ isPass, average: avgScore, failReason });
         setIsSubmitted(true);
         setStep(3); 
-        setMyRankData({ rank: '집계중...', score: avgScore, accuracy: localAccuracy });
+        setMyRankData({ rank: t('ranking.loading', '집계중...'), score: avgScore, accuracy: localAccuracy });
         
         if (userId) {
             try {
@@ -387,21 +418,29 @@ const PastExam = ({ isExamActive, setIsExamActive }) => {
                     const meIndex = processed.findIndex(u => String(u.userId || u.id) === String(userId) || String(u.name) === String(userName));
                     
                     if (meIndex !== -1) {
-                        setMyRankData({ rank: `${meIndex + 1}등`, score: processed[meIndex].score, accuracy: processed[meIndex].accuracy });
+                        setMyRankData({ rank: formatSetting('ranking.rank_value', '{rank}등', { rank: meIndex + 1 }), score: processed[meIndex].score, accuracy: processed[meIndex].accuracy });
                     } else {
-                        setMyRankData({ rank: '순위권 밖', score: avgScore, accuracy: localAccuracy });
+                        setMyRankData({ rank: t('ranking.out_of_rank', '순위권 밖'), score: avgScore, accuracy: localAccuracy });
                     }
                 }
             } catch (e) { 
                 console.error("랭킹 집계 오류:", e);
-                setMyRankData({ rank: '갱신 지연', score: avgScore, accuracy: localAccuracy });
+                setMyRankData({ rank: t('ranking.delayed', '갱신 지연'), score: avgScore, accuracy: localAccuracy });
             }
         }
     }
 
+    useEffect(() => {
+        if (step === 2 && timeLeft === 0 && !isSubmitted) {
+            alert(t('messages.time_over', '150분의 시험 시간이 종료되었습니다. 자동으로 답안이 제출됩니다.'));
+            executeGradeExam();
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [timeLeft, step, isSubmitted]);
+
     const handleExportPDF = () => {
         if (Object.keys(userAnswers).length === 0) {
-            alert("제출한 답안이 없어 결과를 추출할 수 없습니다.");
+            alert(t('messages.no_submitted_answer_pdf', '제출한 답안이 없어 결과를 추출할 수 없습니다.'));
             return;
         }
 
@@ -412,8 +451,15 @@ const PastExam = ({ isExamActive, setIsExamActive }) => {
 
         //  PDF 결과표에도 동일하게 사용자 이름과 시간 반영
         const passFailMessage = examResult.isPass 
-            ? `${userName || '사용자'}님, 합격을 축하합니다!` 
-            : `${userName || '사용자'}님은 불합격입니다. (${examResult.failReason})`;
+            ? formatSetting('result.pass_message', '{name}님, 합격을 축하합니다!', { name: displayUserName })
+            : formatSetting('result.fail_message', '{name}님은 불합격입니다. ({reason})', { name: displayUserName, reason: examResult.failReason });
+        const pdfTitle = formatSetting('pdf.title', '{year}년 {session}회차 시험 결과 및 오답 노트', { year: selectedYear, session: selectedSession });
+        const pdfHeaderTitle = formatSetting('pdf.header_title', '[시험 결과] {year}년 {session}회차 기출문제', { year: selectedYear, session: selectedSession });
+        const pdfWrongNoteTitle = t('pdf.wrong_note_title', ' 오답 노트 ');
+        const pdfNoWrongTitle = t('pdf.no_wrong_title', ' 틀린 문제가 없습니다! 완벽합니다.');
+        const pdfDetailTableTitle = t('pdf.detail_table_title', ' 제출한 문제 상세 채점표');
+        const pdfResultTitle = t('result.title', '최종 결과표');
+        const pdfExplanationEmpty = t('explanation.empty', '해설이 아직 등록되어 있지 않습니다. DB에는 해설이 있어도 이 문구가 보이면 /api/past-exam 응답에 explanation_text가 포함되는지 확인해야 합니다.');
 
         const printWindow = window.open('', '_blank');
         printWindow.document.write(`
@@ -421,7 +467,7 @@ const PastExam = ({ isExamActive, setIsExamActive }) => {
             <html lang="ko">
             <head>
                 <meta charset="UTF-8">
-                <title>${selectedYear}년 ${selectedSession}회차 시험 결과 및 오답 노트</title>
+                <title>${escapeHtml(pdfTitle)}</title>
                 <style>body { font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; color: #333; line-height: 1.6; padding: 30px; max-width: 800px; margin: 0 auto; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
                     .header { text-align: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 2px solid #222; }
                     .header h1 { margin: 0 0 10px 0; color: #1e3a8a; }
@@ -474,21 +520,21 @@ const PastExam = ({ isExamActive, setIsExamActive }) => {
             </head>
             <body>
                 <div class="header">
-                    <h1>[시험 결과] ${selectedYear}년 ${selectedSession}회차 기출문제</h1>
+                    <h1>${escapeHtml(pdfHeaderTitle)}</h1>
                 </div>
 
                 <div class="section-title">
-                    <h2>최종 결과표</h2>
+                    <h2>${escapeHtml(pdfResultTitle)}</h2>
                 </div>
                 
                 <div class="result-box">
-                    <h2>총 평균 ${examResult.average}점</h2>
-                    <p>${passFailMessage}</p>
+                    <h2>${escapeHtml(formatSetting('result.average_title', '총 평균 {score}점', { score: examResult.average }))}</h2>
+                    <p>${escapeHtml(passFailMessage)}</p>
                     <div class="time-info">
-                        <div>응시 시작: <strong>${formatDateTime(startTime)}</strong></div>
-                        <div>응시 종료: <strong>${formatDateTime(endTime)}</strong></div>
+                        <div>${escapeHtml(t('pdf.start_time_label', '응시 시작: '))}<strong>${escapeHtml(formatDateTimeLabel(startTime))}</strong></div>
+                        <div>${escapeHtml(t('pdf.end_time_label', '응시 종료: '))}<strong>${escapeHtml(formatDateTimeLabel(endTime))}</strong></div>
                         <div style="margin-top: 8px; border-top: 1px dashed #ccc; padding-top: 8px;">
-                            실제 소요 시간: <strong>${formatTime(9000 - timeLeft)}</strong>
+                            ${escapeHtml(t('pdf.elapsed_time_label', '실제 소요 시간: '))}<strong>${escapeHtml(formatTime(9000 - timeLeft))}</strong>
                         </div>
                     </div>
                 </div>
@@ -498,24 +544,24 @@ const PastExam = ({ isExamActive, setIsExamActive }) => {
                         const isPass = score >= 40;
                         return `
                             <div class="subject-box ${isPass ? 'pass' : 'fail'}">
-                                <div class="subject-name">${i + 1}과목</div>
-                                <div class="subject-score ${isPass ? 'score-pass' : 'score-fail'}">${score}점</div>
-                                <div class="badge ${isPass ? 'pass' : 'fail'}">${isPass ? 'PASS' : '과락'}</div>
+                                <div class="subject-name">${escapeHtml(formatSetting('result.subject_label', '{number}과목', { number: i + 1 }))}</div>
+                                <div class="subject-score ${isPass ? 'score-pass' : 'score-fail'}">${escapeHtml(formatSetting('result.score_value', '{score}점', { score }))}</div>
+                                <div class="badge ${isPass ? 'pass' : 'fail'}">${escapeHtml(isPass ? t('result.subject_pass_badge', 'PASS') : t('pdf.subject_fail_badge_short', '과락'))}</div>
                             </div>
                         `;
                     }).join('')}
                 </div>
 
                 <div class="section-title">
-                    <h2> 제출한 문제 상세 채점표</h2>
+                    <h2>${escapeHtml(pdfDetailTableTitle)}</h2>
                 </div>
                 <table>
                     <thead>
                         <tr>
-                            <th>문제 번호</th>
-                            <th>내 정답</th>
-                            <th>실제 정답</th>
-                            <th>결과</th>
+                            <th>${escapeHtml(t('result.table_no_header', '문제 번호'))}</th>
+                            <th>${escapeHtml(t('result.table_my_answer_header', '내 정답'))}</th>
+                            <th>${escapeHtml(t('result.table_correct_answer_header', '실제 정답'))}</th>
+                            <th>${escapeHtml(t('result.table_result_header', '결과'))}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -525,10 +571,10 @@ const PastExam = ({ isExamActive, setIsExamActive }) => {
                             const isCorrect = String(ans) === String(q.correct_label);
                             return `
                                 <tr>
-                                    <td>${idx + 1}번</td>
-                                    <td class="${isCorrect ? 'correct-text' : 'wrong-text'}">${ans}번</td>
-                                    <td class="correct-text">${q.correct_label}번</td>
-                                    <td class="${isCorrect ? 'correct-text' : 'wrong-text'}">${isCorrect ? 'O' : 'X'}</td>
+                                    <td>${escapeHtml(formatSetting('result.question_no_value', '{number}번', { number: idx + 1 }))}</td>
+                                    <td class="${isCorrect ? 'correct-text' : 'wrong-text'}">${escapeHtml(formatSetting('result.answer_value', '{answer}번', { answer: ans }))}</td>
+                                    <td class="correct-text">${escapeHtml(formatSetting('result.answer_value', '{answer}번', { answer: q.correct_label }))}</td>
+                                    <td class="${isCorrect ? 'correct-text' : 'wrong-text'}">${escapeHtml(isCorrect ? t('result.correct_symbol', 'O') : t('result.wrong_symbol', 'X'))}</td>
                                 </tr>
                             `;
                         }).join('')}
@@ -537,7 +583,7 @@ const PastExam = ({ isExamActive, setIsExamActive }) => {
 
                 ${wrongQs.length >0 ? `
                 <div class="section-title" style="page-break-before: always;">
-                    <h2> 오답 노트 </h2>
+                    <h2>${escapeHtml(pdfWrongNoteTitle)}</h2>
                 </div>
                 ${wrongQs.map((q) => {
                     const myAns = userAnswers[q.question_id];
@@ -551,9 +597,9 @@ const PastExam = ({ isExamActive, setIsExamActive }) => {
 
                     return `
                     <div class="question-box">
-                        <div class="info-row">실제 기출 번호: ${q.info_id || '정보 없음'}번</div>
-                        <div class="subject">${getSubjectName(q.subject_id)}</div>
-                        <div class="q-text">Q. ${q.question_text || ""}</div>
+                        <div class="info-row">${escapeHtml(formatSetting('pdf.actual_question_no', '실제 기출 번호: {number}번', { number: q.info_id || t('pdf.no_info', '정보 없음') }))}</div>
+                        <div class="subject">${escapeHtml(getSubjectNameLabel(q.subject_id))}</div>
+                        <div class="q-text">${escapeHtml(formatSetting('exam.question_prefix', 'Q. ', {}))}${escapeHtml(q.question_text || "")}</div>
                         ${q.question_img ? `<img class="q-img" src="${window.location.origin}/question_image/${q.question_img}" onerror=" this.style.display='none'" />` : ''}
                         <div class="options">
                             ${[1, 2, 3, 4].map(num => {
@@ -568,29 +614,29 @@ const PastExam = ({ isExamActive, setIsExamActive }) => {
                                 
                                 if (isCorrectAns) { 
                                     optClass = "option correct"; 
-                                    mark = " (정답) "; 
+                                    mark = escapeHtml(t('pdf.correct_mark', ' (정답) '));
                                 } else if (isUserAns) { 
                                     optClass = "option wrong"; 
-                                    mark = " (내 오답) "; 
+                                    mark = escapeHtml(t('pdf.my_wrong_mark', ' (내 오답) '));
                                 }
                                 
-                                return `<div class="${optClass}">${num}. ${mark}${optText}</div>`;
+                                return `<div class="${optClass}">${escapeHtml(formatSetting('pdf.option_prefix', '{number}. ', { number: num }))}${mark}${escapeHtml(optText)}</div>`;
                             }).join('')}
                         </div>
 
                         <div class="explanation-box">
-                            <div class="explanation-title"> 해설</div>
-                            <div class="explanation-text">${explanation ? escapeHtml(explanation) : '해설이 아직 등록되어 있지 않습니다. DB에는 해설이 있어도 이 문구가 보이면 /api/past-exam 응답에 explanation_text가 포함되는지 확인해야 합니다.'}</div>
+                            <div class="explanation-title">${escapeHtml(t('explanation.title', '해설'))}</div>
+                            <div class="explanation-text">${explanation ? escapeHtml(explanation) : escapeHtml(pdfExplanationEmpty)}</div>
                         </div>
                     </div>
                     `;
                 }).join('')}
                 ` : `
                 <div class="section-title" style="page-break-before: always;">
-                    <h2> 오답 노트</h2>
+                    <h2>${escapeHtml(pdfWrongNoteTitle)}</h2>
                 </div>
                 <div style="text-align: center; padding: 40px; background: #f8f9fa; border-radius: 8px;">
-                    <h3 style="color: #10b981;"> 틀린 문제가 없습니다! 완벽합니다.</h3>
+                    <h3 style="color: #10b981;">${escapeHtml(pdfNoWrongTitle)}</h3>
                 </div>
                 `}
                 
@@ -616,21 +662,21 @@ const PastExam = ({ isExamActive, setIsExamActive }) => {
                     onClick={handleGoWrittenLobby}
                     style={{ marginBottom: '16px', padding: '10px 16px', background: '#475569', color: '#ffffff', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}
                 >
-                    필기 로비
+                    {t('buttons.written_lobby', '필기 로비')}
                 </button>
 
                 {/* 기출 응시 제목은 공통 페이지 제목 클래스로 통일합니다. */}
-                <h2 className="wgs-page-title" style={{ textAlign: 'center', color: 'var(--wgs-title)', marginBottom: '20px' }}>기출문제 응시</h2>
+                <h2 className="wgs-page-title" style={{ textAlign: 'center', color: 'var(--wgs-title)', marginBottom: '20px' }}>{t('selector.title', '기출문제 응시')}</h2>
                 <div className="past-exam-selector-controls" style={{ display: 'flex', gap: '20px', marginBottom: '20px' }}>
                     <select value={selectedYear} onChange={(e) => setSelectedYear(Number(e.target.value))} style={{ flex: 1, padding: '12px', borderRadius: '8px', background: 'var(--wgs-input-bg)', color: 'white', border: '1px solid var(--wgs-border)' }}>
-                        {YEARS.map(y => <option key={y} value={y}>{y}년</option>)}
+                        {YEARS.map(y => <option key={y} value={y}>{formatSetting('selector.year_option', '{year}년', { year: y })}</option>)}
                     </select>
                     <select value={selectedSession} onChange={(e) => setSelectedSession(Number(e.target.value))} style={{ flex: 1, padding: '12px', borderRadius: '8px', background: 'var(--wgs-input-bg)', color: 'white', border: '1px solid var(--wgs-border)' }}>
-                        {SESSIONS.map(s => <option key={s} value={s}>{s}회차</option>)}
+                        {SESSIONS.map(s => <option key={s} value={s}>{formatSetting('selector.session_option', '{session}회차', { session: s })}</option>)}
                     </select>
                 </div>
                 <button onClick={handleStartExam} style={{ width: '100%', padding: '15px', background: '#3b82f6', color: 'white', border: 'none', borderRadius: '8px', fontSize: '18px', fontWeight: 'bold', cursor: 'pointer' }}>
-                    응시 시작
+                    {t('buttons.start_exam', '응시 시작')}
                 </button>
             </div>
         );
@@ -647,35 +693,35 @@ const PastExam = ({ isExamActive, setIsExamActive }) => {
                         onClick={handleGoWrittenLobby}
                         style={{ padding: '10px 16px', background: '#475569', color: '#ffffff', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}
                     >
-                        필기 로비
+                        {t('buttons.written_lobby', '필기 로비')}
                     </button>
                 </div>
 
-                <h2 style={{ color: '#fcd34d', fontSize: '24px', margin: '0 0 20px 0' }}>최종 결과표</h2>
+                <h2 style={{ color: '#fcd34d', fontSize: '24px', margin: '0 0 20px 0' }}>{t('result.title', '최종 결과표')}</h2>
                 
                 <div style={{ background: examResult.isPass ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)', border: `2px solid ${examResult.isPass ? '#10b981' : '#ef4444'}`, padding: '30px', borderRadius: '12px', marginBottom: '25px' }}>
-                    <h1 style={{ margin: '0 0 10px 0', fontSize: '40px', color: examResult.isPass ? '#10b981' : '#ef4444' }}>총 평균 {examResult.average}점</h1>
+                    <h1 style={{ margin: '0 0 10px 0', fontSize: '40px', color: examResult.isPass ? '#10b981' : '#ef4444' }}>{formatSetting('result.average_title', '총 평균 {score}점', { score: examResult.average })}</h1>
                     
                     {/*  합격/불합격 메시지에 이름 적용 */}
                     <h3 style={{ margin: 0, color: 'white', fontSize: '20px' }}>
                         {examResult.isPass 
-                            ? `${userName || '사용자'}님, 합격을 축하합니다!` 
-                            : `${userName || '사용자'}님은 불합격입니다. (${examResult.failReason})`
+                            ? formatSetting('result.pass_message', '{name}님, 합격을 축하합니다!', { name: displayUserName })
+                            : formatSetting('result.fail_message', '{name}님은 불합격입니다. ({reason})', { name: displayUserName, reason: examResult.failReason })
                         }
                     </h3>
                     
                     {/*  시간 정보 표시 (웹 버전) */}
                     <div style={{ marginTop: '20px', padding: '15px 20px', background: 'rgba(0,0,0,0.3)', borderRadius: '8px', display: 'inline-block', textAlign: 'left' }}>
                         <div style={{ color: 'var(--wgs-muted)', fontSize: '14px', marginBottom: '10px', borderBottom: '1px dashed var(--wgs-border)', paddingBottom: '10px' }}>
-                            <div style={{ marginBottom: '5px' }}>시작 일시 : <strong style={{ color: 'white' }}>{formatDateTime(startTime)}</strong></div>
-                            <div>종료 일시 : <strong style={{ color: 'white' }}>{formatDateTime(endTime)}</strong></div>
+                            <div style={{ marginBottom: '5px' }}>{t('time.start_label', '시작 일시 : ')}<strong style={{ color: 'white' }}>{formatDateTimeLabel(startTime)}</strong></div>
+                            <div>{t('time.end_label', '종료 일시 : ')}<strong style={{ color: 'white' }}>{formatDateTimeLabel(endTime)}</strong></div>
                         </div>
                         <div className="past-exam-result-time-row" style={{ display: 'flex', gap: '20px' }}>
                             <span style={{ color: 'var(--wgs-muted)', fontSize: '15px' }}>
-                                실제 소요 시간 : <strong style={{ color: 'white' }}>{formatTime(9000 - timeLeft)}</strong>
+                                {t('time.elapsed_label', '실제 소요 시간 : ')}<strong style={{ color: 'white' }}>{formatTime(9000 - timeLeft)}</strong>
                             </span>
                             <span style={{ color: 'var(--wgs-muted)', fontSize: '15px' }}>
-                                남은 시간 : <strong style={{ color: 'white' }}>{formatTime(timeLeft)}</strong>
+                                {t('time.remaining_label', '남은 시간 : ')}<strong style={{ color: 'white' }}>{formatTime(timeLeft)}</strong>
                             </span>
                         </div>
                     </div>
@@ -688,10 +734,10 @@ const PastExam = ({ isExamActive, setIsExamActive }) => {
                         const isSubjectPass = score >= 40;
                         return (
                             <div key={i} style={{ background: '#1e2433', padding: '15px', borderRadius: '8px', border: `1px solid ${isSubjectPass ? '#3b82f6' : '#ef4444'}`, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                                <div style={{ fontSize: '14px', color: 'var(--wgs-muted)', marginBottom: '8px' }}>{i + 1}과목</div>
-                                <div style={{ fontSize: '22px', fontWeight: 'bold', color: isSubjectPass ? '#10b981' : '#ef4444' }}>{score}점</div>
+                                <div style={{ fontSize: '14px', color: 'var(--wgs-muted)', marginBottom: '8px' }}>{formatSetting('result.subject_label', '{number}과목', { number: i + 1 })}</div>
+                                <div style={{ fontSize: '22px', fontWeight: 'bold', color: isSubjectPass ? '#10b981' : '#ef4444' }}>{formatSetting('result.score_value', '{score}점', { score })}</div>
                                 <div style={{ fontSize: '13px', fontWeight: 'bold', color: isSubjectPass ? '#3b82f6' : '#ef4444', marginTop: '5px', background: isSubjectPass ? 'rgba(59, 130, 246, 0.1)' : 'rgba(239, 68, 68, 0.1)', padding: '4px 10px', borderRadius: '12px' }}>
-                                    {isSubjectPass ? 'PASS' : '과락 (FAIL)'}
+                                    {isSubjectPass ? t('result.subject_pass_badge', 'PASS') : t('result.subject_fail_badge', '과락 (FAIL)')}
                                 </div>
                             </div>
                         );
@@ -700,22 +746,22 @@ const PastExam = ({ isExamActive, setIsExamActive }) => {
 
                 {myRankData && (
                     <div className="past-exam-my-ranking-row" style={{ background: 'var(--wgs-practice-toggle-bg)', border: '1px solid #3b82f6', padding: '15px', borderRadius: '8px', marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px' }}>
-                        <span style={{ color: 'var(--wgs-title)', fontWeight: 'bold' }}> 현재 나의 랭킹 ({selectedYear}년 {selectedSession}회차)</span>
+                        <span style={{ color: 'var(--wgs-title)', fontWeight: 'bold' }}>{formatSetting('ranking.current_title', ' 현재 나의 랭킹 ({year}년 {session}회차)', { year: selectedYear, session: selectedSession })}</span>
                         <span style={{ color: 'white', fontSize: '16px' }}>
-                            <strong style={{ color: '#fcd34d' }}>{myRankData.rank || '순위권 밖'}</strong> ({myRankData.score ?? 0}점, 정답률 {myRankData.accuracy ?? 0}%)
+                            <strong style={{ color: '#fcd34d' }}>{myRankData.rank || t('ranking.out_of_rank', '순위권 밖')}</strong> {formatSetting('ranking.summary', '({score}점, 정답률 {accuracy}%)', { score: myRankData.score ?? 0, accuracy: myRankData.accuracy ?? 0 })}
                         </span>
                     </div>
                 )}
 
                 <div className="past-exam-result-table-wrap" style={{ background: '#1e2433', padding: '20px', borderRadius: '8px', border: '1px solid var(--wgs-border)', marginBottom: '20px', maxHeight: '400px', overflowY: 'auto', overflowX: 'auto' }}>
-                    <h4 style={{ color: 'var(--wgs-muted)', marginTop: 0, marginBottom: '15px', textAlign: 'left', borderBottom: '1px solid var(--wgs-border)', paddingBottom: '10px' }}> 제출한 문제 상세 채점표</h4>
+                    <h4 style={{ color: 'var(--wgs-muted)', marginTop: 0, marginBottom: '15px', textAlign: 'left', borderBottom: '1px solid var(--wgs-border)', paddingBottom: '10px' }}>{t('result.detail_table_title', ' 제출한 문제 상세 채점표')}</h4>
                     <table style={{ width: '100%', borderCollapse: 'collapse', color: 'white', fontSize: '15px' }}>
                         <thead>
                             <tr style={{ background: 'var(--wgs-border)' }}>
-                                <th style={{ padding: '10px', border: '1px solid var(--wgs-border)' }}>문제 번호</th>
-                                <th style={{ padding: '10px', border: '1px solid var(--wgs-border)' }}>내 정답</th>
-                                <th style={{ padding: '10px', border: '1px solid var(--wgs-border)' }}>실제 정답</th>
-                                <th style={{ padding: '10px', border: '1px solid var(--wgs-border)' }}>결과</th>
+                                <th style={{ padding: '10px', border: '1px solid var(--wgs-border)' }}>{t('result.table_no_header', '문제 번호')}</th>
+                                <th style={{ padding: '10px', border: '1px solid var(--wgs-border)' }}>{t('result.table_my_answer_header', '내 정답')}</th>
+                                <th style={{ padding: '10px', border: '1px solid var(--wgs-border)' }}>{t('result.table_correct_answer_header', '실제 정답')}</th>
+                                <th style={{ padding: '10px', border: '1px solid var(--wgs-border)' }}>{t('result.table_result_header', '결과')}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -726,13 +772,13 @@ const PastExam = ({ isExamActive, setIsExamActive }) => {
                                 const isCorrect = String(ans) === String(q.correct_label);
                                 return (
                                     <tr key={q.question_id} style={{ background: idx % 2 === 0 ? '#1e2433' : 'var(--wgs-button-muted)', textAlign: 'center' }}>
-                                        <td style={{ padding: '10px', border: '1px solid var(--wgs-border)' }}>{idx + 1}번</td>
+                                        <td style={{ padding: '10px', border: '1px solid var(--wgs-border)' }}>{formatSetting('result.question_no_value', '{number}번', { number: idx + 1 })}</td>
                                         <td style={{ padding: '10px', border: '1px solid var(--wgs-border)', color: isCorrect ? '#10b981' : '#ef4444', fontWeight: 'bold' }}>
-                                            {`${ans}번`}
+                                            {formatSetting('result.answer_value', '{answer}번', { answer: ans })}
                                         </td>
-                                        <td style={{ padding: '10px', border: '1px solid var(--wgs-border)', color: '#10b981', fontWeight: 'bold' }}>{q.correct_label}번</td>
+                                        <td style={{ padding: '10px', border: '1px solid var(--wgs-border)', color: '#10b981', fontWeight: 'bold' }}>{formatSetting('result.answer_value', '{answer}번', { answer: q.correct_label })}</td>
                                         <td style={{ padding: '10px', border: '1px solid var(--wgs-border)', color: isCorrect ? '#10b981' : '#ef4444', fontWeight: 'bold' }}>
-                                            {isCorrect ? 'O' : 'X'}
+                                            {isCorrect ? t('result.correct_symbol', 'O') : t('result.wrong_symbol', 'X')}
                                         </td>
                                     </tr>
                                 );
@@ -742,13 +788,13 @@ const PastExam = ({ isExamActive, setIsExamActive }) => {
                 </div>
 
                 <div className="past-exam-action-row" style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                    <button onClick={handleExportPDF} style={{ flex: 1, minWidth: '150px', padding: '15px', background: '#10b981', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', fontSize: '15px' }}>PDF로 추출 
+                    <button onClick={handleExportPDF} style={{ flex: 1, minWidth: '150px', padding: '15px', background: '#10b981', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', fontSize: '15px' }}>{t('buttons.export_pdf', 'PDF로 추출')}
                     </button>
                     <button onClick={() => setStep(2)} style={{ flex: 1, minWidth: '150px', padding: '15px', background: 'var(--wgs-border)', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', fontSize: '15px' }}>
-                        응시한 OMR 이동
+                        {t('buttons.go_omr', '응시한 OMR 이동')}
                     </button>
                     <button onClick={() => setStep(1)} style={{ flex: 1, minWidth: '150px', padding: '15px', background: '#3b82f6', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', fontSize: '15px' }}>
-                        다른 기출문제 풀기
+                        {t('buttons.retry_other_exam', '다른 기출문제 풀기')}
                     </button>
                 </div>
             </div>
@@ -757,7 +803,7 @@ const PastExam = ({ isExamActive, setIsExamActive }) => {
 
     const currentQ = questions[currentIndex];
     
-    if (!currentQ) return <div style={{ textAlign: 'center', padding: '50px', color: 'white' }}>문제를 불러오는 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.</div>;
+    if (!currentQ) return <div style={{ textAlign: 'center', padding: '50px', color: 'white' }}>{t('messages.current_question_missing', '문제를 불러오는 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.')}</div>;
 
     return (
         <div className="exam-page written-exam-page past-exam-page wgs-typography-scope">
@@ -768,12 +814,12 @@ const PastExam = ({ isExamActive, setIsExamActive }) => {
                     <div className="past-exam-confirm-modal-card">
                         <div className="past-exam-confirm-icon"></div>
                         <div className="past-exam-confirm-message">
-                            <strong>{userName || '사용자'}</strong>님이 응시하신 시험을<br />
-                            정말 종료하고 답을 제출하시겠습니까?
+                            <strong>{displayUserName}</strong>{t('confirm.message_after_name', '님이 응시하신 시험을')}<br />
+                            {t('confirm.message_question', '정말 종료하고 답을 제출하시겠습니까?')}
                         </div>
                         <div className="past-exam-confirm-actions">
-                            <button className="past-exam-confirm-submit" onClick={executeGradeExam}>Yes (제출)</button>
-                            <button className="past-exam-confirm-cancel" onClick={() => setShowConfirmModal(false)}>No (계속 풀기)</button>
+                            <button className="past-exam-confirm-submit" onClick={executeGradeExam}>{t('confirm.submit_button', 'Yes (제출)')}</button>
+                            <button className="past-exam-confirm-cancel" onClick={() => setShowConfirmModal(false)}>{t('confirm.cancel_button', 'No (계속 풀기)')}</button>
                         </div>
                     </div>
                     </div>
@@ -785,7 +831,7 @@ const PastExam = ({ isExamActive, setIsExamActive }) => {
                     onClick={handleGoWrittenLobby}
                     style={{ padding: '10px 16px', background: '#475569', color: '#ffffff', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}
                 >
-                    필기 로비
+                    {t('buttons.written_lobby', '필기 로비')}
                 </button>
             </div>
 
@@ -794,23 +840,23 @@ const PastExam = ({ isExamActive, setIsExamActive }) => {
             >
                 <div className="past-exam-question-panel" style={{ flex: '1 1 700px', minWidth: 0, background: '#1e2433', padding: '30px', borderRadius: '12px', border: '1px solid var(--wgs-border)', boxSizing: 'border-box' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px', borderBottom: '1px solid var(--wgs-border)', paddingBottom: '10px' }}>
-                        <span style={{ color: 'var(--wgs-title)', fontWeight: 'bold', fontSize: '18px' }}>{selectedYear}년 {selectedSession}회차</span>
+                        <span style={{ color: 'var(--wgs-title)', fontWeight: 'bold', fontSize: '18px' }}>{formatSetting('exam.exam_badge', '{year}년 {session}회차', { year: selectedYear, session: selectedSession })}</span>
                         <span style={{ color: 'var(--wgs-muted)', fontSize: '16px' }}>{currentIndex + 1} / {questions.length}</span>
                     </div>
                     
                     <div style={{ color: '#fcd34d', fontWeight: 'bold', marginBottom: '10px', fontSize: '14px' }}>
-                        {getSubjectName(currentQ.subject_id)}
+                        {getSubjectNameLabel(currentQ.subject_id)}
                     </div>
 
                     <div className="exam-question-title-row" style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '14px' }}>
-                        <h3 style={{ margin: 0, lineHeight: '1.5', color: 'white', fontSize: '20px' }}>{currentIndex + 1}. {currentQ.question_text || "문제 내용이 없습니다."}</h3>
+                        <h3 style={{ margin: 0, lineHeight: '1.5', color: 'white', fontSize: '20px' }}>{formatSetting('exam.question_title', '{number}. {text}', { number: currentIndex + 1, text: currentQ.question_text || t('exam.empty_question_text', '문제 내용이 없습니다.') })}</h3>
                         {/* 필기 기출문제 응시 중 현재 문항을 바로 신고하는 버튼입니다. */}
                         <ErrorReportButton
-                            examType="필기" mode="기출문제" questionInfo={{
+                            examType={t('report.exam_type', '필기')} mode={t('report.mode', '기출문제')} questionInfo={{
                                 year: selectedYear,
                                 round: selectedSession,
                                 number: currentIndex + 1,
-                                subject: getSubjectName(currentQ.subject_id),
+                                subject: getSubjectNameLabel(currentQ.subject_id),
                                 title: currentQ.question_text,
                             }}
                         />
@@ -820,7 +866,7 @@ const PastExam = ({ isExamActive, setIsExamActive }) => {
                         <div style={{ textAlign: 'center', margin: '20px 0', width: '100%' }}>
                             <img 
                                 src={`/question_image/${currentQ.question_img}`} 
-                                alt="문제 첨부 이미지" style={{ maxWidth: '100%', maxHeight: '400px', objectFit: 'contain', borderRadius: '4px' }} 
+                                alt={t('image.question_alt', '문제 첨부 이미지')} style={{ maxWidth: '100%', maxHeight: '400px', objectFit: 'contain', borderRadius: '4px' }}
                                 onError={(e) => { e.target.style.display = 'none'; }}
                             />
                         </div>
@@ -841,7 +887,7 @@ const PastExam = ({ isExamActive, setIsExamActive }) => {
                             return (
                                 <button key={num} onClick={() => handleAnswer(num)} disabled={isSubmitted}
                                     style={{ textAlign: 'left', padding: '15px', borderRadius: '8px', background: bg, border: border, color: 'white', fontSize: '16px', cursor: isSubmitted ? 'default' : 'pointer', transition: 'all 0.2s' }}>
-                                    {num}번. {currentQ[`option_${num}`] || ""}
+                                    {formatSetting('exam.option_prefix', '{number}번. ', { number: num })}{currentQ[`option_${num}`] || ""}
                                 </button>
                             );
                         })}
@@ -868,38 +914,38 @@ const PastExam = ({ isExamActive, setIsExamActive }) => {
                             }}
                         >
                             <div style={{ fontWeight: '900', color: '#60a5fa', marginBottom: '8px', fontSize: '16px' }}>
-                                해설
+                                {t('explanation.title', '해설')}
                             </div>
                             <div style={{ whiteSpace: 'pre-wrap', fontSize: '15px' }}>
-                                {getWrittenExplanation(currentQ) || '해설이 아직 등록되어 있지 않습니다. DB에는 해설이 있어도 이 문구가 보이면 /api/past-exam 응답에 explanation_text가 포함되는지 확인해야 합니다.'}
+                                {getWrittenExplanation(currentQ) || t('explanation.empty', '해설이 아직 등록되어 있지 않습니다. DB에는 해설이 있어도 이 문구가 보이면 /api/past-exam 응답에 explanation_text가 포함되는지 확인해야 합니다.')}
                             </div>
                         </div>
                     )}
 
                     <div className="past-exam-action-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '30px', gap: '15px' }}>
-                        <button onClick={() => setCurrentIndex(Math.max(0, currentIndex - 1))} disabled={currentIndex === 0} style={{ padding: '12px 25px', background: currentIndex === 0 ? 'var(--wgs-border)' : 'var(--wgs-border)', color: 'white', border: 'none', borderRadius: '6px', cursor: currentIndex === 0 ? 'not-allowed' : 'pointer', fontWeight: 'bold' }}>이전</button>
+                        <button onClick={() => setCurrentIndex(Math.max(0, currentIndex - 1))} disabled={currentIndex === 0} style={{ padding: '12px 25px', background: currentIndex === 0 ? 'var(--wgs-border)' : 'var(--wgs-border)', color: 'white', border: 'none', borderRadius: '6px', cursor: currentIndex === 0 ? 'not-allowed' : 'pointer', fontWeight: 'bold' }}>{t('buttons.prev', '이전')}</button>
                         
                         {!isSubmitted ? (
                             <button onClick={handleGradeExam} style={{ padding: '12px 30px', background: '#ef4444', color: 'white', border: 'none', borderRadius: '6px', fontSize: '16px', fontWeight: 'bold', cursor: 'pointer', flex: 1 }}>
-                                제출 및 채점하기
+                                {t('buttons.submit_grade', '제출 및 채점하기')}
                             </button>
                         ) : (
                             <div className="past-exam-action-row" style={{ display: 'flex', gap: '10px', flex: 1 }}>
                                 <button onClick={() => setStep(3)} style={{ padding: '12px 10px', background: '#8b5cf6', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontSize: '16px', flex: 1 }}>
-                                    최종결과표로 이동
+                                    {t('buttons.go_result', '최종결과표로 이동')}
                                 </button>
                                 <button onClick={() => { setStep(1); }} style={{ padding: '12px 10px', background: '#3b82f6', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontSize: '16px', flex: 1 }}>
-                                    종료 및 홈으로
+                                    {t('buttons.exit_home', '종료 및 홈으로')}
                                 </button>
                             </div>
                         )}
 
-                        <button onClick={() => setCurrentIndex(Math.min(questions.length - 1, currentIndex + 1))} disabled={currentIndex === questions.length - 1} style={{ padding: '12px 25px', background: currentIndex === questions.length - 1 ? 'var(--wgs-border)' : '#3b82f6', color: 'white', border: 'none', borderRadius: '6px', cursor: currentIndex === questions.length - 1 ? 'not-allowed' : 'pointer', fontWeight: 'bold' }}>다음</button>
+                        <button onClick={() => setCurrentIndex(Math.min(questions.length - 1, currentIndex + 1))} disabled={currentIndex === questions.length - 1} style={{ padding: '12px 25px', background: currentIndex === questions.length - 1 ? 'var(--wgs-border)' : '#3b82f6', color: 'white', border: 'none', borderRadius: '6px', cursor: currentIndex === questions.length - 1 ? 'not-allowed' : 'pointer', fontWeight: 'bold' }}>{t('buttons.next', '다음')}</button>
                     </div>
 
                     <div style={{ marginTop: '20px' }}>
                         <button onClick={() => setShowDrawing(!showDrawing)} style={{ width: '100%', padding: '12px', background: 'var(--wgs-button-muted)', color: 'var(--wgs-title)', border: '1px solid #3b82f6', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', fontSize: '16px', transition: '0.2s' }}>
-                            {showDrawing ? '연습장 닫기' : '연습장 열기'}
+                            {showDrawing ? t('buttons.close_drawing', '연습장 닫기') : t('buttons.open_drawing', '연습장 열기')}
                         </button>
                     </div>
                     {showDrawing && <DrawingBoard />}
@@ -908,14 +954,14 @@ const PastExam = ({ isExamActive, setIsExamActive }) => {
 
                 <div className="past-exam-omr-panel" style={{ flex: '1 1 300px', minWidth: 0, display: 'flex', flexDirection: 'column', maxHeight: '80vh' }}>
                     <div style={{ background: '#1e2433', padding: '15px', borderTopLeftRadius: '12px', borderTopRightRadius: '12px', borderBottom: '2px solid var(--wgs-border)', textAlign: 'center', zIndex: 10 }}>
-                        <div style={{ fontSize: '14px', color: 'var(--wgs-title)', marginBottom: '5px', fontWeight: 'bold' }}>남은 시간</div>
+                        <div style={{ fontSize: '14px', color: 'var(--wgs-title)', marginBottom: '5px', fontWeight: 'bold' }}>{t('omr.remaining_time_title', '남은 시간')}</div>
                         <div style={{ fontSize: '24px', fontWeight: 'bold', color: timeLeft <= 600 ? '#ef4444' : '#10b981' }}>
-                            {isSubmitted ? '--시간 --분 --초' : formatTime(timeLeft)}
+                            {isSubmitted ? t('time.submitted_placeholder', '--시간 --분 --초') : formatTime(timeLeft)}
                         </div>
                     </div>
                     
                     <div style={{ background: 'var(--wgs-button-muted)', padding: '20px', borderBottomLeftRadius: '12px', borderBottomRightRadius: '12px', overflowY: 'auto', flex: 1 }}>
-                        <h4 style={{ textAlign: 'center', marginTop: 0, borderBottom: '1px solid var(--wgs-border)', paddingBottom: '10px', color: 'white' }}>진행 현황 (OMR)</h4>
+                        <h4 style={{ textAlign: 'center', marginTop: 0, borderBottom: '1px solid var(--wgs-border)', paddingBottom: '10px', color: 'white' }}>{t('omr.title', '진행 현황 (OMR)')}</h4>
                         <div className="past-exam-omr-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '8px' }}>
                             {questions.map((q, idx) => {
                                 const isAnswered = !!userAnswers[q.question_id];

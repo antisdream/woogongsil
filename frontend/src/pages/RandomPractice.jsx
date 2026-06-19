@@ -1,11 +1,60 @@
 // 필기 문제은행 라우트 페이지 컴포넌트입니다.
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import DrawingBoard from './DrawingBoard'; 
 import ErrorReportButton from '../components/ErrorReportButton';
+import useScreenSettings from '../useScreenSettings';
 
 const API_BASE = "";
+
+const WRITTEN_RANDOM_HISTORY_KEY = 'wgs_written_random_history_v1';
+const WRITTEN_RANDOM_ID_LIMIT = 120;
+const WRITTEN_RANDOM_SUBJECT_LIMIT = 2;
+
+const uniqueRecentList = (list, nextValue, limit) => {
+    const normalized = String(nextValue ?? '').trim();
+    if (!normalized) return Array.isArray(list) ? list.slice(0, limit) : [];
+    return [normalized, ...(Array.isArray(list) ? list.filter((item) => String(item) !== normalized) : [])].slice(0, limit);
+};
+
+const readWrittenRandomHistory = () => {
+    if (typeof window === 'undefined') return { ids: [], subjects: [] };
+    try {
+        const parsed = JSON.parse(window.localStorage.getItem(WRITTEN_RANDOM_HISTORY_KEY) || '{}');
+        return {
+            ids: Array.isArray(parsed.ids) ? parsed.ids.map(String).filter(Boolean).slice(0, WRITTEN_RANDOM_ID_LIMIT) : [],
+            subjects: Array.isArray(parsed.subjects) ? parsed.subjects.map(String).filter(Boolean).slice(0, WRITTEN_RANDOM_SUBJECT_LIMIT) : [],
+        };
+    } catch {
+        return { ids: [], subjects: [] };
+    }
+};
+
+const rememberWrittenRandomQuestion = (nextQuestion) => {
+    if (typeof window === 'undefined' || !nextQuestion) return;
+    const history = readWrittenRandomHistory();
+    const questionId = nextQuestion.question_id || nextQuestion.id;
+    const subject = nextQuestion.subject_id || nextQuestion.subject;
+    const nextHistory = {
+        ids: uniqueRecentList(history.ids, questionId, WRITTEN_RANDOM_ID_LIMIT),
+        subjects: uniqueRecentList(history.subjects, subject, WRITTEN_RANDOM_SUBJECT_LIMIT),
+    };
+    try {
+        window.localStorage.setItem(WRITTEN_RANDOM_HISTORY_KEY, JSON.stringify(nextHistory));
+    } catch {
+        // localStorage가 막혀도 랜덤 문제 풀이는 계속 진행합니다.
+    }
+};
+
+const buildWrittenRandomQuery = () => {
+    const history = readWrittenRandomHistory();
+    const params = new URLSearchParams();
+    if (history.ids.length >0) params.set('excludeIds', history.ids.join(','));
+    if (history.subjects.length >0) params.set('excludeSubjects', history.subjects.join(','));
+    const query = params.toString();
+    return query ? `?${query}` : '';
+};
 
 
 // 필기 해설 텍스트 추출 유틸
@@ -43,7 +92,21 @@ const getSubjectName = (id) => {
     }
 };
 
+const replaceSettingTokens = (text, values = {}) => {
+    let result = String(text || '');
+    Object.entries(values).forEach(([key, value]) => {
+        result = result.replaceAll(`{${key}}`, String(value ?? ''));
+    });
+    return result;
+};
+
 const RandomPractice = () => {
+    const { getSetting } = useScreenSettings('random');
+    const t = useCallback((key, fallback) => getSetting(key, fallback), [getSetting]);
+    const formatSetting = useCallback((key, fallback, values = {}) => (
+        replaceSettingTokens(t(key, fallback), values)
+    ), [t]);
+
     // 필기 문제은행에서 필기 로비(/cert/ipe/written)로 돌아가기 위해 사용합니다.
     const navigate = useNavigate();
     const [question, setQuestion] = useState(null);
@@ -61,16 +124,32 @@ const RandomPractice = () => {
     
     const nextButtonRef = useRef(null);
 
-    const fetchRandomQuestion = async () => {
+    const getSubjectNameLabel = useCallback((id) => {
+        const fallback = getSubjectName(id);
+        try {
+            if (id === undefined || id === null || id === '') return t('subjects.unknown', fallback);
+            const strId = String(id).trim();
+            const lastChar = strId.charAt(strId.length - 1);
+            if (['0', '1', '2', '3', '4'].includes(lastChar)) {
+                return t(`subjects.subject_${lastChar}`, fallback);
+            }
+            return formatSetting('subjects.default', '과목 : {id}', { id: strId });
+        } catch (error) {
+            return t('subjects.unknown', fallback);
+        }
+    }, [formatSetting, t]);
+
+    const fetchRandomQuestion = useCallback(async () => {
         try {
             setLoadError(false);
-            const res = await axios.get(`${API_BASE}/api/random-question`);
+            const res = await axios.get(`${API_BASE}/api/random-question${buildWrittenRandomQuery()}`);
             
             if (!res.data || Object.keys(res.data).length === 0) {
                 throw new Error("문제 데이터가 비어있습니다.");
             }
             
             setQuestion(res.data);
+            rememberWrittenRandomQuestion(res.data);
             setSelectedAnswer(null);
             setIsSubmitted(false);
             setIsCorrect(null);
@@ -80,15 +159,15 @@ const RandomPractice = () => {
             console.error("문제 로딩 에러:", err);
             setLoadError(true);
         }
-    };
+    }, []);
 
     useEffect(() => {
         fetchRandomQuestion();
      
-    }, []);
+    }, [fetchRandomQuestion]);
 
     const handleGrade = async () => {
-        if (!selectedAnswer) return alert("정답을 선택해주세요!");
+        if (!selectedAnswer) return alert(t('messages.need_answer', '정답을 선택해주세요!'));
         
         setIsSubmitted(true);
         const correct = String(selectedAnswer) === String(question.correct_label);
@@ -128,7 +207,7 @@ const RandomPractice = () => {
                     const meIndex = processed.findIndex(u => String(u.id) === String(userId) || String(u.userId) === String(userId));
                     if (meIndex !== -1) {
                         setMyRankData({ 
-                            rank: `${meIndex + 1}등`, 
+                            rank: meIndex + 1,
                             score: processed[meIndex].score, 
                             accuracy: processed[meIndex].accuracy 
                         });
@@ -144,8 +223,8 @@ const RandomPractice = () => {
         }, 100);
     };
 
-    if (loadError) return <div style={{ color: 'white', textAlign: 'center', padding: '50px' }}>문제를 불러오는데 실패했습니다. 서버를 확인해주세요.</div>;
-    if (!question) return <div style={{ color: 'white', textAlign: 'center', padding: '50px' }}>문제를 불러오는 중입니다...</div>;
+    if (loadError) return <div style={{ color: 'white', textAlign: 'center', padding: '50px' }}>{t('messages.load_failed', '문제를 불러오는데 실패했습니다. 서버를 확인해주세요.')}</div>;
+    if (!question) return <div style={{ color: 'white', textAlign: 'center', padding: '50px' }}>{t('messages.loading', '문제를 불러오는 중입니다...')}</div>;
 
     const hasOptionsArray = question.options && Array.isArray(question.options) && question.options.length >0;
 
@@ -159,34 +238,39 @@ const RandomPractice = () => {
                     onClick={() => navigate('/cert/ipe/written')}
                     style={{ padding: '10px 16px', background: '#475569', color: '#ffffff', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}
                 >
-                    필기 로비
+                    {t('buttons.written_lobby', '필기 로비')}
                 </button>
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
                 {/*   문제은행 상단 뱃지에 연도, 회차, 문제 번호 출력 추가합니다. */}
                 <div style={{ background: '#3b82f6', color: 'white', padding: '6px 12px', borderRadius: '20px', fontWeight: 'bold', fontSize: '14px' }}>
-                    [{question.year}년 {question.session}회차 {question.info_id}번] {getSubjectName(question.subject_id)}
+                    {formatSetting('meta.question_badge', '[{year}년 {session}회차 {number}번] {subject}', {
+                        year: question.year,
+                        session: question.session,
+                        number: question.info_id,
+                        subject: getSubjectNameLabel(question.subject_id)
+                    })}
                 </div>
             </div>
 
             <div className="exam-question-title-row" style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px', borderBottom: '2px solid var(--wgs-border)', paddingBottom: '10px' }}>
                 {/* 문제은행 제목은 공통 섹션 제목 클래스 기준으로 통일합니다. */}
-                <h2 className="wgs-section-title" style={{ color: 'var(--wgs-blue)', margin: 0 }}>오늘의 문제은행</h2>
+                <h2 className="wgs-section-title" style={{ color: 'var(--wgs-blue)', margin: 0 }}>{t('page.title', '오늘의 문제은행')}</h2>
                 {/* 현재 보고 있는 필기 문제은행 문항을 관리자에게 즉시 신고하는 버튼입니다. */}
                 <ErrorReportButton
-                    examType="필기" mode="문제은행" questionInfo={{
+                    examType={t('report.exam_type', '필기')} mode={t('report.mode', '문제은행')} questionInfo={{
                         year: question?.year,
                         round: question?.session,
                         number: question?.info_id || question?.question_id || question?.id,
-                        subject: getSubjectName(question?.subject_id),
+                        subject: getSubjectNameLabel(question?.subject_id),
                         title: question?.question_text,
                     }}
                 />
             </div>
 
             <div style={{ fontSize: '18px', lineHeight: '1.6', margin: '20px 0', padding: '20px', background: 'var(--wgs-input-bg)', borderRadius: '8px', borderLeft: '4px solid #3b82f6' }}>
-                <span style={{ fontWeight: 'bold', color: 'var(--wgs-blue)', marginRight: '10px' }}>Q.</span>
+                <span style={{ fontWeight: 'bold', color: 'var(--wgs-blue)', marginRight: '10px' }}>{t('question.prefix', 'Q.')}</span>
                 {question.question_text}
             </div>
 
@@ -194,7 +278,7 @@ const RandomPractice = () => {
                 <div style={{ textAlign: 'center', margin: '20px 0', width: '100%' }}>
                     <img 
                         src={`/question_image/${question.question_img}`} 
-                        alt="문제 첨부 이미지" style={{ maxWidth: '100%', maxHeight: '400px', objectFit: 'contain', borderRadius: '4px' }}
+                        alt={t('image.question_alt', '문제 첨부 이미지')} style={{ maxWidth: '100%', maxHeight: '400px', objectFit: 'contain', borderRadius: '4px' }}
                         onError={(e) => { e.target.style.display = 'none'; }} 
                     />
                 </div>
@@ -226,12 +310,12 @@ const RandomPractice = () => {
                 {!isSubmitted ? (
                     <>
                         <button onClick={handleGrade} style={{ padding: '15px 40px', background: '#10b981', color: 'white', border: 'none', borderRadius: '8px', fontSize: '18px', fontWeight: 'bold', cursor: 'pointer', width: '100%', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
-                            정답 확인하기
+                            {t('buttons.check_answer', '정답 확인하기')}
                         </button>
                         
                         <div style={{ marginTop: '15px' }}>
                             <button onClick={() => setShowDrawing(!showDrawing)} style={{ width: '100%', padding: '12px', background: 'var(--wgs-button-muted)', color: 'var(--wgs-title)', border: '1px solid #3b82f6', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', fontSize: '16px', transition: '0.2s' }}>
-                                {showDrawing ? '연습장 닫기' : '연습장 열기'}
+                                {showDrawing ? t('buttons.close_drawing', '연습장 닫기') : t('buttons.open_drawing', '연습장 열기')}
                             </button>
                         </div>
                         {showDrawing && <DrawingBoard />}
@@ -240,10 +324,10 @@ const RandomPractice = () => {
                     <div style={{ animation: 'fadeIn 0.5s' }}>
                         <div style={{ padding: '20px', background: isCorrect ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)', border: `2px solid ${isCorrect ? '#10b981' : '#ef4444'}`, borderRadius: '8px', marginBottom: '18px' }}>
                             <h3 style={{ color: isCorrect ? '#10b981' : '#ef4444', margin: '0 0 10px 0' }}>
-                                {isCorrect ? '정답입니다!' : '아쉽습니다, 다시 도전해보세요!'}
+                                {isCorrect ? t('result.correct_title', '정답입니다!') : t('result.wrong_title', '아쉽습니다, 다시 도전해보세요!')}
                             </h3>
-                            {!isCorrect && <p style={{ margin: 0, fontSize: '16px', color: 'white' }}>정답은 <strong style={{ color: '#10b981' }}>{question.correct_label}번</strong> 입니다.</p>}
-                            {!isCorrect && userId && <p style={{ margin: '10px 0 0 0', color: 'var(--wgs-muted)', fontSize: '14px' }}>※ 틀린 문제는 마이페이지의 오답노트에 자동 저장되었습니다.</p>}
+                            {!isCorrect && <p style={{ margin: 0, fontSize: '16px', color: 'white' }}>{formatSetting('result.correct_answer_prefix', '정답은 ', {})}<strong style={{ color: '#10b981' }}>{formatSetting('result.correct_answer_value', '{label}번', { label: question.correct_label })}</strong>{formatSetting('result.correct_answer_suffix', ' 입니다.', {})}</p>}
+                            {!isCorrect && userId && <p style={{ margin: '10px 0 0 0', color: 'var(--wgs-muted)', fontSize: '14px' }}>{t('result.wrong_saved_notice', '※ 틀린 문제는 마이페이지의 오답노트에 자동 저장되었습니다.')}</p>}
                         </div>
 
                         {/* ============================================================
@@ -266,29 +350,29 @@ const RandomPractice = () => {
                             }}
                         >
                             <div style={{ fontWeight: '900', color: '#60a5fa', marginBottom: '8px', fontSize: '16px' }}>
-                                해설
+                                {t('explanation.title', '해설')}
                             </div>
                             <div style={{ whiteSpace: 'pre-wrap', fontSize: '15px' }}>
-                                {getWrittenExplanation(question) || '해설이 아직 등록되어 있지 않습니다. DB에는 해설이 있어도 이 문구가 보이면 /api/random-question 응답에 explanation_text가 포함되는지 확인해야 합니다.'}
+                                {getWrittenExplanation(question) || t('explanation.empty', '해설이 아직 등록되어 있지 않습니다. DB에는 해설이 있어도 이 문구가 보이면 /api/random-question 응답에 explanation_text가 포함되는지 확인해야 합니다.')}
                             </div>
                         </div>
 
                         {myRankData && (
                             <div className="random-rank-row" style={{ background: 'var(--wgs-practice-toggle-bg)', padding: '12px', borderRadius: '8px', border: '1px dashed #fcd34d', marginBottom: '20px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '15px', flexWrap: 'wrap' }}>
-                                <span style={{ color: '#fcd34d', fontWeight: 'bold', fontSize: '15px' }}>내 랭킹 업데이트!</span>
+                                <span style={{ color: '#fcd34d', fontWeight: 'bold', fontSize: '15px' }}>{t('ranking.update_title', '내 랭킹 업데이트!')}</span>
                                 <span style={{ color: 'white', fontSize: '15px' }}>
-                                    <strong style={{ color: '#fcd34d' }}>{myRankData.rank || '순위권 밖'}</strong> ({myRankData.score ?? 0}점, 정답률 {myRankData.accuracy ?? 0}%)
+                                    <strong style={{ color: '#fcd34d' }}>{myRankData.rank ? formatSetting('ranking.rank_value', '{rank}등', { rank: myRankData.rank }) : t('ranking.out_of_rank', '순위권 밖')}</strong> {formatSetting('ranking.summary', '({score}점, 정답률 {accuracy}%)', { score: myRankData.score ?? 0, accuracy: myRankData.accuracy ?? 0 })}
                                 </span>
                             </div>
                         )}
 
                         <button ref={nextButtonRef} onClick={fetchRandomQuestion} style={{ padding: '15px 40px', background: '#3b82f6', color: 'white', border: 'none', borderRadius: '8px', fontSize: '18px', fontWeight: 'bold', cursor: 'pointer', width: '100%', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
-                            다음 문제 풀기
+                            {t('buttons.next_question', '다음 문제 풀기')}
                         </button>
                         
                         <div style={{ marginTop: '15px' }}>
                             <button onClick={() => setShowDrawing(!showDrawing)} style={{ width: '100%', padding: '12px', background: 'var(--wgs-button-muted)', color: 'var(--wgs-title)', border: '1px dashed var(--wgs-border)', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', fontSize: '16px' }}>
-                                {showDrawing ? '연습장 닫기' : '연습장 열기'}
+                                {showDrawing ? t('buttons.close_drawing', '연습장 닫기') : t('buttons.open_drawing', '연습장 열기')}
                             </button>
                         </div>
                         {showDrawing && <DrawingBoard />}

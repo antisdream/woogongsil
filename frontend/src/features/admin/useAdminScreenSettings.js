@@ -78,8 +78,8 @@ export default function useAdminScreenSettings({
 
   const validateScreenForm = useCallback(() => {
     if (!screenForm.setting_key.trim()) return '설정 키를 입력해주세요.';
-    if (!/^[a-zA-Z0-9_-]{2,100}$/.test(screenForm.setting_key.trim())) {
-      return '설정 키는 영문, 숫자, _, - 조합 2~100자로 입력해주세요.';
+    if (!/^[a-zA-Z0-9_.-]{2,100}$/.test(screenForm.setting_key.trim())) {
+      return '설정 키는 영문, 숫자, _, -, . 조합 2~100자로 입력해주세요.';
     }
     if (!screenForm.setting_label.trim()) return '관리 이름을 입력해주세요.';
     return '';

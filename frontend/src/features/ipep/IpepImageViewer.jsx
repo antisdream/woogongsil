@@ -2,7 +2,16 @@
 import React from 'react';
 import { baseButtonStyle } from './ipepPracticeStyles.js';
 
-function IpepImageViewer({ imageViewer, imageZoom, setImageZoom, closeImageViewer }) {
+function IpepImageViewer({
+    imageViewer,
+    imageZoom,
+    setImageZoom,
+    closeImageViewer,
+    zoomOutLabel = '축소',
+    zoomInLabel = '확대',
+    openNewWindowLabel = '새 창',
+    closeLabel = '닫기'
+}) {
         if (!imageViewer) return null;
 
         return (
@@ -34,11 +43,11 @@ function IpepImageViewer({ imageViewer, imageZoom, setImageZoom, closeImageViewe
                     <div style={{ display: 'flex', gap: '8px', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', borderBottom: '1px solid var(--wgs-border)' }}>
                         <strong style={{ color: 'var(--wgs-text)' }}>{imageViewer.title}</strong>
                         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                            <button type="button" onClick={() => setImageZoom(prev => Math.max(0.75, Number((prev - 0.25).toFixed(2))))} style={{ ...baseButtonStyle, padding: '8px 10px', background: 'var(--wgs-button-muted)' }}>축소</button>
+                            <button type="button" onClick={() => setImageZoom(prev => Math.max(0.75, Number((prev - 0.25).toFixed(2))))} style={{ ...baseButtonStyle, padding: '8px 10px', background: 'var(--wgs-button-muted)' }}>{zoomOutLabel}</button>
                             <button type="button" onClick={() => setImageZoom(1)} style={{ ...baseButtonStyle, padding: '8px 10px', background: '#64748b' }}>{Math.round(imageZoom * 100)}%</button>
-                            <button type="button" onClick={() => setImageZoom(prev => Math.min(3, Number((prev + 0.25).toFixed(2))))} style={{ ...baseButtonStyle, padding: '8px 10px', background: '#3b82f6' }}>확대</button>
-                            <button type="button" onClick={() => window.open(imageViewer.src, '_blank', 'noopener,noreferrer')} style={{ ...baseButtonStyle, padding: '8px 10px', background: '#10b981' }}>새 창</button>
-                            <button type="button" onClick={closeImageViewer} style={{ ...baseButtonStyle, padding: '8px 10px', background: '#ef4444' }}>닫기</button>
+                            <button type="button" onClick={() => setImageZoom(prev => Math.min(3, Number((prev + 0.25).toFixed(2))))} style={{ ...baseButtonStyle, padding: '8px 10px', background: '#3b82f6' }}>{zoomInLabel}</button>
+                            <button type="button" onClick={() => window.open(imageViewer.src, '_blank', 'noopener,noreferrer')} style={{ ...baseButtonStyle, padding: '8px 10px', background: '#10b981' }}>{openNewWindowLabel}</button>
+                            <button type="button" onClick={closeImageViewer} style={{ ...baseButtonStyle, padding: '8px 10px', background: '#ef4444' }}>{closeLabel}</button>
                         </div>
                     </div>
                     <div style={{ maxHeight: '78vh', overflow: 'auto', padding: '16px', background: 'var(--wgs-panel)' }}>
