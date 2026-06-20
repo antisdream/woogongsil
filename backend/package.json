@@ -30,7 +30,11 @@
     "express": "^5.2.1",
     "fs": "^0.0.1-security",
     "mysql2": "^3.22.3",
-    "nodemailer": "^8.0.7",
+    "nodemailer": "^9.0.1",
     "socket.io": "^4.8.3"
+  },
+  "overrides": {
+    "qs": "^6.15.2",
+    "ws": "^8.21.0"
   }
 }

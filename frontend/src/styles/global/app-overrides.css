@@ -446,3 +446,301 @@ body.wgs-theme-dark .faq-open-btn {
   color: #bfdbfe !important;
   background: rgba(15, 23, 42, 0.4) !important;
 }
+
+/* =========================================================
+   게시판 테마 보정
+   - 게시글/댓글/표 문구는 기존 wgs_screen_settings 흐름을 유지합니다.
+   - 인라인 색상이 남아 있는 표시 요소만 테마 토큰으로 덮어 라이트/다크 대비를 맞춥니다.
+   ========================================================= */
+.board-page {
+  background: color-mix(in srgb, var(--wgs-card) 88%, var(--wgs-page-bg)) !important;
+  color: var(--wgs-text) !important;
+}
+
+.board-page :is(h1, h2, h3, h4) {
+  color: var(--wgs-title) !important;
+}
+
+.board-page :is(p, td, th, label),
+.board-page div[style*="white-space: pre-wrap"],
+.board-page span[style*="#e2e8f0"],
+.board-page span[style*="#64748b"] {
+  color: var(--wgs-text) !important;
+}
+
+.board-page small,
+.board-page td[style*="var(--wgs-subtle)"],
+.board-page div[style*="var(--wgs-subtle)"] {
+  color: var(--wgs-subtle) !important;
+}
+
+.board-page .table-wrapper table,
+.board-page div[style*="background: var(--wgs-practice-toggle-bg)"] {
+  background: var(--wgs-card-soft) !important;
+  color: var(--wgs-text) !important;
+  border: 1px solid var(--wgs-border) !important;
+}
+
+.board-page thead tr {
+  background: var(--wgs-surface-2) !important;
+}
+
+.board-page tbody tr {
+  background: color-mix(in srgb, var(--wgs-surface) 86%, transparent) !important;
+}
+
+.board-page tbody tr[style*="rgba(245, 158, 11"] {
+  background: color-mix(in srgb, var(--wgs-warning) 14%, var(--wgs-card)) !important;
+}
+
+.board-page tbody tr:hover {
+  background: color-mix(in srgb, var(--wgs-primary) 8%, var(--wgs-surface)) !important;
+}
+
+.board-tab-grid button {
+  background: var(--wgs-surface) !important;
+  color: var(--wgs-text) !important;
+  border-color: var(--wgs-border) !important;
+}
+
+.board-tab-grid button[style*="rgba(245, 158, 11"] {
+  background: color-mix(in srgb, var(--wgs-warning) 16%, var(--wgs-surface)) !important;
+  color: #b45309 !important;
+  border-color: color-mix(in srgb, var(--wgs-warning) 62%, var(--wgs-border)) !important;
+}
+
+.board-tab-grid button[style*="rgba(59, 130, 246"] {
+  background: color-mix(in srgb, var(--wgs-primary) 14%, var(--wgs-surface)) !important;
+  color: var(--wgs-primary-strong) !important;
+  border-color: color-mix(in srgb, var(--wgs-primary) 62%, var(--wgs-border)) !important;
+}
+
+body.wgs-theme-dark .board-tab-grid button[style*="rgba(245, 158, 11"] {
+  color: #fcd34d !important;
+}
+
+body.wgs-theme-dark .board-tab-grid button[style*="rgba(59, 130, 246"] {
+  color: #bfdbfe !important;
+}
+
+.board-page :is(input, textarea, select) {
+  background: var(--wgs-input-bg) !important;
+  color: var(--wgs-text) !important;
+  border-color: var(--wgs-border) !important;
+}
+
+.board-page :is(input, textarea)::placeholder {
+  color: var(--wgs-subtle) !important;
+}
+
+.board-page button[style*="background: var(--wgs-practice-toggle-bg)"],
+.board-page button[style*="background: var(--wgs-input-bg)"],
+.board-page button[style*="background: var(--wgs-border)"] {
+  background: var(--wgs-surface) !important;
+  color: var(--wgs-text) !important;
+  border: 1px solid var(--wgs-border) !important;
+}
+
+.board-page button[style*="background: #3b82f6"],
+.board-page button[style*="background: #10b981"],
+.board-page button[style*="background: #f59e0b"],
+.board-page button[style*="background: #ef4444"],
+.board-page button[style*="background: #8b5cf6"],
+.board-page button[style*="background: #6366f1"] {
+  color: #ffffff !important;
+}
+
+.board-page button[style*="border: 1px solid #ef4444"]:not([style*="background: #ef4444"]) {
+  color: var(--wgs-danger) !important;
+}
+
+.board-page button[style*="border: 1px solid #10b981"] {
+  color: var(--wgs-success) !important;
+}
+
+.board-page [style*="borderLeft: 3px solid #3b82f6"],
+.board-page [style*="border-left: 3px solid #3b82f6"] {
+  background: color-mix(in srgb, var(--wgs-primary) 5%, transparent) !important;
+  border-radius: 8px !important;
+  padding-top: 8px !important;
+  padding-bottom: 8px !important;
+}
+
+/* =========================================================
+   운세 페이지 테마 보정
+   - 운세 문구/버튼명/placeholder는 fortune 화면 설정 키를 그대로 사용합니다.
+   - 색상과 입력 UI만 테마 토큰에 연결해 밝기 조절과 함께 자연스럽게 변하도록 합니다.
+   ========================================================= */
+.fortune-page {
+  width: min(100%, 800px) !important;
+  color: var(--wgs-text) !important;
+}
+
+.fortune-page div[style*="background: var(--wgs-button-muted)"],
+.fortune-page div[style*="background: var(--wgs-practice-toggle-bg)"],
+.fortune-page div[style*="background: var(--wgs-input-bg)"] {
+  background: color-mix(in srgb, var(--wgs-card) 88%, var(--wgs-page-bg)) !important;
+  color: var(--wgs-text) !important;
+  border: 1px solid var(--wgs-border) !important;
+  box-shadow: var(--wgs-shadow) !important;
+}
+
+.fortune-page div[style*="background: var(--wgs-practice-toggle-bg)"] {
+  background: var(--wgs-card-soft) !important;
+}
+
+.fortune-page div[style*="background: var(--wgs-input-bg)"] {
+  background: var(--wgs-surface) !important;
+  box-shadow: none !important;
+}
+
+.fortune-page :is(h2, h3, h4) {
+  color: var(--wgs-title) !important;
+}
+
+.fortune-page :is(p, label, div, span) {
+  color: var(--wgs-text) !important;
+}
+
+.fortune-page label,
+.fortune-page [style*="var(--wgs-subtle)"] {
+  color: var(--wgs-muted) !important;
+}
+
+.fortune-page :is(input, select, textarea) {
+  background: var(--wgs-input-bg) !important;
+  color: var(--wgs-text) !important;
+  border-color: var(--wgs-border) !important;
+}
+
+.fortune-page :is(input, select, textarea)::placeholder {
+  color: var(--wgs-subtle) !important;
+}
+
+.fortune-page button {
+  border-color: var(--wgs-border) !important;
+}
+
+.fortune-page button[style*="background: var(--wgs-button-muted)"],
+.fortune-page button[style*="background: var(--wgs-input-bg)"],
+.fortune-page button[style*="background: var(--wgs-practice-toggle-bg)"] {
+  background: var(--wgs-surface) !important;
+  color: var(--wgs-text) !important;
+}
+
+.fortune-page button[style*="background: rgba(59, 130, 246"] {
+  background: color-mix(in srgb, var(--wgs-primary) 14%, var(--wgs-surface)) !important;
+  color: var(--wgs-primary-strong) !important;
+}
+
+.fortune-page button[style*="background: rgba(239, 68, 68"] {
+  background: color-mix(in srgb, var(--wgs-danger) 12%, var(--wgs-surface)) !important;
+  color: var(--wgs-danger) !important;
+}
+
+.fortune-page button[style*="background: #3b82f6"],
+.fortune-page button[style*="background: #10b981"],
+.fortune-page button[style*="background: #ec4899"],
+.fortune-page button[style*="background: #ef4444"] {
+  color: #ffffff !important;
+}
+
+body.wgs-theme-dark .fortune-page button[style*="background: rgba(59, 130, 246"] {
+  color: #bfdbfe !important;
+}
+
+body.wgs-theme-dark .fortune-page button[style*="background: rgba(239, 68, 68"] {
+  color: #fecaca !important;
+}
+
+/* =========================================================
+   FAQ 테마 보정
+   - FAQ 항목/검색/버튼 문구는 faq 화면 설정 키를 유지합니다.
+   - 표, 답변 행, 검색창만 테마 토큰으로 정리해 기존 FAQ 데이터와 충돌하지 않게 합니다.
+   ========================================================= */
+.faq-page-wrap {
+  color: var(--wgs-text) !important;
+}
+
+.faq-card {
+  background: color-mix(in srgb, var(--wgs-card) 90%, var(--wgs-page-bg)) !important;
+  color: var(--wgs-text) !important;
+  border-color: var(--wgs-border) !important;
+}
+
+.faq-header p,
+.faq-search-result {
+  color: var(--wgs-muted) !important;
+}
+
+.faq-table {
+  background: var(--wgs-surface) !important;
+  color: var(--wgs-text) !important;
+  border: 1px solid var(--wgs-border) !important;
+}
+
+.faq-table thead tr {
+  background: var(--wgs-surface-2) !important;
+}
+
+.faq-table tbody tr {
+  background: color-mix(in srgb, var(--wgs-surface) 88%, transparent) !important;
+}
+
+.faq-table tbody tr.is-open,
+.faq-answer-row {
+  background: color-mix(in srgb, var(--wgs-primary) 7%, var(--wgs-surface)) !important;
+}
+
+.faq-table th,
+.faq-table td,
+.faq-answer-cell,
+.faq-answer-text {
+  color: var(--wgs-text) !important;
+  border-color: var(--wgs-border) !important;
+}
+
+.faq-empty-cell {
+  color: var(--wgs-subtle) !important;
+}
+
+.faq-question-cell button {
+  color: var(--wgs-title) !important;
+}
+
+.faq-open-btn,
+.faq-pagination button,
+.faq-reset-btn {
+  background: var(--wgs-surface) !important;
+  color: var(--wgs-primary-strong) !important;
+  border: 1px solid var(--wgs-border) !important;
+}
+
+.faq-open-btn[aria-expanded="true"],
+.faq-pagination button.is-active,
+.faq-search-btn {
+  background: var(--wgs-primary) !important;
+  color: #ffffff !important;
+  border-color: var(--wgs-primary) !important;
+}
+
+.faq-pagination button:disabled {
+  background: var(--wgs-card-soft) !important;
+  color: var(--wgs-subtle) !important;
+}
+
+.faq-search-form input {
+  background: var(--wgs-input-bg) !important;
+  color: var(--wgs-text) !important;
+  border-color: var(--wgs-border) !important;
+}
+
+.faq-search-form input::placeholder {
+  color: var(--wgs-subtle) !important;
+}
+
+body.wgs-theme-dark .faq-open-btn,
+body.wgs-theme-dark .faq-pagination button,
+body.wgs-theme-dark .faq-reset-btn {
+  color: #bfdbfe !important;
+}

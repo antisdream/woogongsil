@@ -1,5 +1,5 @@
 // Root application shell, route table, and global guards.
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { Suspense, lazy, useState, useEffect, useCallback, useRef } from 'react';
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 
@@ -28,28 +28,29 @@ import './styles/mealmap/mealmap-activity.css';
 import './styles/mealmap/mealmap-tone-fixes.css';
 import './styles/admin/admin-theme-fixes.css';
 
-import Home from './pages/Home';
-import Login from './pages/Login';
-import Signup from './pages/Signup';
-import FindAuth from './pages/FindAuth';
-import PastExam from './pages/PastExam';
-import RandomPractice from './pages/RandomPractice';
-import MyPage from './pages/MyPage';
-import WrongPractice from './pages/WrongPractice';
-import Fortune from './pages/Fortune';
-import FAQ from './pages/FAQ';
-import ChangePW from './pages/ChangePW';
-import Board from './pages/Board';
-import IpepPractice from './pages/IpepPractice';
-import WrittenLobby from './pages/WrittenLobby';
-import CertificateIpeHome from './pages/CertificateIpeHome';
-import PastExamMultiplayer from './pages/PastExamMultiplayer';
-import MealMap from './pages/MealMap';
-import Admin from './pages/Admin';
-import AdminUserRanking from './pages/AdminUserRanking';
 import useScreenSettings from './useScreenSettings';
 import RealTimeClock from './components/app/RealTimeClock';
 import ThemeModeToggle from './components/app/ThemeModeToggle';
+
+const Home = lazy(() => import('./pages/Home'));
+const Login = lazy(() => import('./pages/Login'));
+const Signup = lazy(() => import('./pages/Signup'));
+const FindAuth = lazy(() => import('./pages/FindAuth'));
+const PastExam = lazy(() => import('./pages/PastExam'));
+const RandomPractice = lazy(() => import('./pages/RandomPractice'));
+const MyPage = lazy(() => import('./pages/MyPage'));
+const WrongPractice = lazy(() => import('./pages/WrongPractice'));
+const Fortune = lazy(() => import('./pages/Fortune'));
+const FAQ = lazy(() => import('./pages/FAQ'));
+const ChangePW = lazy(() => import('./pages/ChangePW'));
+const Board = lazy(() => import('./pages/Board'));
+const IpepPractice = lazy(() => import('./pages/IpepPractice'));
+const WrittenLobby = lazy(() => import('./pages/WrittenLobby'));
+const CertificateIpeHome = lazy(() => import('./pages/CertificateIpeHome'));
+const PastExamMultiplayer = lazy(() => import('./pages/PastExamMultiplayer'));
+const MealMap = lazy(() => import('./pages/MealMap'));
+const Admin = lazy(() => import('./pages/Admin'));
+const AdminUserRanking = lazy(() => import('./pages/AdminUserRanking'));
 
 // App.jsx
 // 역할:
@@ -278,6 +279,24 @@ const showWgsToast = (message, type = 'info') => {
         theme: getToastTheme()
     });
 };
+
+function RouteLoadingFallback() {
+    return (
+        <div
+            style={{
+                width: '100%',
+                minHeight: '220px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'var(--wgs-muted)',
+                fontWeight: 700,
+            }}
+        >
+            화면을 불러오는 중입니다...
+        </div>
+    );
+}
 
 
 // 관리자와 운영자 권한 값은 서버와 브라우저 저장소에서 true/false, 1/0, 'true'/'1'처럼 섞여 들어올 수 있습니다.
@@ -922,40 +941,42 @@ function App() {
                 <main
                     className="wgs-main-content" style={{ width: '100%', minWidth: 0, boxSizing: 'border-box', marginTop: '30px', paddingBottom: '50px' }}
                 >
-                    <Routes>
-                        <Route path="/" element={<Home />} />
-                        <Route path="/login" element={<Login />} />
-                        {/* 예전 /signup, /find 주소는 외부 링크/북마크 호환을 위해 유지합니다. */}
-                        <Route path="/signup" element={<Signup afterSignupPath="/login" />} />
-                        <Route path="/find" element={<FindAuth loginPath="/login" />} />
-                        {/* 기존 주소는 새 정보처리기사 주소로 넘기고, 실제 화면은 기존 컴포넌트를 그대로 사용합니다. */}
-                        <Route path="/written" element={<Navigate to="/cert/ipe/written" replace />} />
-                        <Route path="/practice" element={<Navigate to="/cert/ipe/written-bank" replace />} />
-                        <Route path="/exam" element={<Navigate to="/cert/ipe/written-past" replace />} />
-                        <Route path="/ipep" element={<Navigate to="/cert/ipe/practical" replace />} />
-                        <Route path="/cert/ipe" element={<CertificateIpeHome />} />
-                        <Route path="/cert/ipe/written" element={<WrittenLobby />} />
-                        <Route path="/cert/ipe/written-bank" element={<RandomPractice />} />
-                        <Route path="/cert/ipe/written-past" element={<PastExam isExamActive={isExamActive} setIsExamActive={setIsExamActive} />} />
-                        <Route path="/cert/ipe/practical" element={<IpepPractice key="ipep-lobby" setIsExamActive={setIsExamActive} initialMode="lobby" />} />
-                        <Route path="/cert/ipe/practical-bank" element={<IpepPractice key="ipep-random" setIsExamActive={setIsExamActive} initialMode="random" />} />
-                        <Route path="/cert/ipe/practical-past" element={<IpepPractice key="ipep-past" setIsExamActive={setIsExamActive} initialMode="past" />} />
-                        <Route path="/multiplayer" element={<PastExamMultiplayer setIsExamActive={setIsExamActive} />} />
-                        <Route path="/multiplayer/:mpTab" element={<PastExamMultiplayer setIsExamActive={setIsExamActive} />} />
-                        <Route path="/mealmap/*" element={<MealMap />} />
-                        <Route path="/mypage" element={<MyPage />} />
-                        <Route path="/wrong" element={<WrongPractice />} />
-                        <Route path="/wrong/:wrongTab" element={<WrongPractice />} />
-                        <Route path="/fortune" element={<Fortune />} />
-                        <Route path="/faq" element={<FAQ />} />
-                        <Route path="/change-pw" element={<ChangePW />} />
-                        <Route path="/board/*" element={<Board />} />
-                        {/*  [관리자 Step1 라우트]
-                            관리자 본기능은 /admin 하위 라우트에서 탭 단위로 연결한다. */}
-                        <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
-                        <Route path="/admin/user-ranking/:targetUserId" element={<AdminUserRanking />} />
-                        <Route path="/admin/:adminTab" element={<Admin />} />
-                    </Routes>
+                    <Suspense fallback={<RouteLoadingFallback />}>
+                        <Routes>
+                            <Route path="/" element={<Home />} />
+                            <Route path="/login" element={<Login />} />
+                            {/* 예전 /signup, /find 주소는 외부 링크/북마크 호환을 위해 유지합니다. */}
+                            <Route path="/signup" element={<Signup afterSignupPath="/login" />} />
+                            <Route path="/find" element={<FindAuth loginPath="/login" />} />
+                            {/* 기존 주소는 새 정보처리기사 주소로 넘기고, 실제 화면은 기존 컴포넌트를 그대로 사용합니다. */}
+                            <Route path="/written" element={<Navigate to="/cert/ipe/written" replace />} />
+                            <Route path="/practice" element={<Navigate to="/cert/ipe/written-bank" replace />} />
+                            <Route path="/exam" element={<Navigate to="/cert/ipe/written-past" replace />} />
+                            <Route path="/ipep" element={<Navigate to="/cert/ipe/practical" replace />} />
+                            <Route path="/cert/ipe" element={<CertificateIpeHome />} />
+                            <Route path="/cert/ipe/written" element={<WrittenLobby />} />
+                            <Route path="/cert/ipe/written-bank" element={<RandomPractice />} />
+                            <Route path="/cert/ipe/written-past" element={<PastExam isExamActive={isExamActive} setIsExamActive={setIsExamActive} />} />
+                            <Route path="/cert/ipe/practical" element={<IpepPractice key="ipep-lobby" setIsExamActive={setIsExamActive} initialMode="lobby" />} />
+                            <Route path="/cert/ipe/practical-bank" element={<IpepPractice key="ipep-random" setIsExamActive={setIsExamActive} initialMode="random" />} />
+                            <Route path="/cert/ipe/practical-past" element={<IpepPractice key="ipep-past" setIsExamActive={setIsExamActive} initialMode="past" />} />
+                            <Route path="/multiplayer" element={<PastExamMultiplayer setIsExamActive={setIsExamActive} />} />
+                            <Route path="/multiplayer/:mpTab" element={<PastExamMultiplayer setIsExamActive={setIsExamActive} />} />
+                            <Route path="/mealmap/*" element={<MealMap />} />
+                            <Route path="/mypage" element={<MyPage />} />
+                            <Route path="/wrong" element={<WrongPractice />} />
+                            <Route path="/wrong/:wrongTab" element={<WrongPractice />} />
+                            <Route path="/fortune" element={<Fortune />} />
+                            <Route path="/faq" element={<FAQ />} />
+                            <Route path="/change-pw" element={<ChangePW />} />
+                            <Route path="/board/*" element={<Board />} />
+                            {/*  [관리자 Step1 라우트]
+                                관리자 본기능은 /admin 하위 라우트에서 탭 단위로 연결한다. */}
+                            <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
+                            <Route path="/admin/user-ranking/:targetUserId" element={<AdminUserRanking />} />
+                            <Route path="/admin/:adminTab" element={<Admin />} />
+                        </Routes>
+                    </Suspense>
                 </main>
             </div>
         </div>

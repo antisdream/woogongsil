@@ -154,12 +154,19 @@ function IpepPractice({ setIsExamActive, initialMode = 'lobby' }) {
 
     const userName = sessionStorage.getItem('userName') || getIpepScreenSetting('user.default_name', '사용자');
     const userId = sessionStorage.getItem('userId') || '';
+    const getSessionAuth = useCallback(() => ({
+        id: sessionStorage.getItem('userId') || userId || '',
+        userId: sessionStorage.getItem('userId') || userId || '',
+        sessionToken: sessionStorage.getItem('sessionToken') || '',
+        serverInstanceId: sessionStorage.getItem('wgsServerInstanceId') || localStorage.getItem('wgsServerInstanceId') || '',
+    }), [userId]);
 
     // 실기 채점 결과를 랭킹에 반영합니다. 실패해도 문제 풀이 흐름은 막지 않습니다.
     const saveIpepRanking = async ({ mode, totalCount, correctCount, totalScore, maxScore, year = null, session = null }) => {
         if (!userId) return;
         try {
             await axios.post(`${API_BASE}/api/ipep-ranking`, {
+                ...getSessionAuth(),
                 id: userId,
                 userName,
                 mode,
@@ -180,6 +187,7 @@ function IpepPractice({ setIsExamActive, initialMode = 'lobby' }) {
         if (!userId || wrongQuestions.length === 0) return;
         try {
             await axios.post(`${API_BASE}/api/save-ipep-wrong`, {
+                ...getSessionAuth(),
                 id: userId,
                 source,
                 year,

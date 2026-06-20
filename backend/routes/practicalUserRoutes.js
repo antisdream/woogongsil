@@ -10,6 +10,7 @@ function registerPracticalUserRoutes(options = {}) {
     const saveIpepRankingStore = options.saveIpepRankingStore;
     const safeNumber = options.safeNumber;
     const getKSTDateTime = options.getKSTDateTime;
+    const validateRealtimeSession = options.validateRealtimeSession;
 
     if (!app || typeof app.post !== 'function') {
         throw new Error('registerPracticalUserRoutes requires an Express app.');
@@ -17,9 +18,46 @@ function registerPracticalUserRoutes(options = {}) {
     if (!pool || typeof pool.query !== 'function') {
         throw new Error('registerPracticalUserRoutes requires a MySQL pool.');
     }
+    if (typeof validateRealtimeSession !== 'function') {
+        throw new Error('registerPracticalUserRoutes requires validateRealtimeSession.');
+    }
+
+    function authUserId(auth) {
+        return String(auth?.user?.id || auth?.id || '').trim();
+    }
+
+    async function requireSessionUser(req, res, expectedId = '') {
+        const auth = await validateRealtimeSession(req);
+        if (!auth.valid) {
+            res.status(401).json({
+                success: false,
+                valid: false,
+                reason: auth.reason || 'session_expired',
+                msg: '로그인 세션이 만료되었습니다. 다시 로그인해주세요.',
+            });
+            return null;
+        }
+
+        const requesterId = authUserId(auth);
+        const targetId = String(expectedId || requesterId || '').trim();
+        if (!requesterId || !targetId || requesterId !== targetId) {
+            res.status(403).json({
+                success: false,
+                valid: false,
+                reason: 'forbidden_user_mismatch',
+                msg: '본인 계정으로만 처리할 수 있습니다.',
+            });
+            return null;
+        }
+
+        return auth;
+    }
 // 7-1. 실기 랭킹 / 실기 오답노트 API
 app.post('/api/ipep-ranking', async (req, res) => {
-    const id = String(req.body.id || req.body.userId || '').trim();
+    const auth = await requireSessionUser(req, res, req.body.id || req.body.userId);
+    if (!auth) return;
+
+    const id = authUserId(auth);
     const mode = req.body.mode === 'past'? 'past' : 'random';
 
     if (!id) return res.status(400).json({ success: false, msg: '로그인이 필요합니다.' });
@@ -29,7 +67,7 @@ app.post('/api/ipep-ranking', async (req, res) => {
 
         // 실기 랭킹은 프리시즌 없이 서버 기준 날짜로 24시간 내내 기록합니다.
         const user = await getUserById(id);
-        const userName = req.body.userName || (user && user.name) || id;
+        const userName = auth.user?.name || (user && user.name) || id;
         const store = getIpepRankingStore();
         const list = mode === 'past'? store.past : store.random;
 
@@ -212,7 +250,10 @@ function normalizeIpepWrongRow(row, source) {
 app.post('/api/save-ipep-wrong', async (req, res) => {
     try {
         // 기존 프론트 요청 형식(id + wrongQuestions 배열)을 그대로 받으면서 내부 저장소만 SQL로 바꿉니다.
-        const id = String(req.body.id || req.body.userId || '').trim();
+        const auth = await requireSessionUser(req, res, req.body.id || req.body.userId);
+        if (!auth) return;
+
+        const id = authUserId(auth);
         const source = normalizeIpepWrongSource(req.body.source);
         const wrongQuestions = Array.isArray(req.body.wrongQuestions)
             ? req.body.wrongQuestions
@@ -258,6 +299,9 @@ app.post('/api/save-ipep-wrong', async (req, res) => {
 app.get('/api/user/:id/ipep-wrongnotes', async (req, res) => {
     try {
         const id = String(req.params.id || '').trim();
+        const auth = await requireSessionUser(req, res, id);
+        if (!auth) return;
+
         const sourceFilter = req.query.source ? normalizeIpepWrongSource(req.query.source) : null;
 
         if (!id) return res.status(400).json({ success: false, msg: '사용자 정보가 없습니다.' });
@@ -338,7 +382,10 @@ app.get('/api/user/:id/ipep-wrongnotes', async (req, res) => {
 
 app.post('/api/remove-ipep-wrong', async (req, res) => {
     try {
-        const id = String(req.body.id || req.body.userId || '').trim();
+        const auth = await requireSessionUser(req, res, req.body.id || req.body.userId);
+        if (!auth) return;
+
+        const id = authUserId(auth);
         const source = normalizeIpepWrongSource(req.body.source);
         const wrongNoteId = Number(req.body.wrongNoteId || req.body.wrong_note_id || req.body.wrongId);
         const questionId = Number(req.body.question_id || req.body.questionId || req.body.idToDelete);
@@ -365,7 +412,10 @@ app.post('/api/remove-ipep-wrong', async (req, res) => {
 
 app.post('/api/remove-all-ipep-wrong', async (req, res) => {
     try {
-        const id = String(req.body.id || req.body.userId || '').trim();
+        const auth = await requireSessionUser(req, res, req.body.id || req.body.userId);
+        if (!auth) return;
+
+        const id = authUserId(auth);
         const source = req.body.source ? normalizeIpepWrongSource(req.body.source) : null;
 
         if (!id) return res.status(400).json({ success: false, msg: '로그인이 필요합니다.' });

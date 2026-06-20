@@ -13,6 +13,11 @@ const API_BASE = '';
 const MyPage = () => {
     const navigate = useNavigate();
     const userId = sessionStorage.getItem('userId');
+    const getSessionAuth = useCallback(() => ({
+        id: sessionStorage.getItem('userId') || userId || '',
+        sessionToken: sessionStorage.getItem('sessionToken') || '',
+        serverInstanceId: sessionStorage.getItem('wgsServerInstanceId') || localStorage.getItem('wgsServerInstanceId') || '',
+    }), [userId]);
     const { getSetting } = useScreenSettings('mypage');
     const t = useCallback((key, fallback) => getSetting(key, fallback), [getSetting]);
     const formatSetting = (key, fallback, values = {}) => {
@@ -38,7 +43,7 @@ const MyPage = () => {
 
         const fetchUserData = async () => {
             try {
-                const res = await axios.get(`${API_BASE}/api/user/${userId}`);
+                const res = await axios.get(`${API_BASE}/api/user/${userId}`, { params: getSessionAuth() });
 
                 if (!res.data || res.data.msg) {
                     throw new Error(t('messages.user_not_found', '유저 정보를 찾을 수 없습니다.'));
@@ -47,7 +52,7 @@ const MyPage = () => {
                 setUser(res.data);
 
                 try {
-                    const ipepRes = await axios.get(`${API_BASE}/api/user/${userId}/ipep-wrongnotes`);
+                    const ipepRes = await axios.get(`${API_BASE}/api/user/${userId}/ipep-wrongnotes`, { params: getSessionAuth() });
                     setIpepWrongNotes(Array.isArray(ipepRes.data?.wrongNotes) ? ipepRes.data.wrongNotes : []);
                 } catch (ipepErr) {
                     console.warn('실기 오답노트 불러오기 실패:', ipepErr);
@@ -74,7 +79,7 @@ const MyPage = () => {
         };
 
         fetchUserData();
-    }, [t, userId]);
+    }, [getSessionAuth, t, userId]);
 
     const handleDeleteAccount = async () => {
         const confirm1 = window.confirm(t('delete.first_confirm', '탈퇴를 하게되면 활동정보를 복구하실 수 없습니다. 탈퇴를 진행하시겠습니까?'));
@@ -84,7 +89,7 @@ const MyPage = () => {
         if (!inputPw) return;
 
         try {
-            const res = await axios.post(`${API_BASE}/api/user/delete`, { id: userId, password: inputPw });
+            const res = await axios.post(`${API_BASE}/api/user/delete`, { ...getSessionAuth(), id: userId, password: inputPw });
             if (res.data.success) {
                 const confirm2 = window.confirm(t('delete.second_confirm', '비밀번호가 일치합니다. 탈퇴를 계속 진행하시겠습니까?'));
                 if (confirm2) {
@@ -106,7 +111,7 @@ const MyPage = () => {
 
         const formattedDate = `${dDate.year}-${String(dDate.month).padStart(2, '0')}-${String(dDate.day).padStart(2, '0')}`;
         try {
-            await axios.post(`${API_BASE}/api/user/update`, { id: userId, dDay: formattedDate });
+            await axios.post(`${API_BASE}/api/user/update`, { ...getSessionAuth(), id: userId, dDay: formattedDate });
             sessionStorage.setItem('dDay', formattedDate);
             alert(t('messages.dday_saved', 'D-Day가 저장되었습니다.'));
             window.location.reload();

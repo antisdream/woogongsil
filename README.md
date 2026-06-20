@@ -1,138 +1,117 @@
-# 우공실 학습 플랫폼
+# 우공실
 
-우공실은 정보처리기사 필기와 실기 학습 흐름을 한 곳에서 운영하기 위한 웹 기반 학습 플랫폼입니다. 문제 풀이, 오답 관리, 랭킹, 게시판, 실시간 소통, 회식맵, 관리자 운영 기능을 하나의 서비스 경험으로 묶어 학습자와 운영자가 같은 데이터 기준에서 움직일 수 있도록 구성했습니다.
+우공실은 정보처리기사 필기와 실기 학습을 위한 웹 기반 학습 서비스입니다. 문제 풀이, 기출 복습, 오답노트, 랭킹, 멀티플레이 CBT, 게시판, 맛집 지도, 관리자 운영 기능을 한 서비스 안에서 제공합니다.
 
-이 저장소는 개발 환경 검증과 AWS Lightsail 배포를 함께 고려합니다. 운영 데이터와 비밀 설정은 저장소에 포함하지 않고, 애플리케이션 코드와 배포 가능한 정적 자산만 공개 대상으로 관리합니다.
+운영 서비스: https://woogongsil.site
 
-## 서비스 접속
+## 주요 기능
 
-- 운영 URL: https://woogongsil.site
-- 최초 접속 환경에서는 게이트키퍼 인증코드 입력 후 서비스를 이용할 수 있습니다.
+- 필기 문제은행, 기출 문제, 랜덤 문제 풀이
+- 실기 랜덤 문제, 실기 기출 문제, 주관식 답안 입력
+- 오답노트, 개인 풀이 기록, 랭킹 기록
+- 멀티플레이 CBT 방 생성, 참여, 결과 확인
+- 게시판, 공지, 댓글, 좋아요, 이메일 알림
+- FAQ, 운세, 캘린더, 실시간 접속자와 채팅
+- 맛집 지도, 장소 제보, 수정/삭제 요청, 관리자 검토
+- 회원가입 승인 대기, 관리자 승인/거절, 안내 메일 발송
+- 관리자 페이지 기반 사용자, 공지, 문제, 화면 문구, 일정, 맛집, 승인 요청 관리
 
-## 서비스 범위
+## 보안과 접속 흐름
 
-- 정보처리기사 필기 문제은행, 기출문제, 오답노트
-- 정보처리기사 실기 문제은행, 기출문제, 주관식 채점 흐름
-- 멀티플레이 CBT 방 생성, 응시, 결과 확인, 오답 정리
-- 회원가입, 로그인, 이메일 인증, 세션 관리
-- 게시판, 공지, 댓글, 추천, 공지 순서 관리
-- 홈 화면 달력, 랭킹, 실시간 접속자, 채팅
-- 회식맵 장소 즉시 제보 등록, 댓글, 좋아요, 수정/삭제 요청, 관리자 결재 검토
-- 관리자 페이지 기반 사용자, 문제, 화면 설정, 일정, 공지, 결재 관리
+우공실은 제한된 학습 구성원이 사용하는 서비스를 기준으로 설계되어 있습니다.
 
-## 운영 구조
+- 첫 접속 기기에서는 게이트키퍼 인증을 통과해야 서비스를 사용할 수 있습니다.
+- hCaptcha는 게이트키퍼, 로그인, 회원가입, 계정 찾기처럼 자동화 공격 위험이 있는 흐름에 적용됩니다.
+- 게이트키퍼 인증을 통과한 신뢰 기기에서는 로그인 이후 반복적인 hCaptcha 입력을 줄였습니다.
+- 캐시 삭제, 브라우저 변경, 기기 변경, 게이트키퍼 쿠키 만료 시에는 다시 보안 확인이 필요할 수 있습니다.
+- 주요 API는 서버에서 세션 토큰과 사용자 권한을 다시 검증합니다.
+- 개발자도구에서 화면 디자인이나 CSS를 임시로 바꿔도 서버 데이터는 바뀌지 않습니다.
+- 서버 데이터를 변경하는 작업은 인증된 API와 권한 검사를 통과해야만 반영됩니다.
+- 요청 제한, CORS 제한, 보안 헤더, robots 차단 정책을 적용했습니다.
 
-우공실은 React/Vite 기반 프론트엔드와 Express/MySQL 기반 백엔드로 구성됩니다. 프론트엔드는 사용자 화면과 관리자 화면을 제공하고, 백엔드는 인증, 문제 데이터, 게시판, 랭킹, 회식맵, 멀티플레이, 운영 설정 API를 담당합니다.
+## 회원가입 승인
 
-관리자 페이지의 주요 변경 작업은 DB와 연결된 CRUD 흐름을 기준으로 동작합니다. 따라서 화면 설정, 문제/해설 수정, 사용자 관리, 회식맵 공개 식당 관리와 수정/삭제 결재 같은 운영성 기능은 프론트엔드 컴포넌트와 백엔드 라우트가 함께 유지되어야 합니다. 필기 문제은행, 필기 기출문제, 실기 문제은행/기출문제, 오답노트는 라우팅, 채점, 저장 API는 코드에 유지하고 화면 문구, 버튼명, 결과표/PDF/필터/이미지 안내 문구는 `wgs_screen_settings` 기준으로 관리합니다. 회식맵 화면 문구와 활동 이력/필터/제보/수정 제안/삭제 요청 모달 문구, 지도/상세 패널 상태 메시지는 기존 `mealmap_page_texts` 기준으로 관리합니다.
+신규 회원가입은 바로 계정으로 등록되지 않고 관리자 승인 대기 상태로 접수됩니다.
+
+1. 사용자가 회원가입을 신청합니다.
+2. 신청 정보는 승인 대기 목록에 저장됩니다.
+3. 관리자가 승인하면 실제 계정이 생성됩니다.
+4. 관리자가 거절하면 거절 사유와 함께 안내 메일이 발송됩니다.
+
+이 방식은 승인되지 않은 사용자의 접근을 줄이고, 소규모 학습 그룹 운영에 맞춰 회원 관리를 명확하게 하기 위한 흐름입니다.
+
+## 관리자 기능
+
+관리자 페이지에서는 다음 기능을 제공합니다.
+
+- 회원 목록과 권한 상태 확인
+- 가입 승인 요청 처리
+- 사용자 임시정지, 계정 삭제, 운영자 권한 관리
+- 전체 공지 발송과 운영 모드 관리
+- 게시판 공지 순서와 알림 관리
+- 문제와 해설 조회 및 수정
+- 화면 문구와 레이아웃 설정 관리
+- 캘린더 일정 관리
+- 맛집 장소와 수정 요청 검토
+- 운영 로그와 최근 접속 기록 확인
+
+회원 목록의 `최근 로그인`은 로그인 API가 성공한 시각입니다. `최근 로그아웃`은 사용자가 명시적으로 로그아웃 API를 호출한 마지막 시각입니다. 브라우저 종료, 서버 재시작, 탭 종료는 명시적 로그아웃으로 기록되지 않을 수 있으므로 `로그인 유지`와 `현재 접속중`은 구분해서 해석해야 합니다.
 
 ## 기술 스택
 
-### 프론트엔드
+Frontend:
 
-![React](https://img.shields.io/badge/React-19.2-61DAFB?logo=react&logoColor=000)
-![Vite](https://img.shields.io/badge/Vite-8.0-646CFF?logo=vite&logoColor=fff)
-![React Router](https://img.shields.io/badge/React_Router-7.14-CA4245?logo=reactrouter&logoColor=fff)
-![Axios](https://img.shields.io/badge/Axios-1.15-5A29E4?logo=axios&logoColor=fff)
-![Socket.IO Client](https://img.shields.io/badge/Socket.IO_Client-4.8-010101?logo=socketdotio&logoColor=fff)
-![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4.2-06B6D4?logo=tailwindcss&logoColor=fff)
-![ESLint](https://img.shields.io/badge/ESLint-9.39-4B32C3?logo=eslint&logoColor=fff)
+- React 19
+- Vite 8
+- React Router 7
+- Axios
+- Socket.IO Client
+- Tailwind CSS
+- ESLint
 
-- React와 React DOM을 기반으로 사용자 페이지, 관리자 페이지, 시험 화면, 회식맵 화면을 구성합니다.
-- Vite를 사용해 개발 서버, 프로덕션 빌드, 정적 자산 번들링을 처리합니다.
-- React Router로 페이지 라우팅을 관리하고, Axios로 백엔드 API와 통신합니다.
-- Socket.IO Client로 실시간 접속자, 채팅, 멀티플레이 흐름을 연결합니다.
-- Tailwind CSS, 전역 CSS, 도메인별 CSS 파일을 함께 사용해 화면 스타일을 관리합니다.
-- ESLint로 프론트엔드 코드 품질과 Hook 사용 규칙을 검증합니다.
+Backend:
 
-### 백엔드
+- Node.js
+- Express 5
+- MySQL
+- Socket.IO
+- bcrypt
+- Nodemailer
+- csv-parser / csv-parse
 
-![Node.js](https://img.shields.io/badge/Node.js-Runtime-339933?logo=nodedotjs&logoColor=fff)
-![Express](https://img.shields.io/badge/Express-5.2-000000?logo=express&logoColor=fff)
-![MySQL](https://img.shields.io/badge/MySQL-8.x-4479A1?logo=mysql&logoColor=fff)
-![Socket.IO](https://img.shields.io/badge/Socket.IO-4.8-010101?logo=socketdotio&logoColor=fff)
-![Nodemailer](https://img.shields.io/badge/Nodemailer-Mail-22B573)
-![bcrypt](https://img.shields.io/badge/bcrypt-Password_Security-2F855A)
-![dotenv](https://img.shields.io/badge/dotenv-Environment-2E7D32)
-![CSV](https://img.shields.io/badge/CSV_Parser-Data_Import-FFB000)
+Infrastructure:
 
-- Node.js와 Express를 기반으로 인증, 시험, 게시판, 랭킹, 회식맵, 관리자 API를 제공합니다.
-- MySQL2 연결 풀을 사용해 운영 DB와 연동하고, 관리자 페이지 CRUD 흐름을 처리합니다.
-- Socket.IO로 멀티플레이 시험, 실시간 접속자, 채팅 관련 서버 이벤트를 관리합니다.
-- Nodemailer로 회원가입, 계정 찾기, 오류 신고 등 메일 발송 기능을 처리합니다.
-- bcrypt로 비밀번호 해시를 관리하고, dotenv 기반 환경변수로 운영 민감값을 분리합니다.
-- csv-parser와 csv-parse 기반 스크립트로 필기/실기 문제 데이터 적재와 보정 작업을 지원합니다.
+- AWS Lightsail
+- Ubuntu
+- PM2
+- Nginx
+- MySQL
 
-### 배포 및 검증
-
-![AWS Lightsail](https://img.shields.io/badge/AWS_Lightsail-Deployment-FF9900?logo=amazonaws&logoColor=fff)
-![Docker](https://img.shields.io/badge/Docker-Load_Test-2496ED?logo=docker&logoColor=fff)
-![npm](https://img.shields.io/badge/npm-Scripts-CB3837?logo=npm&logoColor=fff)
-
-- AWS Lightsail 배포를 기준으로 로컬 검증, 환경변수 관리, 서버 실행 흐름을 맞춥니다.
-- Docker 기반 부하 테스트 기록을 운영 전 성능 검증 자료로 관리합니다.
-- 성능 테스트 실행 환경과 k6, Prometheus, Grafana 설정은 [antisdream/woogongsil-loadtest-lab](https://github.com/antisdream/woogongsil-loadtest-lab)에서 별도로 관리합니다.
-- `npm run check`, `npm run lint`, `npm run build`를 배포 전 기본 검증 절차로 사용합니다.
-- 백엔드 실행 후 `/api/ipep/health`를 호출해 Express, MySQL 연결, 실기 API 라우트가 함께 살아 있는지 확인합니다.
-
-## 프로젝트 구성
+## 프로젝트 구조
 
 ```text
 ExamAppProject/
-├─ backend/              # Express, MySQL, Socket.IO, 관리자/시험/게시판 API
-│  ├─ config/            # 환경변수와 DB 연결 설정
-│  ├─ middleware/        # 입장 인증, hCaptcha, 요청 제한
-│  ├─ routes/            # 기능별 API 라우트
-│  ├─ services/          # 서버 런타임 상태와 공통 저장소
-│  └─ scripts/           # 데이터 적재와 유지보수 스크립트
-├─ frontend/             # React/Vite 사용자 화면과 관리자 화면
-│  ├─ public/            # 정적 자산과 안전 보정 스크립트
+├─ backend/
+│  ├─ config/          # 환경 변수와 DB 연결 설정
+│  ├─ middleware/      # 게이트키퍼, hCaptcha, 요청 제한
+│  ├─ routes/          # 기능별 API 라우트
+│  ├─ services/        # 공통 서버 상태와 저장소 유틸
+│  ├─ scripts/         # 문제 데이터 적재와 유지보수 스크립트
+│  └─ server.js        # Express/Socket.IO 서버 진입점
+├─ frontend/
+│  ├─ public/          # 정적 파일
 │  └─ src/
-│     ├─ components/     # 공통 UI 컴포넌트
-│     ├─ features/       # 도메인별 기능 모듈
-│     ├─ pages/          # 라우트 페이지
-│     └─ styles/         # 전역/관리자/회식맵 스타일
-├─ docs/
-│  └─ performance/       # Docker 부하 테스트와 성능 검증 기록
-├─ PATCH_NOTES.md        # 서비스 변경 이력
-└─ README.md             # 프로젝트 안내
+│     ├─ components/   # 공통 UI 컴포넌트
+│     ├─ features/     # 기능별 모듈
+│     ├─ pages/        # 라우트 페이지
+│     └─ styles/       # 전역/관리자/기능별 스타일
+├─ PATCH_NOTES.md      # 사용자 중심 변경 이력
+└─ README.md
 ```
 
-## 주요 설정
+## 로컬 실행
 
-환경변수는 `backend/.env`에서 관리합니다. 이 파일에는 DB 접속 정보, 메일 앱 비밀번호, hCaptcha 비밀키, 초대 코드, 카카오 API 키처럼 운영 민감값이 들어가므로 GitHub에 올리지 않습니다.
-
-공유용 예시는 `backend/.env.example`, `backend/.env.mealmap.kakao.example`, `frontend/.env.local.mealmap.kakao.example`에만 둡니다. 실제 운영값은 AWS Lightsail 또는 로컬 서버의 환경 설정으로 별도 관리합니다.
-
-## 화면 설정과 테마 운영
-
-우공실의 화면 문구와 일부 레이아웃 값은 관리자 페이지의 `화면 설정 관리` 탭과 기존 `wgs_screen_settings` 테이블을 기준으로 운영합니다. 새 테이블이나 새 컬럼을 만들지 않고 `page_key`, `section_key`, `setting_type`, `setting_key`, `setting_value` 조합으로 값을 관리합니다.
-
-### 테마 모드와 밝기
-
-- 다크/라이트 모드는 `localStorage.wgsThemeMode`에 저장되어 사용자가 다시 접속해도 마지막 선택을 유지합니다.
-- 밝기 조절값은 다크/라이트 모드별로 `sessionStorage`에 저장합니다. 사이트를 닫았다 다시 열면 기본값인 `50%`로 시작하고, 같은 사이트 세션 안에서는 새로고침해도 선택값이 유지됩니다.
-- 밝기 슬라이더는 `10%`부터 `100%`까지 `10%` 단위로 조절합니다.
-- 밝기 조절은 전체 앱에 CSS `filter`를 거는 방식이 아니라 `--wgs-page-bg`, `--wgs-card`, `--wgs-surface`, `--wgs-input-bg` 같은 테마 토큰을 다시 계산하는 방식으로 처리합니다. 그래서 이미지, 지도, 글자까지 함께 흐려지는 문제를 줄이고 라이트모드는 밝은 배경/어두운 글자, 다크모드는 어두운 배경/밝은 글자 원칙을 유지합니다.
-
-### 홈 화면 위치 설정
-
-- 홈 상단 히어로 문구는 기존처럼 `home.hero.hero_title`, `home.hero.hero_desc`로 관리합니다.
-- 위치와 폭은 `setting_type='layout'` 설정으로 관리합니다.
-- 현재 연결된 홈 히어로 layout 키는 `title_align`, `desc_align`, `title_offset_x`, `title_offset_y`, `desc_offset_x`, `desc_offset_y`, `content_width`입니다.
-- 정렬은 `left`, `center`, `right` 중 하나를 사용하고, offset 값은 `-200`부터 `200`까지 10px 단위로 보정됩니다.
-
-### 관리자 화면 설정 관리
-
-- `layout` 타입 설정은 관리자 화면에서 값 종류에 맞는 입력 UI로 보정합니다.
-- `*_align` 계열은 좌/가운데/우 select로 저장합니다.
-- `*_offset_*` 계열은 `-200px ~ 200px` range로 저장합니다.
-- `*_width` 계열은 `60% ~ 100%` range로 저장합니다.
-- 연결되지 않은 layout 값은 DB에 저장할 수 있지만, 실제 화면 반영은 각 페이지 컴포넌트가 해당 키를 읽도록 연결되어 있어야 합니다.
-
-## 실행 요약
-
-백엔드:
+Backend:
 
 ```bash
 cd backend
@@ -141,7 +120,7 @@ npm run check
 node server.js
 ```
 
-프론트엔드:
+Frontend:
 
 ```bash
 cd frontend
@@ -150,42 +129,80 @@ npm run lint
 npm run build
 ```
 
-로컬 개발 서버가 필요할 때는 프론트엔드에서 `npm run dev`를 실행하고, API는 Vite 프록시를 통해 `localhost:5000` 백엔드로 전달합니다.
-
-로컬 백엔드 health check:
+개발 서버가 필요하면 frontend에서 다음 명령을 실행합니다.
 
 ```bash
-cd backend
-node server.js
+npm run dev
+```
+
+기본 백엔드 health check:
+
+```bash
 curl http://localhost:5000/api/ipep/health
 ```
 
-`/api/ipep/health`는 배포/운영 점검용으로 `GET` 요청만 게이트키퍼 인증 없이 허용합니다.
+## 환경 변수
 
-정상 응답 예시는 `success: true`와 `정보처리기사 실기 API 정상 작동 중` 메시지입니다. 이 확인은 DB 연결 풀을 통해 `SELECT 1`까지 수행하므로, 단순 서버 기동보다 한 단계 더 강한 배포 전 점검입니다.
+실제 운영 값은 저장소에 포함하지 않습니다. 예시는 `backend/.env.example`을 참고합니다.
 
-## 배포 기준
+주요 환경 변수 범위:
 
-AWS Lightsail 배포 시에는 프론트엔드 빌드 결과와 백엔드 서버가 함께 동작해야 합니다. 운영 환경에서는 다음 기준을 지킵니다.
+- 서버 포트
+- MySQL 연결 정보
+- 공개 사이트 URL
+- 게이트키퍼 초대 코드와 토큰 secret
+- hCaptcha site key와 secret key
+- 메일 발송 계정
+- Kakao 지도 API 키
+- CORS 허용 origin
+- 요청 제한 값
 
-- `.env`, DB 백업, 로그, 런타임 JSON 저장소는 저장소에 포함하지 않습니다.
-- `backend/node_modules`, `frontend/node_modules`, `frontend/dist`는 GitHub에 올리지 않습니다.
-- 서버 실행 전 `backend/.env` 값을 운영 환경에 맞게 설정합니다.
-- 배포 전 `backend npm run check`, `frontend npm run lint`, `frontend npm run build`를 통과시킵니다.
-- 백엔드 실행 후 `GET /api/ipep/health`가 정상 응답하는지 확인합니다.
-- 관리자 페이지의 CRUD 흐름은 DB 스키마와 함께 확인합니다.
-- 화면 문구, 버튼명, 링크, 이미지, 일부 안내문은 기존 `wgs_screen_settings`와 `mealmap_page_texts` 기준으로 관리하며, 게시판 같은 사용자 화면도 가능한 범위에서 같은 화면 설정 흐름에 연결합니다.
-- 성능 관련 변경은 Docker 부하 테스트 기록을 참고해 배포 전 확인 항목을 재점검합니다.
+GitHub에 올리지 않는 항목:
 
-## 저장소 공개 전 확인
+- `.env`
+- SSH 키
+- 운영 DB 덤프
+- 메일 앱 비밀번호
+- hCaptcha secret
+- 초대 코드
+- Kakao API 키
+- `node_modules`
+- `frontend/dist`
+- 백업 압축 파일
 
-이 저장소는 개인 운영값이 포함되지 않은 상태로 공개하는 것을 전제로 합니다. 공개 전에는 `git status`, `.gitignore`, `.env` 제외 여부, 대용량 파일 여부를 다시 확인해야 합니다.
+## 검증 기준
 
-## 운영 문서
+배포 또는 PR 전에는 다음 검증을 권장합니다.
 
-- [PATCH_NOTES.md](./PATCH_NOTES.md): 게시판 공지와 운영 기능 반영 기록을 기준으로 정리한 서비스 변경 이력
-- [docs/performance/README.md](./docs/performance/README.md): Docker 부하 테스트와 성능 검증 기록
-- [antisdream/woogongsil-loadtest-lab](https://github.com/antisdream/woogongsil-loadtest-lab): k6, Prometheus, Grafana 기반 성능 테스트 실행 환경과 회차별 기록
-- [backend/.env.example](./backend/.env.example): 백엔드 운영 환경변수 예시
-- [backend/.env.mealmap.kakao.example](./backend/.env.mealmap.kakao.example): 회식맵 카카오 API 백엔드 설정 예시
-- [frontend/.env.local.mealmap.kakao.example](./frontend/.env.local.mealmap.kakao.example): 회식맵 카카오 API 프론트엔드 설정 예시
+```bash
+cd backend
+npm audit
+npm run check
+```
+
+```bash
+cd frontend
+npm audit
+npm run lint
+npm run build
+```
+
+운영 반영 후에는 다음 항목을 확인합니다.
+
+- PM2 프로세스 online
+- Nginx 설정 검사 통과
+- `/`, `/admin`, `/mealmap` HTTP 200
+- `/api/ipep/health` 정상 응답
+- 게이트키퍼 인증 흐름 정상
+- 관리자 페이지 접근과 주요 목록 조회 정상
+- 모바일 화면에서 표, 지도, 버튼, 입력창 표시 정상
+
+## 문서
+
+- [PATCH_NOTES.md](./PATCH_NOTES.md): 사용자 중심 변경 이력
+- [backend/.env.example](./backend/.env.example): 백엔드 환경 변수 예시
+- [docs/performance/README.md](./docs/performance/README.md): 성능 검증 관련 문서
+
+## 라이선스와 공개 범위
+
+이 저장소는 애플리케이션 소스 공개를 기준으로 정리됩니다. 운영 데이터, 계정 정보, 비밀 키, 백업 파일은 포함하지 않습니다.

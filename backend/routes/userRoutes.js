@@ -8,9 +8,41 @@ function registerUserRoutes(options = {}) {
     const getUserById = options.getUserById;
     const formatDateOnly = options.formatDateOnly;
     const getKSTDateTime = options.getKSTDateTime;
+    const validateRealtimeSession = options.validateRealtimeSession;
 
-    if (!app || !pool || !getUserById || !formatDateOnly || !getKSTDateTime) {
-        throw new Error('registerUserRoutes requires app, pool, getUserById, formatDateOnly, and getKSTDateTime.');
+    if (!app || !pool || !getUserById || !formatDateOnly || !getKSTDateTime || typeof validateRealtimeSession !== 'function') {
+        throw new Error('registerUserRoutes requires app, pool, getUserById, formatDateOnly, getKSTDateTime, and validateRealtimeSession.');
+    }
+
+    function authUserId(auth) {
+        return String(auth?.user?.id || auth?.id || '').trim();
+    }
+
+    async function requireSessionUser(req, res, expectedId = '') {
+        const auth = await validateRealtimeSession(req);
+        if (!auth.valid) {
+            res.status(401).json({
+                success: false,
+                valid: false,
+                reason: auth.reason || 'session_expired',
+                msg: '로그인 세션이 만료되었습니다. 다시 로그인해주세요.',
+            });
+            return null;
+        }
+
+        const requesterId = authUserId(auth);
+        const targetId = String(expectedId || requesterId || '').trim();
+        if (!requesterId || !targetId || requesterId !== targetId) {
+            res.status(403).json({
+                success: false,
+                valid: false,
+                reason: 'forbidden_user_mismatch',
+                msg: '본인 계정으로만 처리할 수 있습니다.',
+            });
+            return null;
+        }
+
+        return auth;
     }
 
     // 8. 마이페이지 / 회원탈퇴 / 오답노트
@@ -18,6 +50,9 @@ function registerUserRoutes(options = {}) {
         const id = String(req.params.id || '').trim();
 
         try {
+            const auth = await requireSessionUser(req, res, id);
+            if (!auth) return;
+
             const user = await getUserById(id);
             if (!user) return res.status(404).json({ msg: '유저 정보 없음' });
 
@@ -88,7 +123,10 @@ function registerUserRoutes(options = {}) {
     });
 
     app.post('/api/user/update', async (req, res) => {
-        const id = String(req.body.id || '').trim();
+        const auth = await requireSessionUser(req, res, req.body.id);
+        if (!auth) return;
+
+        const id = authUserId(auth);
         const dDay = req.body.dDay || null;
 
         try {
@@ -104,7 +142,10 @@ function registerUserRoutes(options = {}) {
     });
 
     app.post('/api/user/delete', async (req, res) => {
-        const id = String(req.body.id || '').trim();
+        const auth = await requireSessionUser(req, res, req.body.id);
+        if (!auth) return;
+
+        const id = authUserId(auth);
         const password = String(req.body.password || '');
 
         const connection = await pool.getConnection();
@@ -142,7 +183,10 @@ function registerUserRoutes(options = {}) {
     });
 
     app.post('/api/save-wrong', async (req, res) => {
-        const id = String(req.body.id || '').trim();
+        const auth = await requireSessionUser(req, res, req.body.id);
+        if (!auth) return;
+
+        const id = authUserId(auth);
         const wrongQuestions = Array.isArray(req.body.wrongQuestions) ? req.body.wrongQuestions : [];
         const source = req.body.source || 'random';
         const year = req.body.year || null;
@@ -184,7 +228,10 @@ function registerUserRoutes(options = {}) {
     });
 
     app.post('/api/remove-wrong', async (req, res) => {
-        const id = String(req.body.id || '').trim();
+        const auth = await requireSessionUser(req, res, req.body.id);
+        if (!auth) return;
+
+        const id = authUserId(auth);
         const questionId = req.body.question_id;
 
         try {
@@ -197,7 +244,10 @@ function registerUserRoutes(options = {}) {
     });
 
     app.post('/api/remove-all-wrong', async (req, res) => {
-        const id = String(req.body.id || '').trim();
+        const auth = await requireSessionUser(req, res, req.body.id);
+        if (!auth) return;
+
+        const id = authUserId(auth);
         const source = req.body.source || null;
 
         try {

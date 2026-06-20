@@ -83,6 +83,7 @@ export const IPEP_GRADING_POLICY_OPTIONS = [
 export const ADMIN_TABS = [
   { id: 'dashboard', label: '대시보드', description: '관리 현황 요약' },
   { id: 'users', label: '사용자·접속 관리', description: '회원 목록과 실시간 접속자' },
+  { id: 'signupRequests', label: '회원가입 승인', description: '신규 가입 승인/거절' },
   { id: 'approvals', label: '결재 사항', description: '운영자 요청 승인/반려' },
   { id: 'notice', label: '공지·점검 관리', description: '전체 공지와 점검 모드' },
   { id: 'questions', label: '문제·해설 관리', description: '필기/실기 문제 데이터' },

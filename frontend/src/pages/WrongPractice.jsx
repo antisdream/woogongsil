@@ -349,6 +349,11 @@ const WrongPractice = () => {
     const location = useLocation();
     const { wrongTab } = useParams();
     const userId = sessionStorage.getItem('userId') || '';
+    const getSessionAuth = useCallback(() => ({
+        id: sessionStorage.getItem('userId') || userId || '',
+        sessionToken: sessionStorage.getItem('sessionToken') || '',
+        serverInstanceId: sessionStorage.getItem('wgsServerInstanceId') || localStorage.getItem('wgsServerInstanceId') || '',
+    }), [userId]);
     const { getSetting } = useScreenSettings('wrong');
     const t = useCallback((key, fallback) => getSetting(key, fallback), [getSetting]);
     const formatSetting = useCallback((key, fallback, values = {}) => (
@@ -458,8 +463,8 @@ const WrongPractice = () => {
         setIsLoading(true);
         try {
             const [writtenRes, ipepRes] = await Promise.all([
-                axios.get(`${API_BASE}/api/user/${userId}`),
-                axios.get(`${API_BASE}/api/user/${userId}/ipep-wrongnotes`)
+                axios.get(`${API_BASE}/api/user/${userId}`, { params: getSessionAuth() }),
+                axios.get(`${API_BASE}/api/user/${userId}/ipep-wrongnotes`, { params: getSessionAuth() })
             ]);
 
             setWrittenNotes(Array.isArray(writtenRes.data?.wrongNotes) ? writtenRes.data.wrongNotes : []);
@@ -535,6 +540,7 @@ const WrongPractice = () => {
         try {
             if (isWrittenTab) {
                 await axios.post(`${API_BASE}/api/remove-wrong`, {
+                    ...getSessionAuth(),
                     id: userId,
                     source: activeTab,
                     wrongNoteId: getWrongNoteId(currentNote),
@@ -542,6 +548,7 @@ const WrongPractice = () => {
                 });
             } else {
                 await axios.post(`${API_BASE}/api/remove-ipep-wrong`, {
+                    ...getSessionAuth(),
                     id: userId,
                     source: activeTab,
                     wrongNoteId: getWrongNoteId(currentNote),
@@ -590,6 +597,7 @@ const WrongPractice = () => {
         try {
             if (isWrittenTab) {
                 await axios.post(`${API_BASE}/api/remove-all-wrong`, {
+                    ...getSessionAuth(),
                     id: userId,
                     source: activeTab,
                     year: activeTab === 'past'? writtenPastFilter.year : 'ALL',
@@ -597,6 +605,7 @@ const WrongPractice = () => {
                 });
             } else {
                 await axios.post(`${API_BASE}/api/remove-all-ipep-wrong`, {
+                    ...getSessionAuth(),
                     id: userId,
                     source: activeTab,
                     year: activeTab === 'ipep_past'? ipepPastFilter.year : 'ALL',

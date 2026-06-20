@@ -44,6 +44,12 @@ function wgsRateKeyPart(value, fallback = 'unknown') {
     .slice(0, 180) || fallback;
 }
 
+function wgsRateHashPart(value, fallback = '') {
+  const raw = String(value || '').trim();
+  if (!raw) return fallback;
+  return crypto.createHash('sha256').update(raw).digest('hex').slice(0, 32);
+}
+
 function wgsClientIp(req) {
   const forwarded = req.headers['x-forwarded-for'];
   if (typeof forwarded === 'string' && forwarded.trim()) {
@@ -91,6 +97,7 @@ const WGS_RATE_LIMIT_ENABLED = wgsRateBool(process.env.WGS_RATE_LIMIT_ENABLED, t
 
 function wgsRouteGroup(req) {
   const path = req.path;
+  const method = String(req.method || 'GET').toUpperCase();
   if (path === '/api/gatekeeper/verify') return 'gatekeeper';
   if (path === '/api/login') return 'login';
 
@@ -109,6 +116,33 @@ function wgsRouteGroup(req) {
     return 'change_pw';
   }
 
+  if (method === 'POST' && /^\/api\/posts\/[^/]+\/view$/.test(path)) return 'content_view';
+  if (method === 'POST' && path === '/api/posts/notify-email') return 'notify_email';
+
+  if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
+    if (path.startsWith('/api/admin/')) return 'admin_write';
+    if (path.startsWith('/api/realtime-chat/')) return 'realtime_write';
+    if (path.startsWith('/api/mealmap/')) return 'mealmap_write';
+    if (path.startsWith('/api/multiplayer/')) return 'multiplayer_write';
+    if (path.startsWith('/api/posts')) return 'content_write';
+    if (
+      path === '/api/practice-results' ||
+      path === '/api/exam-results' ||
+      path === '/api/ipep-ranking' ||
+      path === '/api/save-wrong' ||
+      path === '/api/save-ipep-wrong' ||
+      path === '/api/remove-wrong' ||
+      path === '/api/remove-ipep-wrong' ||
+      path === '/api/remove-all-wrong' ||
+      path === '/api/remove-all-ipep-wrong'
+    ) {
+      return 'learning_write';
+    }
+    if (path === '/api/user/update' || path === '/api/user/delete' || path === '/api/user/fortune-history') {
+      return 'account_write';
+    }
+  }
+
   return null;
 }
 
@@ -118,6 +152,7 @@ function wgsRateSpecs(req, group) {
   const ip = wgsRateKeyPart(wgsClientIp(req), 'unknown-ip');
   const username = wgsRateKeyPart(body.username || body.id || body.userId || body.loginId || '', '');
   const email = wgsRateKeyPart(body.email || body.emailAddress || '', '');
+  const sessionToken = wgsRateHashPart(body.sessionToken || req.headers['x-session-token'] || req.query?.sessionToken || '', '');
   const specs = [];
 
   function add(name, keyValue, max, sec) {
@@ -154,11 +189,36 @@ function wgsRateSpecs(req, group) {
     add('change_pw:ip', ip, wgsRateNumber(process.env.WGS_LIMIT_IP_CHANGE_PW_PER_10MIN, 30), 600);
   }
 
+  if (group === 'content_view') {
+    add('content_view:client', clientId, wgsRateNumber(process.env.WGS_LIMIT_CLIENT_CONTENT_VIEW_PER_MIN, 120), 60);
+    add('content_view:ip', ip, wgsRateNumber(process.env.WGS_LIMIT_IP_CONTENT_VIEW_PER_MIN, 300), 60);
+  }
+
+  if (group === 'notify_email') {
+    add('notify:client', clientId, wgsRateNumber(process.env.WGS_LIMIT_CLIENT_NOTIFY_EMAIL_PER_10MIN, 10), 600);
+    add('notify:user', username, wgsRateNumber(process.env.WGS_LIMIT_USER_NOTIFY_EMAIL_PER_10MIN, 10), 600);
+    add('notify:ip', ip, wgsRateNumber(process.env.WGS_LIMIT_IP_NOTIFY_EMAIL_PER_10MIN, 40), 600);
+  }
+
+  if (group === 'content_write' || group === 'learning_write' || group === 'account_write' || group === 'mealmap_write' || group === 'multiplayer_write' || group === 'realtime_write') {
+    const groupKey = group.replace(/[^a-z0-9_:-]/g, '_');
+    add(`${groupKey}:client`, clientId, wgsRateNumber(process.env.WGS_LIMIT_CLIENT_API_WRITE_PER_MIN, 120), 60);
+    add(`${groupKey}:user`, username, wgsRateNumber(process.env.WGS_LIMIT_USER_API_WRITE_PER_MIN, 180), 60);
+    add(`${groupKey}:session`, sessionToken, wgsRateNumber(process.env.WGS_LIMIT_SESSION_API_WRITE_PER_MIN, 180), 60);
+    add(`${groupKey}:ip`, ip, wgsRateNumber(process.env.WGS_LIMIT_IP_API_WRITE_PER_MIN, 600), 60);
+  }
+
+  if (group === 'admin_write') {
+    add('admin_write:user', username, wgsRateNumber(process.env.WGS_LIMIT_USER_ADMIN_WRITE_PER_MIN, 60), 60);
+    add('admin_write:session', sessionToken, wgsRateNumber(process.env.WGS_LIMIT_SESSION_ADMIN_WRITE_PER_MIN, 90), 60);
+    add('admin_write:ip', ip, wgsRateNumber(process.env.WGS_LIMIT_IP_ADMIN_WRITE_PER_MIN, 240), 60);
+  }
+
   return specs;
 }
 
 app.use((req, res, next) => {
-  if (!WGS_RATE_LIMIT_ENABLED || req.method !== 'POST') return next();
+  if (!WGS_RATE_LIMIT_ENABLED || !['GET', 'POST', 'PUT', 'PATCH', 'DELETE'].includes(String(req.method || '').toUpperCase())) return next();
 
   const group = wgsRouteGroup(req);
   if (!group) return next();
@@ -262,21 +322,39 @@ function wgsHasValidGatekeeper(req) {
     return wgsVerifyGatekeeperToken(cookies[WGS_GATEKEEPER_COOKIE_NAME]);
 }
 
-function wgsSetGatekeeperCookie(res, token) {
+function wgsGatekeeperCookieSecureAttribute(req) {
+    const override = String(process.env.WGS_GATEKEEPER_COOKIE_SECURE || '').trim().toLowerCase();
+    if (override) {
+        return ['1', 'true', 'yes', 'on'].includes(override) ? '; Secure' : '';
+    }
+
+    const forwardedProto = String(req.headers['x-forwarded-proto'] || '').toLowerCase();
+    const publicSiteUrl = String(process.env.PUBLIC_SITE_URL || '').trim().toLowerCase();
+    const isHttpsRequest = Boolean(req.secure || forwardedProto.split(',').map((part) => part.trim()).includes('https'));
+    const isHttpsSite = publicSiteUrl.startsWith('https://');
+
+    return isHttpsRequest || isHttpsSite ? '; Secure' : '';
+}
+
+function wgsSetGatekeeperCookie(req, res, token) {
     const maxAgeSeconds = Math.floor(wgsGatekeeperMaxAgeMs() / 1000);
+    const secureAttribute = wgsGatekeeperCookieSecureAttribute(req);
 
     // 배포 사이트는 HTTPS이므로 Secure 쿠키를 사용합니다.
+    // 로컬 모바일 점검처럼 http://내부IP 로 접속할 때는 Secure 쿠키가 저장되지 않아 조건부로 제외합니다.
     // httpOnly라서 프론트 JS가 쿠키 값을 직접 읽을 수 없고, API 요청 때 브라우저가 자동 전송합니다.
     res.setHeader(
         'Set-Cookie',
-        `${WGS_GATEKEEPER_COOKIE_NAME}=${encodeURIComponent(token)}; Max-Age=${maxAgeSeconds}; Path=/; HttpOnly; Secure; SameSite=Lax`
+        `${WGS_GATEKEEPER_COOKIE_NAME}=${encodeURIComponent(token)}; Max-Age=${maxAgeSeconds}; Path=/; HttpOnly${secureAttribute}; SameSite=Lax`
     );
 }
 
-function wgsClearGatekeeperCookie(res) {
+function wgsClearGatekeeperCookie(req, res) {
+    const secureAttribute = wgsGatekeeperCookieSecureAttribute(req);
+
     res.setHeader(
         'Set-Cookie',
-        `${WGS_GATEKEEPER_COOKIE_NAME}=; Max-Age=0; Path=/; HttpOnly; Secure; SameSite=Lax`
+        `${WGS_GATEKEEPER_COOKIE_NAME}=; Max-Age=0; Path=/; HttpOnly${secureAttribute}; SameSite=Lax`
     );
 }
 
@@ -350,6 +428,15 @@ function hcaptchaActionEnabled(action) {
   return envFlagEnabled(envKey, true);
 }
 
+function hcaptchaTrustsGatekeeper() {
+  return envFlagEnabled('HCAPTCHA_TRUST_GATEKEEPER', true);
+}
+
+function hcaptchaCanSkipForTrustedGatekeeper(req, actionName) {
+    if (actionName === 'gatekeeper') return false;
+    return hcaptchaTrustsGatekeeper() && wgsHasValidGatekeeper(req);
+}
+
 function getClientIpForCaptcha(req) {
     const forwarded = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim();
     return forwarded || req.ip || req.socket?.remoteAddress || '';
@@ -404,25 +491,28 @@ function verifyHcaptchaTokenWithServer(token, remoteIp = '') {
 
 async function requireHcaptcha(req, res, actionName) {
     if (!hcaptchaActionEnabled(actionName)) return true;
+    if (hcaptchaCanSkipForTrustedGatekeeper(req, actionName)) return true;
 
     const token = String(req.body?.hcaptchaToken || req.body?.hcaptcha || '').trim();
     if (!token) {
-        return res.status(400).json({
+        res.status(400).json({
             success: false,
             captchaRequired: true,
             msg: '보안 확인(hCaptcha)을 완료한 뒤 다시 시도해주세요.',
         });
+        return false;
     }
 
     const result = await verifyHcaptchaTokenWithServer(token, getClientIpForCaptcha(req));
     if (!result.success) {
         console.warn('[hCaptcha] verification failed:', actionName, result['error-codes'] || []);
-        return res.status(403).json({
+        res.status(403).json({
             success: false,
             captchaRequired: true,
             msg: '보안 확인(hCaptcha)에 실패했습니다. 체크박스를 다시 완료해주세요.',
             errorCodes: result['error-codes'] || [],
         });
+        return false;
     }
 
     return true;
@@ -436,7 +526,15 @@ function hcaptchaPublicConfig() {
 }
 
 app.get('/api/gatekeeper/hcaptcha-config', (req, res) => {
-    return res.json({ success: true, ...hcaptchaPublicConfig() });
+    const publicConfig = hcaptchaPublicConfig();
+    const trustedGatekeeper = hcaptchaTrustsGatekeeper() && wgsHasValidGatekeeper(req);
+
+    return res.json({
+        success: true,
+        ...publicConfig,
+        enabled: publicConfig.enabled && !trustedGatekeeper,
+        trustedGatekeeper,
+    });
 });
 
 app.get('/api/gatekeeper/status', (req, res) => {
@@ -467,7 +565,7 @@ app.post('/api/gatekeeper/verify', async (req, res) => {
     }
 
     const token = wgsCreateGatekeeperToken();
-    wgsSetGatekeeperCookie(res, token);
+    wgsSetGatekeeperCookie(req, res, token);
 
     return res.json({
         success: true,
@@ -477,7 +575,7 @@ app.post('/api/gatekeeper/verify', async (req, res) => {
 });
 
 app.post('/api/gatekeeper/logout', (req, res) => {
-    wgsClearGatekeeperCookie(res);
+    wgsClearGatekeeperCookie(req, res);
     return res.json({
         success: true,
         allowed: false,

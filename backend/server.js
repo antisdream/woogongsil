@@ -56,6 +56,106 @@ const { createAdminRuntimeState } = require('./services/adminRuntimeState');
 const { createJsonFileStores } = require('./services/jsonFileStores');
 
 const app = express();
+app.disable('x-powered-by');
+
+function wgsBoolEnv(value, fallback = false) {
+    const raw = String(value ?? '').trim().toLowerCase();
+    if (!raw) return fallback;
+    return ['1', 'true', 'yes', 'y', 'on'].includes(raw);
+}
+
+function wgsCsvEnv(value) {
+    return String(value || '')
+        .split(',')
+        .map((item) => item.trim())
+        .filter(Boolean);
+}
+
+function wgsIsPrivateDevHost(hostname) {
+    const host = String(hostname || '').trim().toLowerCase();
+    if (host === 'localhost' || host === '127.0.0.1' || host === '::1') return true;
+    if (/^10\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(host)) return true;
+    if (/^192\.168\.\d{1,3}\.\d{1,3}$/.test(host)) return true;
+    if (/^172\.(1[6-9]|2\d|3[0-1])\.\d{1,3}\.\d{1,3}$/.test(host)) return true;
+    return false;
+}
+
+function wgsAllowedCorsOrigin(origin) {
+    if (!origin) return true;
+
+    const defaults = [
+        'https://woogongsil.site',
+        'https://www.woogongsil.site',
+        'http://localhost:5000',
+        'http://127.0.0.1:5000',
+    ];
+    const allowedOrigins = new Set([
+        ...defaults,
+        ...wgsCsvEnv(process.env.PUBLIC_SITE_URL),
+        ...wgsCsvEnv(process.env.CORS_ALLOWED_ORIGINS),
+        ...wgsCsvEnv(process.env.WGS_ALLOWED_ORIGINS),
+    ].filter(Boolean));
+
+    if (allowedOrigins.has(origin)) return true;
+
+    try {
+        const parsed = new URL(origin);
+        if (wgsIsPrivateDevHost(parsed.hostname)) return true;
+    } catch (error) {
+        return false;
+    }
+
+    return false;
+}
+
+const wgsCorsOptions = {
+    origin(origin, callback) {
+        callback(null, wgsAllowedCorsOrigin(origin));
+    },
+    credentials: true,
+    methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: [
+        'Content-Type',
+        'Authorization',
+        'X-Requested-With',
+        'X-WGS-Client-Id',
+        'X-Client-Id',
+        'X-User-Id',
+        'X-Session-Token',
+        'X-Server-Instance-Id',
+        'X-Admin-Approval-Bypass',
+    ],
+    maxAge: 600,
+};
+
+function wgsSecurityHeaders(req, res, next) {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=(self), payment=(), usb=(), interest-cohort=()');
+    res.setHeader(
+        'Content-Security-Policy',
+        [
+            "default-src 'self'",
+            "script-src 'self' 'unsafe-inline' https://js.hcaptcha.com https://*.hcaptcha.com https://dapi.kakao.com",
+            "style-src 'self' 'unsafe-inline'",
+            "img-src 'self' data: blob: https://*.kakao.com https://*.kakaocdn.net https://*.daumcdn.net https://map.daumcdn.net https://t1.daumcdn.net https://map.kakao.com",
+            "font-src 'self' data:",
+            "connect-src 'self' ws: wss: https://hcaptcha.com https://*.hcaptcha.com https://dapi.kakao.com",
+            "frame-src 'self' https://js.hcaptcha.com https://*.hcaptcha.com",
+            "object-src 'none'",
+            "base-uri 'self'",
+            "form-action 'self'",
+            "frame-ancestors 'none'",
+        ].join('; ')
+    );
+    if (wgsBoolEnv(process.env.WGS_ROBOTS_NOINDEX, true)) {
+        res.setHeader('X-Robots-Tag', 'noindex, nofollow, noarchive');
+    }
+    next();
+}
+
+app.use(wgsSecurityHeaders);
 
 // HTTP 서버 + Socket.IO 서버 준비합니다
 // ------------------------------------------------------------
@@ -64,8 +164,11 @@ const app = express();
 const server = http.createServer(app);
 const io = SocketIOServer ? new SocketIOServer(server, {
     cors: {
-        origin: '*',
-        methods: ['GET', 'POST']
+        origin(origin, callback) {
+            callback(null, wgsAllowedCorsOrigin(origin));
+        },
+        methods: ['GET', 'POST'],
+        credentials: true
     }
 }) : null;
 
@@ -73,7 +176,15 @@ const createMultiplayerRouter = require('./multiplayerRoutes');
 const { attachMultiplayerSocket } = require('./multiplayerSocket');
 
 // 프론트에서 API 요청을 보낼 수 있도록 CORS 허용합니다
-app.use(cors());
+app.use(cors(wgsCorsOptions));
+
+app.get('/robots.txt', (req, res) => {
+    res.type('text/plain').send([
+        'User-agent: *',
+        'Disallow: /',
+        '',
+    ].join('\n'));
+});
 
 // JSON body를 Express가 읽을 수 있도록 설정합니다.
 app.use(express.json({ limit: '10mb' }));
@@ -1273,6 +1384,12 @@ async function ensureSchemaCompatibility() {
             ['화면/테마', '다크모드와 라이트모드는 어떻게 바꾸나요?', '화면 상단의 다크/라이트 토글 버튼을 눌러 테마를 바꿀 수 있습니다.\n선택한 테마는 여러 페이지에서 동일하게 적용되도록 구성되어 있습니다.'],
             ['화면/테마', '모바일에서도 사용할 수 있나요?', '모바일에서도 접속할 수 있지만, 기출문제 응시와 결과 확인은 화면이 넓은 PC 환경에서 더 편하게 사용할 수 있습니다.\n장문 답안을 작성해야 하는 실기 문제는 화면모드를 가로모드로 변경하시거나 키보드가 있는 환경을 권장합니다.'],
             ['화면/테마', '글씨가 잘 보이지 않을 때는 어떻게 하나요?', '먼저 다크모드와 라이트모드를 전환해 보고, 브라우저 확대 비율을 100%로 맞춰 주세요.\n특정 페이지에서만 글씨가 흐리거나 보이지 않는다면 그 부분을 게시판에 알려 주세요.'],
+            ['계정/로그인', '회원가입 후 바로 로그인할 수 있나요?', '신규 회원가입은 관리자 승인 후 이용할 수 있습니다.\n승인되면 가입한 이메일로 승인 안내가 발송되고, 거절된 경우에는 거절 사유가 함께 안내됩니다.\n기존 회원은 별도 승인 절차 없이 이전처럼 계속 이용할 수 있습니다.'],
+            ['필기/실기 문제은행', '문제은행 랜덤 문제는 같은 문제가 바로 반복되나요?', '문제은행은 최근에 푼 문제와 과목을 우선 피해서 다음 문제를 가져오도록 개선되었습니다.\n다만 문제 수가 부족한 경우에는 조건을 자동으로 완화해 학습이 막히지 않도록 처리됩니다.'],
+            ['회식맵', '회식맵 장소를 제보하면 바로 공개되나요?', '신규 장소 제보는 관리자 승인 없이 바로 회식맵에 공개됩니다.\n이미 등록된 장소의 수정 요청이나 삭제 요청은 관리자 또는 최고관리자 검토 후 반영됩니다.'],
+            ['회식맵', '회식맵 장소 등록 시 카테고리는 어떻게 입력하나요?', '카카오 지도 검색으로 장소를 선택하면 가져올 수 있는 카테고리 정보를 우선 사용합니다.\n직접 입력할 때는 한 글자나 초성을 입력하면 한식, 한정식처럼 관련 카테고리 추천을 확인할 수 있습니다.'],
+            ['회식맵', '대표메뉴, 영업시간, 가격도 자동으로 채워지나요?', '카카오 지도 API에서 기본으로 제공되는 장소명, 주소, 좌표, 전화번호, 카테고리 같은 정보는 자동 입력에 활용할 수 있습니다.\n대표메뉴, 영업시간, 최소가격, 최대가격처럼 API 응답에 없는 정보는 사용자가 직접 입력해야 합니다.'],
+            ['화면/테마', '화면 밝기는 어떻게 조절하나요?', '상단의 밝기 슬라이더로 10%부터 100%까지 10% 단위로 조절할 수 있습니다.\n처음 기본값은 50%이며, 사이트를 닫기 전까지 같은 브라우저 화면에서 설정이 유지됩니다.'],
         ];
 
         const faqScreenSettingDefaultsNoHardcodeV1 = [
@@ -2575,6 +2692,7 @@ registerPracticalUserRoutes({
     pool,
     getSeasonStatus,
     getUserById,
+    validateRealtimeSession,
     getIpepRankingStore,
     saveIpepRankingStore,
     safeNumber,
@@ -2586,6 +2704,7 @@ registerUserRoutes({
     pool,
     bcrypt,
     getUserById,
+    validateRealtimeSession,
     formatDateOnly,
     getKSTDateTime,
 });
@@ -2600,6 +2719,7 @@ registerRankingRoutes({
     app,
     pool,
     getSeasonStatus,
+    validateRealtimeSession,
     getIpepRankingStore,
     safeNumber,
 });
@@ -2624,6 +2744,7 @@ registerFortuneRoutes({
     app,
     pool,
     getUserById,
+    validateRealtimeSession,
     getKSTDateTime,
 });
 
@@ -2636,6 +2757,7 @@ registerBoardRoutes({
     isNoticeBoardCreateRequest,
     sendNoticePostEmailsInBackground,
     getUserById,
+    validateRealtimeSession,
     sendEmail,
 });
 

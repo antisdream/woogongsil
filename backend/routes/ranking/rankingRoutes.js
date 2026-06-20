@@ -7,14 +7,49 @@ function registerRankingRoutes(options = {}) {
     const getSeasonStatus = options.getSeasonStatus;
     const getIpepRankingStore = options.getIpepRankingStore;
     const safeNumber = options.safeNumber;
+    const validateRealtimeSession = options.validateRealtimeSession;
 
-    if (!app || !pool || !getSeasonStatus || !getIpepRankingStore || !safeNumber) {
-        throw new Error('registerRankingRoutes requires app, pool, getSeasonStatus, getIpepRankingStore, and safeNumber.');
+    if (!app || !pool || !getSeasonStatus || !getIpepRankingStore || !safeNumber || typeof validateRealtimeSession !== 'function') {
+        throw new Error('registerRankingRoutes requires app, pool, getSeasonStatus, getIpepRankingStore, safeNumber, and validateRealtimeSession.');
+    }
+
+    function authUserId(auth) {
+        return String(auth?.user?.id || auth?.id || '').trim();
+    }
+
+    async function requireSessionUser(req, res, expectedId = '') {
+        const auth = await validateRealtimeSession(req);
+        if (!auth.valid) {
+            res.status(401).json({
+                success: false,
+                valid: false,
+                reason: auth.reason || 'session_expired',
+                msg: '로그인 세션이 만료되었습니다. 다시 로그인해주세요.',
+            });
+            return null;
+        }
+
+        const requesterId = authUserId(auth);
+        const targetId = String(expectedId || requesterId || '').trim();
+        if (!requesterId || !targetId || requesterId !== targetId) {
+            res.status(403).json({
+                success: false,
+                valid: false,
+                reason: 'forbidden_user_mismatch',
+                msg: '본인 계정으로만 처리할 수 있습니다.',
+            });
+            return null;
+        }
+
+        return auth;
     }
 
     // 10. 랭킹 API
     app.post('/api/practice-results', async (req, res) => {
-        const userId = String(req.body.userId || '').trim();
+        const auth = await requireSessionUser(req, res, req.body.userId || req.body.id);
+        if (!auth) return;
+
+        const userId = authUserId(auth);
         const isCorrect = Boolean(req.body.isCorrect);
 
         if (!userId) return res.status(400).json({ success: false, msg: '로그인 필요' });
@@ -40,7 +75,10 @@ function registerRankingRoutes(options = {}) {
     });
 
     app.post('/api/exam-results', async (req, res) => {
-        const userId = String(req.body.userId || '').trim();
+        const auth = await requireSessionUser(req, res, req.body.userId || req.body.id);
+        if (!auth) return;
+
+        const userId = authUserId(auth);
         const examYear = Number(req.body.examYear || 0);
         const examSession = Number(req.body.examSession || 0);
         const correctCount = Number(req.body.correctCount || 0);

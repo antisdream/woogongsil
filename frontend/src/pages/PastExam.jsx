@@ -146,6 +146,12 @@ const PastExam = ({ isExamActive, setIsExamActive }) => {
 
     const userId = sessionStorage.getItem('userId');
     const userName = sessionStorage.getItem('userName');
+    const getSessionAuth = useCallback(() => ({
+        id: sessionStorage.getItem('userId') || userId || '',
+        userId: sessionStorage.getItem('userId') || userId || '',
+        sessionToken: sessionStorage.getItem('sessionToken') || '',
+        serverInstanceId: sessionStorage.getItem('wgsServerInstanceId') || localStorage.getItem('wgsServerInstanceId') || '',
+    }), [userId]);
 
     const displayUserName = userName || t('user.default_name', '사용자');
 
@@ -375,6 +381,7 @@ const PastExam = ({ isExamActive, setIsExamActive }) => {
             try {
                 if (wrongQs.length >0) {
                     await axios.post(`${API_BASE}/api/save-wrong`, {
+                        ...getSessionAuth(),
                         id: userId, wrongQuestions: wrongQs, source: 'past', year: selectedYear, session: selectedSession
                     }).catch(e => console.error("오답노트 저장 실패", e));
                 }
@@ -397,6 +404,7 @@ const PastExam = ({ isExamActive, setIsExamActive }) => {
                 const deltaScore = avgScore - prevScore;
 
                 const resultData = {
+                    ...getSessionAuth(),
                     userId, userName, examYear: selectedYear, examSession: selectedSession,
                     score: deltaScore, correctCount: deltaCorrect, totalCount: deltaTotal, answers: userAnswers
                 };

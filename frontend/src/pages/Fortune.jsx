@@ -36,6 +36,12 @@ const Fortune = () => {
 
     const loggedInUser = sessionStorage.getItem('userName') || '';
     const userId = sessionStorage.getItem('userId');
+    const getSessionAuth = useCallback(() => ({
+        id: sessionStorage.getItem('userId') || userId || '',
+        userId: sessionStorage.getItem('userId') || userId || '',
+        sessionToken: sessionStorage.getItem('sessionToken') || '',
+        serverInstanceId: sessionStorage.getItem('wgsServerInstanceId') || localStorage.getItem('wgsServerInstanceId') || '',
+    }), [userId]);
     const loginRedirectedRef = useRef(false);
     const timeOptions = useMemo(() => TIME_OPTIONS.map((option) => ({
         ...option,
@@ -70,7 +76,7 @@ const Fortune = () => {
     const saveFortuneHistory = async (type, searchData) => {
         if (!userId) return;
         try {
-            await axios.post(`${API_BASE}/api/user/fortune-history`, { id: userId, type: type, searchData: searchData });
+            await axios.post(`${API_BASE}/api/user/fortune-history`, { ...getSessionAuth(), id: userId, type: type, searchData: searchData });
         } catch (err) { console.error("운세 기록 저장 실패:", err); }
     };
 
@@ -173,7 +179,7 @@ const Fortune = () => {
     );
 
     return (
-        <div style={{ maxWidth: '800px', margin: '30px auto', color: 'white', fontFamily: 'var(--wgs-font-body)' }}>
+        <div className="fortune-page wgs-typography-scope" style={{ maxWidth: '800px', margin: '30px auto', color: 'white', fontFamily: 'var(--wgs-font-body)' }}>
             {step === 1 && (
                 <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
                     <button onClick={() => setActiveTab('individual')} style={{ flex: 1, padding: '15px', background: activeTab === 'individual'? '#3b82f6' : 'var(--wgs-button-muted)', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', fontSize: '16px' }}>{t('tabs.individual_label', ' 오늘의 운세?')}</button>

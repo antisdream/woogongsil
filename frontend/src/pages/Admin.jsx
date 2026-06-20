@@ -29,11 +29,13 @@ import useAdminQuestions from '../features/admin/useAdminQuestions.js';
 import useAdminNoticeOperations from '../features/admin/useAdminNoticeOperations.js';
 import useAdminApprovals from '../features/admin/useAdminApprovals.js';
 import useAdminOnlineUsers from '../features/admin/useAdminOnlineUsers.js';
+import useAdminSignupRequests from '../features/admin/useAdminSignupRequests.js';
 import AdminNoticeTab from '../features/admin/components/AdminNoticeTab.jsx';
 import AdminPageHeader from '../features/admin/components/AdminPageHeader.jsx';
 import AdminDashboardTab from '../features/admin/components/AdminDashboardTab.jsx';
 import AdminMailModal from '../features/admin/components/AdminMailModal.jsx';
 import AdminUsersTab from '../features/admin/components/AdminUsersTab.jsx';
+import AdminSignupRequestsTab from '../features/admin/components/AdminSignupRequestsTab.jsx';
 import AdminApprovalsTab from '../features/admin/components/AdminApprovalsTab.jsx';
 import AdminApprovalDetailModal from '../features/admin/components/AdminApprovalDetailModal.jsx';
 import AdminQuestionsTab from '../features/admin/components/AdminQuestionsTab.jsx';
@@ -247,6 +249,27 @@ return () => {
   const refreshAdminUsers = useCallback(() => {
     fetchAdminUsers(appliedKeyword);
   }, [appliedKeyword, fetchAdminUsers]);
+
+  const {
+    signupRequests,
+    signupRequestStats,
+    signupRequestStatusFilter,
+    setSignupRequestStatusFilter,
+    signupRequestKeyword,
+    setSignupRequestKeyword,
+    signupRequestLoading,
+    signupRequestError,
+    signupRequestSuccess,
+    fetchSignupRequests,
+    handleSignupRequestSearch,
+    approveSignupRequest,
+    rejectSignupRequest,
+  } = useAdminSignupRequests({
+    activeAdminTab,
+    canOpenAdmin,
+    makeAdminHeaders,
+    refreshUsers: refreshAdminUsers,
+  });
 
   const {
     adminApprovals,
@@ -765,6 +788,24 @@ return () => {
           safeRecentLogPage={safeRecentLogPage}
           recentLogTotalPages={recentLogTotalPages}
           setRecentLogPage={setRecentLogPage}
+        />
+      )}
+
+      {activeAdminTab === 'signupRequests' && (
+        <AdminSignupRequestsTab
+          signupRequests={signupRequests}
+          signupRequestStats={signupRequestStats}
+          signupRequestStatusFilter={signupRequestStatusFilter}
+          setSignupRequestStatusFilter={setSignupRequestStatusFilter}
+          signupRequestKeyword={signupRequestKeyword}
+          setSignupRequestKeyword={setSignupRequestKeyword}
+          signupRequestLoading={signupRequestLoading}
+          signupRequestError={signupRequestError}
+          signupRequestSuccess={signupRequestSuccess}
+          fetchSignupRequests={fetchSignupRequests}
+          handleSignupRequestSearch={handleSignupRequestSearch}
+          approveSignupRequest={approveSignupRequest}
+          rejectSignupRequest={rejectSignupRequest}
         />
       )}
 

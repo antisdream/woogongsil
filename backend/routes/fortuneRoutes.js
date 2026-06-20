@@ -6,6 +6,7 @@ function registerFortuneRoutes(options = {}) {
     const pool = options.pool;
     const getUserById = options.getUserById;
     const getKSTDateTime = options.getKSTDateTime;
+    const validateRealtimeSession = options.validateRealtimeSession;
 
     if (!app || typeof app.post !== 'function') {
         throw new Error('registerFortuneRoutes requires an Express app.');
@@ -13,13 +14,47 @@ function registerFortuneRoutes(options = {}) {
     if (!pool || typeof pool.query !== 'function') {
         throw new Error('registerFortuneRoutes requires a MySQL pool.');
     }
-    if (typeof getUserById !== 'function' || typeof getKSTDateTime !== 'function') {
-        throw new Error('registerFortuneRoutes requires user/date helpers.');
+    if (typeof getUserById !== 'function' || typeof getKSTDateTime !== 'function' || typeof validateRealtimeSession !== 'function') {
+        throw new Error('registerFortuneRoutes requires user/date/session helpers.');
+    }
+
+    function authUserId(auth) {
+        return String(auth?.user?.id || auth?.id || '').trim();
+    }
+
+    async function requireSessionUser(req, res, expectedId = '') {
+        const auth = await validateRealtimeSession(req);
+        if (!auth.valid) {
+            res.status(401).json({
+                success: false,
+                valid: false,
+                reason: auth.reason || 'session_expired',
+                msg: '로그인 세션이 만료되었습니다. 다시 로그인해주세요.',
+            });
+            return null;
+        }
+
+        const requesterId = authUserId(auth);
+        const targetId = String(expectedId || requesterId || '').trim();
+        if (!requesterId || !targetId || requesterId !== targetId) {
+            res.status(403).json({
+                success: false,
+                valid: false,
+                reason: 'forbidden_user_mismatch',
+                msg: '본인 계정으로만 처리할 수 있습니다.',
+            });
+            return null;
+        }
+
+        return auth;
     }
 // 11. 운세 기록 / 운세 계산 API
 // - 기존 JSON server.js의 계산 로직을 유지하고 저장 위치만 SQL로 옮겼습니다.
 app.post('/api/user/fortune-history', async (req, res) => {
-    const id = String(req.body.id || '').trim();
+    const auth = await requireSessionUser(req, res, req.body.id || req.body.userId);
+    if (!auth) return;
+
+    const id = authUserId(auth);
     const type = req.body.type || 'unknown';
     const searchData = req.body.searchData || {};
 

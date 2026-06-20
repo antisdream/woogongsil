@@ -254,3 +254,38 @@ html body .admin-modal-backdrop[aria-label="결재 상세 내용"] pre {
   color: var(--admin-text, var(--wgs-text)) !important;
   border-color: var(--admin-border, var(--wgs-border)) !important;
 }
+
+/* Signup approval tab */
+.admin-signup-request-toolbar {
+  align-items: flex-start !important;
+  gap: 16px !important;
+  margin: 18px 0 12px !important;
+}
+
+.admin-signup-request-toolbar .admin-search-form {
+  align-items: center !important;
+  flex-wrap: wrap !important;
+  justify-content: flex-end !important;
+}
+
+.admin-signup-request-toolbar select {
+  min-height: 42px !important;
+  border-radius: 10px !important;
+  border: 1px solid var(--admin-border-strong) !important;
+  background: var(--admin-input-bg) !important;
+  color: var(--admin-text) !important;
+  font-weight: 800 !important;
+  padding: 0 12px !important;
+}
+
+.admin-signup-request-table td,
+.admin-signup-request-table th {
+  white-space: nowrap !important;
+}
+
+.admin-signup-request-note {
+  max-width: 260px !important;
+  white-space: normal !important;
+  word-break: keep-all !important;
+  line-height: 1.5 !important;
+}

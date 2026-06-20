@@ -121,6 +121,12 @@ const RandomPractice = () => {
 
     const userId = sessionStorage.getItem('userId');
     const userName = sessionStorage.getItem('userName');
+    const getSessionAuth = useCallback(() => ({
+        id: sessionStorage.getItem('userId') || userId || '',
+        userId: sessionStorage.getItem('userId') || userId || '',
+        sessionToken: sessionStorage.getItem('sessionToken') || '',
+        serverInstanceId: sessionStorage.getItem('wgsServerInstanceId') || localStorage.getItem('wgsServerInstanceId') || '',
+    }), [userId]);
     
     const nextButtonRef = useRef(null);
 
@@ -177,6 +183,7 @@ const RandomPractice = () => {
             try {
                 //   오답 저장 시 year와 session을 명시적으로 넘겨주어 백엔드에서 null로 갱신하지 않게 방지합니다.
                 await axios.post(`${API_BASE}/api/save-wrong`, { 
+                    ...getSessionAuth(),
                     id: userId, 
                     source: 'random',
                     year: question.year,
@@ -189,6 +196,7 @@ const RandomPractice = () => {
         if (userId) {
             try {
                 await axios.post(`${API_BASE}/api/practice-results`, {
+                    ...getSessionAuth(),
                     userId, userName, questionId: question.question_id, isCorrect: correct
                 });
 

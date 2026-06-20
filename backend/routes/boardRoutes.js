@@ -11,12 +11,16 @@ function registerBoardRoutes(options = {}) {
     const sendNoticePostEmailsInBackground = options.sendNoticePostEmailsInBackground;
     const getUserById = options.getUserById;
     const sendEmail = options.sendEmail;
+    const validateRealtimeSession = options.validateRealtimeSession;
 
     if (!app || typeof app.get !== 'function') {
         throw new Error('registerBoardRoutes requires an Express app.');
     }
     if (!pool || typeof pool.query !== 'function') {
         throw new Error('registerBoardRoutes requires a MySQL pool.');
+    }
+    if (typeof validateRealtimeSession !== 'function') {
+        throw new Error('registerBoardRoutes requires validateRealtimeSession.');
     }
 
     function normalizeAdminBool(value) {
@@ -31,6 +35,41 @@ function registerBoardRoutes(options = {}) {
         if (!id || typeof getUserById !== 'function') return false;
         const user = await getUserById(id);
         return Boolean(user && !normalizeAdminBool(user.is_suspended) && normalizeAdminBool(user.is_primary_admin));
+    }
+
+    function authUserId(auth) {
+        return String(auth?.user?.id || auth?.id || '').trim();
+    }
+
+    function authUserName(auth) {
+        return String(auth?.user?.name || auth?.user?.nickname || authUserId(auth)).trim();
+    }
+
+    async function requireSessionUser(req, res, expectedId = '') {
+        const auth = await validateRealtimeSession(req);
+        if (!auth.valid) {
+            res.status(401).json({
+                success: false,
+                valid: false,
+                reason: auth.reason || 'session_expired',
+                msg: '로그인 세션이 만료되었습니다. 다시 로그인해주세요.',
+            });
+            return null;
+        }
+
+        const requesterId = authUserId(auth);
+        const targetId = String(expectedId || requesterId || '').trim();
+        if (!requesterId || !targetId || requesterId !== targetId) {
+            res.status(403).json({
+                success: false,
+                valid: false,
+                reason: 'forbidden_user_mismatch',
+                msg: '본인 계정으로만 처리할 수 있습니다.',
+            });
+            return null;
+        }
+
+        return auth;
     }
 // 12. 게시판 API
 app.get('/api/posts', async (req, res) => {
@@ -64,8 +103,11 @@ app.get('/api/posts', async (req, res) => {
 app.post('/api/posts', async (req, res) => {
     const title = String(req.body.title || '').trim();
     const content = String(req.body.content || '').trim();
-    const authorId = String(req.body.authorId || '').trim();
-    const authorName = String(req.body.authorName || '').trim();
+    const auth = await requireSessionUser(req, res, req.body.authorId || req.body.userId || req.body.id);
+    if (!auth) return;
+
+    const authorId = authUserId(auth);
+    const authorName = authUserName(auth);
 
     // 프론트에서 현재 게시판 탭을 함께 보내면 공지게시판 작성 여부를 더 안정적으로 판단할 수 있습니다.
     // - 기존 프론트 호환을 위해 body.boardType이 없어도 content의 숨김 마커로 다시 확인합니다.
@@ -111,7 +153,10 @@ app.post('/api/posts', async (req, res) => {
 });
 
 app.put('/api/posts/notice', async (req, res) => {
-    const userId = String(req.body.userId || '').trim();
+    const auth = await requireSessionUser(req, res, req.body.userId || req.body.id);
+    if (!auth) return;
+
+    const userId = authUserId(auth);
     const postIds = Array.isArray(req.body.postIds) ? req.body.postIds : [];
     const isNotice = req.body.isNotice ? 1 : 0;
 
@@ -153,7 +198,10 @@ app.put('/api/posts/notice', async (req, res) => {
 // - Board.jsx의 '공지 순서' 버튼에서 보낸 orderedPostIds 순서대로 noticeOrder를 재부여합니다.
 // - 기존 게시글/댓글/추천 로직은 변경하지 않고 공지 정렬값만 수정합니다.
 app.put('/api/posts/notice-order', async (req, res) => {
-    const userId = String(req.body.userId || '').trim();
+    const auth = await requireSessionUser(req, res, req.body.userId || req.body.id);
+    if (!auth) return;
+
+    const userId = authUserId(auth);
     const orderedPostIds = Array.isArray(req.body.orderedPostIds) ? req.body.orderedPostIds.map(id => String(id)) : [];
 
     if (!(await isPrimaryAdminUserId(userId))) return res.status(403).json({ success: false, msg: '관리자만 접근 가능합니다.' });
@@ -183,7 +231,10 @@ app.put('/api/posts/notice-order', async (req, res) => {
 
 app.put('/api/posts/:postId', async (req, res) => {
     const postId = String(req.params.postId || '').trim();
-    const userId = String(req.body.userId || '').trim();
+    const auth = await requireSessionUser(req, res, req.body.userId || req.body.id);
+    if (!auth) return;
+
+    const userId = authUserId(auth);
     const title = String(req.body.title || '').trim();
     const content = String(req.body.content || '').trim();
 
@@ -209,7 +260,10 @@ app.put('/api/posts/:postId', async (req, res) => {
 
 app.delete('/api/posts/:id', async (req, res) => {
     const postId = String(req.params.id || '').trim();
-    const userId = String(req.body.userId || '').trim();
+    const auth = await requireSessionUser(req, res, req.body.userId || req.body.id);
+    if (!auth) return;
+
+    const userId = authUserId(auth);
 
     try {
         const [rows] = await pool.query('SELECT * FROM wgs_posts WHERE id = ?', [postId]);
@@ -248,7 +302,10 @@ app.post('/api/posts/:postId/view', async (req, res) => {
 
 app.post('/api/posts/:postId/like', async (req, res) => {
     const postId = String(req.params.postId || '').trim();
-    const userId = String(req.body.userId || '').trim();
+    const auth = await requireSessionUser(req, res, req.body.userId || req.body.id);
+    if (!auth) return;
+
+    const userId = authUserId(auth);
 
     if (!userId) return res.status(400).json({ success: false, msg: '로그인이 필요합니다.' });
 
@@ -276,8 +333,11 @@ app.post('/api/posts/:postId/like', async (req, res) => {
 app.post('/api/posts/:id/comments', async (req, res) => {
     const postId = String(req.params.id || '').trim();
     const text = String(req.body.text || '').trim();
-    const authorId = String(req.body.authorId || '').trim();
-    const authorName = String(req.body.authorName || '').trim();
+    const auth = await requireSessionUser(req, res, req.body.authorId || req.body.userId || req.body.id);
+    if (!auth) return;
+
+    const authorId = authUserId(auth);
+    const authorName = authUserName(auth);
     const id = Date.now().toString();
 
     if (!text) return res.status(400).json({ success: false, msg: '댓글을 입력해주세요.' });
@@ -301,7 +361,10 @@ app.post('/api/posts/:id/comments', async (req, res) => {
 
 app.put('/api/posts/:postId/comments/:commentId', async (req, res) => {
     const commentId = String(req.params.commentId || '').trim();
-    const userId = String(req.body.userId || '').trim();
+    const auth = await requireSessionUser(req, res, req.body.userId || req.body.id);
+    if (!auth) return;
+
+    const userId = authUserId(auth);
     const text = String(req.body.text || '').trim();
 
     try {
@@ -323,7 +386,10 @@ app.put('/api/posts/:postId/comments/:commentId', async (req, res) => {
 
 app.delete('/api/posts/:postId/comments/:commentId', async (req, res) => {
     const commentId = String(req.params.commentId || '').trim();
-    const userId = String(req.body.userId || '').trim();
+    const auth = await requireSessionUser(req, res, req.body.userId || req.body.id);
+    if (!auth) return;
+
+    const userId = authUserId(auth);
 
     try {
         const [rows] = await pool.query('SELECT * FROM wgs_comments WHERE id = ?', [commentId]);
@@ -355,8 +421,11 @@ app.delete('/api/posts/:postId/comments/:commentId', async (req, res) => {
 app.post('/api/posts/:postId/comments/:commentId/replies', async (req, res) => {
     const commentId = String(req.params.commentId || '').trim();
     const text = String(req.body.text || '').trim();
-    const authorId = String(req.body.authorId || '').trim();
-    const authorName = String(req.body.authorName || '').trim();
+    const auth = await requireSessionUser(req, res, req.body.authorId || req.body.userId || req.body.id);
+    if (!auth) return;
+
+    const authorId = authUserId(auth);
+    const authorName = authUserName(auth);
     const id = Date.now().toString();
 
     if (!text) return res.status(400).json({ success: false, msg: '답글을 입력해주세요.' });
@@ -380,7 +449,10 @@ app.post('/api/posts/:postId/comments/:commentId/replies', async (req, res) => {
 
 app.put('/api/posts/:postId/comments/:commentId/replies/:replyId', async (req, res) => {
     const replyId = String(req.params.replyId || '').trim();
-    const userId = String(req.body.userId || '').trim();
+    const auth = await requireSessionUser(req, res, req.body.userId || req.body.id);
+    if (!auth) return;
+
+    const userId = authUserId(auth);
     const text = String(req.body.text || '').trim();
 
     try {
@@ -402,7 +474,10 @@ app.put('/api/posts/:postId/comments/:commentId/replies/:replyId', async (req, r
 
 app.delete('/api/posts/:postId/comments/:commentId/replies/:replyId', async (req, res) => {
     const replyId = String(req.params.replyId || '').trim();
-    const userId = String(req.body.userId || '').trim();
+    const auth = await requireSessionUser(req, res, req.body.userId || req.body.id);
+    if (!auth) return;
+
+    const userId = authUserId(auth);
 
     try {
         const [rows] = await pool.query('SELECT * FROM wgs_replies WHERE id = ?', [replyId]);
@@ -423,9 +498,12 @@ app.delete('/api/posts/:postId/comments/:commentId/replies/:replyId', async (req
 });
 
 app.post('/api/posts/notify-email', async (req, res) => {
+    const auth = await requireSessionUser(req, res, req.body.userId || req.body.id || req.body.actionUserId);
+    if (!auth) return;
+
     const targetUserId = String(req.body.targetUserId || '').trim();
     const targetUserName = req.body.targetUserName || '회원';
-    const actionUserName = req.body.actionUserName || '누군가';
+    const actionUserName = authUserName(auth) || req.body.actionUserName || '누군가';
     const type = req.body.type;
 
     try {

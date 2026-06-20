@@ -99,6 +99,11 @@ const Login = () => {
             });
 
             if (res.data.success === false) {
+                if (res.data.errorType === 'approval_pending' || res.data.errorType === 'signup_rejected') {
+                    alert(res.data.msg || '회원가입 승인 상태를 확인해주세요.');
+                    return;
+                }
+
                 if (res.data.requireConfirm) {
                     if (window.confirm(res.data.msg)) {
                         setIsLoggingIn(false);

@@ -43,6 +43,12 @@ const Board = () => {
 
     const userId = sessionStorage.getItem('userId');
     const userName = sessionStorage.getItem('userName');
+    const getSessionAuth = useCallback(() => ({
+        id: sessionStorage.getItem('userId') || userId || '',
+        userId: sessionStorage.getItem('userId') || userId || '',
+        sessionToken: sessionStorage.getItem('sessionToken') || '',
+        serverInstanceId: sessionStorage.getItem('wgsServerInstanceId') || localStorage.getItem('wgsServerInstanceId') || '',
+    }), [userId]);
 
     //  관리자 판별
     const isAdmin = (
@@ -66,7 +72,7 @@ const Board = () => {
     const boardNoticeLabel = t('tabs.notice_label', '공지게시판');
     const boardFreeLabel = t('tabs.free_label', '자유게시판');
     const getBoardLabel = (boardType) => boardType === BOARD_NOTICE ? boardNoticeLabel : boardFreeLabel;
-    const isLoggedIn = !!userId;
+    const isLoggedIn = !!(userId && sessionStorage.getItem('sessionToken'));
     const requireLogin = () => {
         if (isLoggedIn) return true;
         toast.error(LOGIN_REQUIRED_MESSAGE);
@@ -300,6 +306,7 @@ const Board = () => {
             // - 최고관리자가 공지게시판에서 작성하면 NOTICE 마커가 붙으므로 공지 해제 후에도 공지게시판에 남습니다.
             const finalContent = withBoardMarker(content, boardTab);
             const res = await axios.post(`${API_BASE}/api/posts`, {
+                ...getSessionAuth(),
                 title: getCleanTitle(title),
                 content: finalContent,
                 authorId: userId,
@@ -314,7 +321,7 @@ const Board = () => {
                 alert(t('messages.post_created', '게시글이 등록되었습니다.'));
                 localStorage.removeItem('board_temp_list'); 
                 setTitle(''); setContent('');
-                fetchPosts(); setView('list'); setCurrentPage(1); 
+                fetchPosts(); navigate(getBoardListPath(boardTab)); setView('list'); setCurrentPage(1);
             }
         } catch (err) { alert(t('messages.create_failed', '등록 실패: 서버 에러')); }
     };
@@ -330,6 +337,7 @@ const Board = () => {
             const originalBoard = getPostBoardType(currentPost) || boardTab;
             const finalContent = withBoardMarker(content, originalBoard);
             const res = await axios.put(`${API_BASE}/api/posts/${currentPost.id}`, {
+                ...getSessionAuth(),
                 userId,
                 title: getCleanTitle(title),
                 content: finalContent
@@ -345,12 +353,27 @@ const Board = () => {
         } catch (err) { alert(err.response?.data?.msg || t('messages.update_failed', '수정 실패')); }
     };
 
+    const handleCancelWrite = () => {
+        setIsEditing(false);
+        setShowLoadModal(false);
+
+        // Keep route and local view in sync so /board/.../write does not reopen the editor.
+        if (isEditing && currentPost?.id) {
+            navigate(getBoardPostPath(currentPost.id));
+            setView('detail');
+            return;
+        }
+
+        navigate(getBoardListPath(boardTab));
+        setView('list');
+    };
+
     const handleDeletePost = async (postId) => {
         // 비로그인 사용자는 게시글 삭제 불가
         if (!requireLogin()) return;
         if (!window.confirm(t('messages.post_delete_confirm', '정말 삭제를 진행하시겠습니까? 게시글을 삭제하면 복구를 할 수 없습니다.'))) return;
         try {
-            const res = await axios.delete(`${API_BASE}/api/posts/${postId}`, { data: { userId } });
+            const res = await axios.delete(`${API_BASE}/api/posts/${postId}`, { data: { ...getSessionAuth(), userId } });
             if (res.data.success) {
                 alert(t('messages.delete_success', '삭제가 되었습니다.'));
                 fetchPosts(); navigate(getBoardListPath(boardTab)); setView('list');
@@ -363,6 +386,7 @@ const Board = () => {
         if (targetUserId === userId) return; // 본인이 자신의 글에 반응할 때는 알림을 보내지 않음
         try {
             await axios.post(`${API_BASE}/api/posts/notify-email`, {
+                ...getSessionAuth(),
                 targetUserId,
                 targetUserName,
                 actionUserName: userName,
@@ -379,7 +403,7 @@ const Board = () => {
         if (!requireLogin()) return;
         if (!commentText.trim()) return alert(t('messages.need_comment', '댓글을 입력해주세요.'));
         try {
-            await axios.post(`${API_BASE}/api/posts/${currentPost.id}/comments`, { text: commentText, authorId: userId, authorName: userName });
+            await axios.post(`${API_BASE}/api/posts/${currentPost.id}/comments`, { ...getSessionAuth(), text: commentText, authorId: userId, authorName: userName });
             setCommentText('');
             const res = await axios.get(`${API_BASE}/api/posts`);
             setPosts(res.data); setCurrentPost(res.data.find(p => p.id === currentPost.id));
@@ -397,7 +421,7 @@ const Board = () => {
         if (!requireLogin()) return;
         if (!replyText.trim()) return alert(t('messages.need_reply', '답글을 입력해주세요.'));
         try {
-            await axios.post(`${API_BASE}/api/posts/${currentPost.id}/comments/${commentId}/replies`, { text: replyText, authorId: userId, authorName: userName });
+            await axios.post(`${API_BASE}/api/posts/${currentPost.id}/comments/${commentId}/replies`, { ...getSessionAuth(), text: replyText, authorId: userId, authorName: userName });
             setReplyText(''); setReplyingTo(null);
             const res = await axios.get(`${API_BASE}/api/posts`);
             setPosts(res.data); setCurrentPost(res.data.find(p => p.id === currentPost.id));
@@ -415,7 +439,7 @@ const Board = () => {
         if (hasReplies && !isAdmin) return alert(t('messages.comment_with_reply_delete_blocked', '대댓글이 달린 경우 삭제 할 수 없습니다.'));
         if (!window.confirm(t('messages.comment_delete_confirm', '정말 삭제를 진행하시겠습니까? 댓글을 삭제 하면 복구를 할 수 없습니다.'))) return;
         try {
-            const res = await axios.delete(`${API_BASE}/api/posts/${currentPost.id}/comments/${commentId}`, { data: { userId } });
+            const res = await axios.delete(`${API_BASE}/api/posts/${currentPost.id}/comments/${commentId}`, { data: { ...getSessionAuth(), userId } });
             if (res.data.success) {
                 alert(t('messages.delete_success', '삭제가 되었습니다.'));
                 const updated = await axios.get(`${API_BASE}/api/posts`);
@@ -450,7 +474,7 @@ const Board = () => {
         // 추천은 사용자별 중복 처리가 필요하므로 로그인한 사용자만 허용합니다
         if (!requireLogin()) return;
         try {
-            const res = await axios.post(`${API_BASE}/api/posts/${currentPost.id}/like`, { userId });
+            const res = await axios.post(`${API_BASE}/api/posts/${currentPost.id}/like`, { ...getSessionAuth(), userId });
             if(res.data.success) {
                 const isNowLiked = res.data.likedUsers.includes(userId);
                 setCurrentPost({...currentPost, likes: res.data.likes, likedUsers: res.data.likedUsers});
@@ -469,7 +493,7 @@ const Board = () => {
             if (selectedNoticeIds.length === 0) { toast.error(t('messages.no_selected_posts', '선택된 게시글이 없습니다.')); setNoticeMode('none'); return; }
             if (window.confirm(t('admin.notice_register_confirm', '체크한 게시글을 공지사항으로 등록하시겠습니까?'))) {
                 try {
-                    await axios.put(`${API_BASE}/api/posts/notice`, { userId, postIds: selectedNoticeIds, isNotice: true });
+                    await axios.put(`${API_BASE}/api/posts/notice`, { ...getSessionAuth(), userId, postIds: selectedNoticeIds, isNotice: true });
                     toast.success(t('admin.notice_register_success', '공지사항을 등록하였습니다.'));
                     fetchPosts(); setNoticeMode('none'); setSelectedNoticeIds([]);
                 } catch (e) { toast.error(t('admin.notice_register_failed', '공지사항 등록 오류')); }
@@ -488,7 +512,7 @@ const Board = () => {
             if (selectedNoticeIds.length === 0) { toast.error(t('messages.no_selected_posts', '선택된 게시글이 없습니다.')); setNoticeMode('none'); return; }
             if (window.confirm(t('admin.notice_unregister_confirm', '체크한 게시글의 공지를 해제하시겠습니까?'))) {
                 try {
-                    await axios.put(`${API_BASE}/api/posts/notice`, { userId, postIds: selectedNoticeIds, isNotice: false });
+                    await axios.put(`${API_BASE}/api/posts/notice`, { ...getSessionAuth(), userId, postIds: selectedNoticeIds, isNotice: false });
                     toast.success(t('admin.notice_unregister_success', '공지사항이 해제 되었습니다.'));
                     fetchPosts(); setNoticeMode('none'); setSelectedNoticeIds([]);
                 } catch (e) { toast.error(t('admin.notice_unregister_failed', '공지 해제 오류')); }
@@ -550,6 +574,7 @@ const Board = () => {
 
         try {
             await axios.put(`${API_BASE}/api/posts/notice-order`, {
+                ...getSessionAuth(),
                 userId,
                 orderedPostIds: noticeOrderIds
             });
@@ -598,6 +623,7 @@ const Board = () => {
                 const selectedPosts = posts.filter(post => selectedNoticeIds.includes(post.id));
                 for (const post of selectedPosts) {
                     await axios.put(`${API_BASE}/api/posts/${post.id}`, {
+                        ...getSessionAuth(),
                         userId,
                         title: getCleanTitle(post.title),
                         content: withBoardMarker(post.content, targetBoard)
@@ -664,7 +690,7 @@ const Board = () => {
         if (activityTab === 'posts') {
             if (window.confirm(t('activity.delete_confirm', '정말 삭제를 진행하시겠습니까?'))) {
                 try {
-                    for (let id of checkedIds) { await axios.delete(`${API_BASE}/api/posts/${id}`, { data: { userId } }); }
+                    for (let id of checkedIds) { await axios.delete(`${API_BASE}/api/posts/${id}`, { data: { ...getSessionAuth(), userId } }); }
                     alert(t('messages.delete_success', '삭제가 되었습니다.')); setCheckedIds([]); fetchPosts();
                 } catch(err) { alert(t('activity.delete_posts_failed', '일부 게시글 삭제 실패')); }
             }
@@ -674,8 +700,8 @@ const Board = () => {
             if (window.confirm(t('activity.delete_confirm', '정말 삭제를 진행하시겠습니까?'))) {
                 try {
                     for (let item of itemsToDelete) {
-                        if (item.type === 'comment') await axios.delete(`${API_BASE}/api/posts/${item.postId}/comments/${item.commentId}`, { data: { userId } });
-                        else await axios.delete(`${API_BASE}/api/posts/${item.postId}/comments/${item.commentId}/replies/${item.replyId}`, { data: { userId } });
+                        if (item.type === 'comment') await axios.delete(`${API_BASE}/api/posts/${item.postId}/comments/${item.commentId}`, { data: { ...getSessionAuth(), userId } });
+                        else await axios.delete(`${API_BASE}/api/posts/${item.postId}/comments/${item.commentId}/replies/${item.replyId}`, { data: { ...getSessionAuth(), userId } });
                     }
                     alert(t('messages.delete_success', '삭제가 되었습니다.')); setCheckedIds([]); fetchPosts();
                 } catch(err) { alert(t('activity.delete_comments_failed', '일부 댓글 삭제 실패')); }
@@ -896,7 +922,7 @@ const Board = () => {
                     <input type="text" value={title} onChange={e => setTitle(e.target.value)} placeholder={t('write.title_placeholder', '제목을 입력하세요')} required style={{ width: '100%', padding: '15px', boxSizing: 'border-box', borderRadius: '8px', background: 'var(--wgs-input-bg)', color: 'white', border: '1px solid var(--wgs-border)' }} />
                     <textarea value={content} onChange={handleContentChange} placeholder={t('write.content_placeholder', '내용을 입력하세요')} required rows="12" style={{ width: '100%', padding: '15px', boxSizing: 'border-box', borderRadius: '8px', background: 'var(--wgs-input-bg)', color: 'white', border: '1px solid var(--wgs-border)', resize: 'vertical' }} />
                     <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-                        <button type="button" onClick={() => { setIsEditing(false); setView(isEditing ? 'detail' : 'list'); }} style={{ padding: '15px 20px', background: 'var(--wgs-border)', color: 'white', borderRadius: '8px', cursor: 'pointer' }}>{t('common.cancel', '취소')}</button>
+                        <button type="button" onClick={handleCancelWrite} style={{ padding: '15px 20px', background: 'var(--wgs-border)', color: 'white', borderRadius: '8px', cursor: 'pointer' }}>{t('common.cancel', '취소')}</button>
                         <button type="submit" style={{ padding: '15px 30px', background: '#3b82f6', color: 'white', borderRadius: '8px', cursor: 'pointer' }}>{isEditing ? t('write.update_submit_button', '수정완료') : t('write.create_submit_button', '등록')}</button>
                     </div>
                 </form>

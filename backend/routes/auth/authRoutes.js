@@ -25,6 +25,9 @@ function registerAuthRoutes(options = {}) {
     const ADMIN_USER_ID = options.adminUserId;
     const SERVER_INSTANCE_ID = options.serverInstanceId;
     const DEFAULT_MAINTENANCE_MESSAGE = options.defaultMaintenanceMessage;
+    const SIGNUP_ADMIN_NOTIFY_EMAIL = String(
+        options.signupAdminNotifyEmail || process.env.SIGNUP_ADMIN_NOTIFY_EMAIL || ''
+    ).trim();
 
     const required = {
         app, pool, bcrypt, sendEmail, requireHcaptcha, verificationCodes, getUserByEmail,
@@ -36,6 +39,93 @@ function registerAuthRoutes(options = {}) {
     const missing = Object.entries(required).filter(([, value]) => value === undefined || value === null).map(([key]) => key);
     if (missing.length >0) {
         throw new Error(`registerAuthRoutes missing dependencies: ${missing.join(', ')}`);
+    }
+
+    let signupApprovalSchemaReady = false;
+    let signupApprovalSchemaPromise = null;
+
+    async function ensureSignupApprovalSchema() {
+        if (signupApprovalSchemaReady) return;
+        if (signupApprovalSchemaPromise) return signupApprovalSchemaPromise;
+
+        signupApprovalSchemaPromise = (async () => {
+            await pool.query(`
+                CREATE TABLE IF NOT EXISTS wgs_signup_requests (
+                    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+                    login_id VARCHAR(100) NOT NULL,
+                    password_hash VARCHAR(255) NOT NULL,
+                    name VARCHAR(100) NOT NULL,
+                    email VARCHAR(255) NOT NULL,
+                    status ENUM('PENDING','APPROVED','REJECTED') NOT NULL DEFAULT 'PENDING',
+                    requested_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    reviewed_by VARCHAR(100) NULL,
+                    reviewed_at DATETIME NULL,
+                    review_note TEXT NULL,
+                    request_ip VARCHAR(64) NULL,
+                    user_agent TEXT NULL,
+                    PRIMARY KEY (id),
+                    INDEX idx_wgs_signup_status_requested (status, requested_at),
+                    INDEX idx_wgs_signup_login_status (login_id, status),
+                    INDEX idx_wgs_signup_email_status (email, status)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+            `);
+            signupApprovalSchemaReady = true;
+        })();
+
+        try {
+            await signupApprovalSchemaPromise;
+        } finally {
+            signupApprovalSchemaPromise = null;
+        }
+    }
+
+    async function findPendingSignupRequestByIdOrEmail(id, email) {
+        await ensureSignupApprovalSchema();
+        const normalizedId = String(id || '').trim();
+        const normalizedEmail = String(email || '').trim().toLowerCase();
+        const [rows] = await pool.query(
+            `SELECT id, login_id AS loginId, email, status
+             FROM wgs_signup_requests
+             WHERE status = 'PENDING' AND (login_id = ? OR LOWER(email) = ?)
+             ORDER BY requested_at DESC, id DESC
+             LIMIT 1`,
+            [normalizedId, normalizedEmail]
+        );
+        return rows[0] || null;
+    }
+
+    async function getLatestSignupRequestByLoginId(id) {
+        await ensureSignupApprovalSchema();
+        const normalizedId = String(id || '').trim();
+        if (!normalizedId) return null;
+        const [rows] = await pool.query(
+            `SELECT id, login_id AS loginId, email, status, review_note AS reviewNote,
+                    DATE_FORMAT(requested_at, '%Y-%m-%d %H:%i:%s') AS requestedAt,
+                    DATE_FORMAT(reviewed_at, '%Y-%m-%d %H:%i:%s') AS reviewedAt
+             FROM wgs_signup_requests
+             WHERE login_id = ?
+             ORDER BY requested_at DESC, id DESC
+             LIMIT 1`,
+            [normalizedId]
+        );
+        return rows[0] || null;
+    }
+
+    function getSignupRequestIp(req) {
+        const forwarded = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim();
+        return forwarded || req.ip || req.socket?.remoteAddress || null;
+    }
+
+    function buildSignupAdminNoticeText({ id, name, email }) {
+        return [
+            '신규 회원가입 승인 요청이 접수되었습니다.',
+            '',
+            `아이디: ${id}`,
+            `이름: ${name}`,
+            `이메일: ${email}`,
+            '',
+            '관리자 페이지의 [회원가입 승인] 탭에서 승인 또는 거절을 처리해주세요.',
+        ].join('\n');
     }
 
     // 6. 이메일 인증 API
@@ -170,6 +260,10 @@ function registerAuthRoutes(options = {}) {
         try {
             const user = await getUserById(id);
             if (user) return res.status(400).json({ success: false, msg: '이미 사용 중인 아이디입니다.' });
+            const pendingRequest = await findPendingSignupRequestByIdOrEmail(id, '');
+            if (pendingRequest) {
+                return res.status(400).json({ success: false, msg: '이미 회원가입 승인 대기 중인 아이디입니다.' });
+            }
 
             return res.json({ success: true, msg: '사용 가능한 아이디입니다.' });
         } catch (error) {
@@ -202,22 +296,42 @@ function registerAuthRoutes(options = {}) {
             const duplicatedEmail = await getUserByEmail(email);
             if (duplicatedEmail) return res.status(400).json({ success: false, msg: '이미 가입된 이메일입니다.' });
 
+            const pendingRequest = await findPendingSignupRequestByIdOrEmail(id, email);
+            if (pendingRequest) {
+                return res.status(400).json({
+                    success: false,
+                    msg: pendingRequest.loginId === id
+                        ? '이미 회원가입 승인 대기 중인 아이디입니다.'
+                        : '이미 회원가입 승인 대기 중인 이메일입니다.',
+                });
+            }
+
             const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
 
             await pool.query(
-                'INSERT INTO wgs_users (id, password, name, email, sessionToken) VALUES (?, ?, ?, ?, NULL)',
-                [id, hashedPassword, name, email]
+                `INSERT INTO wgs_signup_requests
+                 (login_id, password_hash, name, email, status, request_ip, user_agent)
+                 VALUES (?, ?, ?, ?, 'PENDING', ?, ?)`,
+                [id, hashedPassword, name, email, getSignupRequestIp(req), String(req.headers['user-agent'] || '').slice(0, 1000)]
             );
 
             delete verificationCodes[email];
 
-            await sendEmail(
-                email,
-                `[ SKN29th_우공실] ${name}님, 회원가입을 환영합니다! `,
-                `안녕하세요, ${name}님!\n정보처리기사 스터디 [ SKN29th_우공실]에 가입해주셔서 진심으로 감사합니다.\n서비스를 이용하시기 전에 게시판의 공지글을 먼저 확인해주시면 감사하겠습니다.\n홈페이지 바로가기 : https://www.woogongsil.co.kr/`
+            const adminNoticeResult = await sendEmail(
+                SIGNUP_ADMIN_NOTIFY_EMAIL,
+                '[SKN29th_우공실] 신규 회원가입 승인 요청',
+                buildSignupAdminNoticeText({ id, name, email })
             );
 
-            return res.status(200).json({ success: true, msg: '회원가입이 완료되었습니다.' });
+            if (adminNoticeResult?.success === false) {
+                console.warn('[signup approval] admin notice email failed:', adminNoticeResult.error?.message || adminNoticeResult.error);
+            }
+
+            return res.status(202).json({
+                success: true,
+                pendingApproval: true,
+                msg: '회원가입 신청이 접수되었습니다. 관리자 승인 후 로그인할 수 있습니다.',
+            });
         } catch (error) {
             console.error('회원가입 오류:', error);
             return res.status(500).json({ success: false, msg: '가입 처리 중 오류가 발생했습니다.' });
@@ -239,6 +353,25 @@ function registerAuthRoutes(options = {}) {
             const user = await getUserById(id);
 
             if (!user) {
+                const signupRequest = await getLatestSignupRequestByLoginId(id);
+                if (signupRequest?.status === 'PENDING') {
+                    return res.json({
+                        success: false,
+                        requireConfirm: false,
+                        errorType: 'approval_pending',
+                        msg: '회원가입 승인 대기 중입니다. 관리자 승인 후 로그인할 수 있습니다.',
+                    });
+                }
+                if (signupRequest?.status === 'REJECTED') {
+                    return res.json({
+                        success: false,
+                        requireConfirm: false,
+                        errorType: 'signup_rejected',
+                        msg: signupRequest.reviewNote
+                            ? `회원가입이 거절되었습니다. 사유: ${signupRequest.reviewNote}`
+                            : '회원가입이 거절되었습니다. 관리자에게 문의해주세요.',
+                    });
+                }
                 return res.json({ success: false, requireConfirm: false, errorType: 'id_wrong' });
             }
 

@@ -15,7 +15,7 @@ const API_BASE = "";
 //  로그인 센터 폭에 맞는 넓은 폼 크기만 적용합니다.
 // 3. 단독 회원가입 화면으로 호출될 가능성을 고려해 일반 모드 스타일도 유지합니다.
 
-const Signup = ({ embedded = false }) => {
+const Signup = ({ embedded = false, afterSignupPath = '/' }) => {
     const navigate = useNavigate();
     const { getSetting } = useScreenSettings('signup');
     const [form, setForm] = useState({
@@ -155,9 +155,9 @@ const Signup = ({ embedded = false }) => {
                 id: form.id, password: form.password, name: form.name, email: form.email, hcaptchaToken
             });
             
-            if (res.status === 200 || res.status === 201 || res.data.success) {
-                alert(getSetting('messages.signup_success', '회원가입이 완료되었습니다!\n가입하신 이메일로 가입 환영 메일이 발송되었습니다.'));
-                navigate('/');
+            if (res.status === 200 || res.status === 201 || res.status === 202 || res.data.success) {
+                alert(res.data?.msg || getSetting('messages.signup_success', '회원가입 신청이 접수되었습니다. 관리자 승인 후 로그인할 수 있습니다.'));
+                navigate(afterSignupPath || '/');
             }
         } catch (err) {
             alert(err.response?.data?.msg || getSetting('messages.signup_failed', '회원가입에 실패했습니다.'));
