@@ -3,6 +3,7 @@ db_backup/
 *.sql
 *.dump
 *.bak
+/-
 
 data
 
@@ -24,6 +25,7 @@ backend/ipep_wrong_notes.json
 backend/ipep_rankings.json
 backend/ranking_*.json
 backend/admin_maintenance_mode.json
+backend/uploads/
 
 # 의존성 및 생성 파일
 node_modules/
@@ -35,12 +37,16 @@ dist/
 # 로컬 전용 자산과 문제 이미지는 저장소 외부에서 관리합니다.
 frontend/public/AppleSDGothicNeo_Font/
 frontend/public/question_image/
+backend/public/question_image/
 backend/public/ipep-img/
 
 # 로그
 *.log
 npm-debug.log*
+.codex-local-logs/
+backend/logs/
 
 # 로컬 임시 파일
 *_tmp.*
 *.tmp
+backend/tmp/
