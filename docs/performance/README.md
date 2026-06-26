@@ -19,9 +19,9 @@
 
 | 순서 | 게시일 | 원문 제목 | 저장소 문서 | 원문 |
 | --- | --- | --- | --- | --- |
-| 1차 | 2026-05-31 15:19 | SKN29th_우공실 성능 테스트 [1] | [docker-load-test-01.md](./docker-load-test-01.md) | [Naver Blog](https://blog.naver.com/andisdream/224301694314) |
-| 2차 | 2026-06-03 20:10 | SKN29th_우공실 성능 테스트 [2] | [docker-load-test-02.md](./docker-load-test-02.md) | [Naver Blog](https://blog.naver.com/andisdream/224304996395) |
-| 3차 | 2026-06-07 14:58 | SKN29th_우공실 성능 테스트 [3] | [docker-load-test-03.md](./docker-load-test-03.md) | [Naver Blog](https://blog.naver.com/andisdream/224308514804) |
+| 1차 | 2026-05-31 15:19 | SKN_우공실 성능 테스트 [1] | [docker-load-test-01.md](./docker-load-test-01.md) | [Naver Blog](https://blog.naver.com/andisdream/224301694314) |
+| 2차 | 2026-06-03 20:10 | SKN_우공실 성능 테스트 [2] | [docker-load-test-02.md](./docker-load-test-02.md) | [Naver Blog](https://blog.naver.com/andisdream/224304996395) |
+| 3차 | 2026-06-07 14:58 | SKN_우공실 성능 테스트 [3] | [docker-load-test-03.md](./docker-load-test-03.md) | [Naver Blog](https://blog.naver.com/andisdream/224308514804) |
 
 ## 배포 전 활용 기준
 

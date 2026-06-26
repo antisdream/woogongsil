@@ -2,7 +2,7 @@
 
 ## 원문 정보
 
-- 원문 제목: SKN29th_우공실 성능 테스트 [3]
+- 원문 제목: SKN_우공실 성능 테스트 [3]
 - 게시일: 2026-06-07 14:58
 - 원문 링크: https://blog.naver.com/andisdream/224308514804
 - 이전 기록: https://blog.naver.com/andisdream/224304996395
