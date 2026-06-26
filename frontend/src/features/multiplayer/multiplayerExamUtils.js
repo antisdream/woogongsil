@@ -107,7 +107,7 @@ export async function apiJson(path, options = {}) {
     return data;
 }
 
-// 기출/문제은행과 동일하게 public/question_image 폴더의 문제 이미지를 찾아서 보여주기 위한 공통 함수입니다.
+// 기출/문제은행과 동일하게 /question_image 정적 경로의 문제 이미지를 찾아서 보여주기 위한 공통 함수입니다.
 export function getQuestionImageSrc(question) {
     // 필기 <보기> 이미지 경로 보정
     // ------------------------------------------------------------

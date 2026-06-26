@@ -11,20 +11,23 @@ import useScreenSettings from '../useScreenSettings';
 // past : 필기 기출문제
 // ipep_random : 실기 문제은행
 // ipep_past : 실기 기출문제
+// ipep_three_week : 실기 3주 공략
 const API_BASE = '';
-const WRONG_TABS = ['random', 'past', 'ipep_random', 'ipep_past'];
+const WRONG_TABS = ['random', 'past', 'ipep_random', 'ipep_past', 'ipep_three_week'];
 const DEFAULT_TAB_LABELS = {
     random: '필기 문제은행',
     past: '필기 기출문제',
     ipep_random: '실기 문제은행',
-    ipep_past: '실기 기출문제'
+    ipep_past: '실기 기출문제',
+    ipep_three_week: '실기 3주 공략'
 };
 
 const TAB_COLORS = {
     random: '#3b82f6',
     past: '#10b981',
     ipep_random: '#f59e0b',
-    ipep_past: '#8b5cf6'
+    ipep_past: '#8b5cf6',
+    ipep_three_week: '#14b8a6'
 };
 
 const replaceSettingTokens = (text, values = {}) => {
@@ -40,14 +43,16 @@ const WRONG_TAB_TO_ROUTE = {
     random: 'written-bank',
     past: 'written-past',
     ipep_random: 'ipep-bank',
-    ipep_past: 'ipep-past'
+    ipep_past: 'ipep-past',
+    ipep_three_week: 'ipep-three-week'
 };
 
 const WRONG_ROUTE_TO_TAB = {
     'written-bank': 'random',
     'written-past': 'past',
     'ipep-bank': 'ipep_random',
-    'ipep-past': 'ipep_past'
+    'ipep-past': 'ipep_past',
+    'ipep-three-week': 'ipep_three_week'
 };
 
 // 기출 오답 필터 카탈로그 유틸
@@ -230,6 +235,9 @@ function getIpepSubjectLabel(note, helpers = {}) {
 }
 
 function getIpepQuestionNo(note, index = 0, activeTab = '') {
+    if (activeTab === 'ipep_three_week' || note?.source === 'ipep_three_week') {
+        return note?.sectionQuestionKey || note?.section_question_key || note?.question_no || note?.questionNo || note?.qno || note?.qNumber || (index + 1);
+    }
     // 실기 문제은행은 subject_no가 과목 내부 문제번호입니다.
     if (activeTab === 'ipep_random' || note?.source === 'ipep_random') {
         return note?.subject_no || note?.subjectNo || note?.question_no || note?.questionNo || note?.qno || note?.qNumber || (index + 1);
@@ -244,7 +252,17 @@ function getSourceLabel(note, activeTab, index = 0, helpers = {}) {
     const formatSetting = helpers.formatSetting || ((key, fallback, values) => replaceSettingTokens(fallback, values));
     const subjectLabels = helpers.subjectLabels || {};
 
-    if (activeTab === 'random' || activeTab === 'past') {
+    if (activeTab === 'random') {
+        const subject = getWrittenSubjectInfo(note, subjectLabels);
+        const qno = getWrittenQuestionNo(note);
+        return formatSetting('source.written_random', '{subjectNo}과목 {subjectName} {questionNo}번문제', {
+            subjectNo: subject.no,
+            subjectName: subject.name,
+            questionNo: qno
+        });
+    }
+
+    if (activeTab === 'past') {
         const year = note.year || note.exam_year || t('source.unknown_year', '연도미상');
         const session = note.session || note.exam_session || t('source.unknown_session', '회차미상');
         const subject = getWrittenSubjectInfo(note, subjectLabels);
@@ -272,6 +290,14 @@ function getSourceLabel(note, activeTab, index = 0, helpers = {}) {
             year,
             session,
             questionNo: getIpepQuestionNo(note, index, activeTab)
+        });
+    }
+
+    if (activeTab === 'ipep_three_week') {
+        return formatSetting('source.ipep_three_week', '3주 공략 {week}주차 Section {section} {questionKey}', {
+            week: note.weekNo || note.week_no || '?',
+            section: note.sectionNo || note.section_no || '---',
+            questionKey: note.sectionQuestionKey || note.section_question_key || getIpepQuestionNo(note, index, activeTab)
         });
     }
 
@@ -305,7 +331,11 @@ function getIpepChoiceImageUrl(note) {
     const fileName = value.split(/[\\/]/).pop();
     if (!fileName) return '';
 
-    const imageType = note.source === 'ipep_past' || note.examYear || note.exam_year ? 'past' : 'random';
+    const imageType = note.source === 'ipep_three_week'
+        ? 'three-week'
+        : note.source === 'ipep_past' || note.examYear || note.exam_year
+            ? 'past'
+            : 'random';
     return `/ipep-img/${imageType}/${encodeURIComponent(fileName)}`;
 }
 
@@ -341,6 +371,16 @@ function sortNotesForPractice(notes, activeTab) {
         copied.sort((a, b) => safeNumber(getIpepQuestionNo(a), 0) - safeNumber(getIpepQuestionNo(b), 0));
     }
 
+    if (activeTab === 'ipep_three_week') {
+        copied.sort((a, b) => {
+            const weekDiff = safeNumber(a.weekNo || a.week_no, 0) - safeNumber(b.weekNo || b.week_no, 0);
+            if (weekDiff !== 0) return weekDiff;
+            const sectionDiff = safeNumber(a.sectionNo || a.section_no, 0) - safeNumber(b.sectionNo || b.section_no, 0);
+            if (sectionDiff !== 0) return sectionDiff;
+            return safeNumber(a.question_no || a.questionNo, 0) - safeNumber(b.question_no || b.questionNo, 0);
+        });
+    }
+
     return copied;
 }
 
@@ -364,7 +404,8 @@ const WrongPractice = () => {
         random: t('tabs.random', DEFAULT_TAB_LABELS.random),
         past: t('tabs.past', DEFAULT_TAB_LABELS.past),
         ipep_random: t('tabs.ipep_random', DEFAULT_TAB_LABELS.ipep_random),
-        ipep_past: t('tabs.ipep_past', DEFAULT_TAB_LABELS.ipep_past)
+        ipep_past: t('tabs.ipep_past', DEFAULT_TAB_LABELS.ipep_past),
+        ipep_three_week: t('tabs.ipep_three_week', DEFAULT_TAB_LABELS.ipep_three_week)
     }), [t]);
 
     const writtenSubjectLabels = useMemo(() => ({
@@ -399,7 +440,7 @@ const WrongPractice = () => {
     }, [activeTab, routeTab]);
 
     const [writtenNotes, setWrittenNotes] = useState([]);
-    const [ipepNotes, setIpepNotes] = useState({ random: [], past: [] });
+    const [ipepNotes, setIpepNotes] = useState({ random: [], past: [], threeWeek: [] });
     const [currentIndex, setCurrentIndex] = useState(0);
     const [selectedAnswer, setSelectedAnswer] = useState('');
     const [ipepAnswer, setIpepAnswer] = useState('');
@@ -470,7 +511,8 @@ const WrongPractice = () => {
             setWrittenNotes(Array.isArray(writtenRes.data?.wrongNotes) ? writtenRes.data.wrongNotes : []);
             setIpepNotes({
                 random: Array.isArray(ipepRes.data?.random) ? ipepRes.data.random : [],
-                past: Array.isArray(ipepRes.data?.past) ? ipepRes.data.past : []
+                past: Array.isArray(ipepRes.data?.past) ? ipepRes.data.past : [],
+                threeWeek: Array.isArray(ipepRes.data?.threeWeek) ? ipepRes.data.threeWeek : []
             });
         } catch (error) {
             console.error('오답노트 조회 실패:', error);
@@ -521,6 +563,10 @@ const WrongPractice = () => {
             if (ipepPastFilter.session !== 'ALL') {
                 notes = notes.filter(note => Number(note.session || note.exam_session) === Number(ipepPastFilter.session));
             }
+        }
+
+        if (activeTab === 'ipep_three_week') {
+            notes = ipepNotes.threeWeek || [];
         }
 
         return sortNotesForPractice(notes, activeTab);
@@ -846,7 +892,7 @@ const WrongPractice = () => {
             </section>
 
             <div
-                className="wrong-note-tabs" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: '12px', marginTop: '18px' }}
+                className="wrong-note-tabs" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '12px', marginTop: '18px' }}
             >
                 {WRONG_TABS.map(tab => (
                     <button

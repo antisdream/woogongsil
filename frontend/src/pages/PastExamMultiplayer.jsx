@@ -197,7 +197,7 @@ function PastExamMultiplayerInner({ setIsExamActive, initialTab = 'play' }) {
 
     const toast = useCallback((message, type = 'info') => setNotice({ message, type }), []);
 
-    // 문제 이미지가 있는 경우에만 본문 아래에 출력합니다. 기존 기출문제와 같은 public/question_image 경로를 사용합니다.
+    // 문제 이미지가 있는 경우에만 본문 아래에 출력합니다. 기존 기출문제와 같은 /question_image 경로를 사용합니다.
     // 문제별 연습장 저장 키를 한 곳에서 만든다.
     // 보기 이미지 확대 팝업 안의 연습장과 원래 시험 화면의 연습장이 같은 키를 쓰므로,
     // 팝업에서 쓴 내용이 닫은 뒤에도 그대로 유지됩니다.
@@ -721,7 +721,7 @@ function PastExamMultiplayerInner({ setIsExamActive, initialTab = 'play' }) {
                                     placeholder="정답을 직접 입력해 주세요. 예: 데이터베이스, SQL, 30"
                                 />
                             </label>
-                            <p style={{ ...descStyle, marginTop: 8 }}>띄어쓰기 차이는 서버에서 최대한 보정하여 채점합니다.</p>
+                            <p style={{ ...descStyle, marginTop: 8 }}>대소문자, 띄어쓰기, 쉼표 유무 차이는 서버에서 최대한 보정하여 채점합니다.</p>
                         </div>
                     ) : (
                         <div style={examOptionWrapStyle}>
