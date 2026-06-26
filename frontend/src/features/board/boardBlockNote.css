@@ -1,0 +1,54 @@
+.wgs-board-blocknote-shell,
+.wgs-board-blocknote-view {
+    overflow: hidden;
+    min-height: 320px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    background: #ffffff;
+}
+
+.wgs-board-blocknote-shell .bn-container,
+.wgs-board-blocknote-view .bn-container {
+    min-height: 320px;
+}
+
+.wgs-board-blocknote-shell .bn-editor {
+    min-height: 320px;
+    padding: 16px;
+}
+
+.wgs-board-blocknote-view {
+    min-height: 260px;
+}
+
+.wgs-board-plain-view {
+    min-height: 260px;
+    padding: 16px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    background: #ffffff;
+}
+
+.wgs-board-blocknote-view .bn-container {
+    min-height: 260px;
+}
+
+.wgs-board-blocknote-view .bn-editor {
+    min-height: 260px;
+    padding: 16px;
+}
+
+.wgs-board-blocknote-view .bn-block-content[data-content-type="image"] img,
+.wgs-board-blocknote-view .bn-block-content[data-content-type="video"] video {
+    max-width: 100%;
+    border-radius: 8px;
+}
+
+@media (max-width: 640px) {
+    .wgs-board-blocknote-shell .bn-editor {
+        min-height: 280px;
+        padding: 12px;
+    }
+}

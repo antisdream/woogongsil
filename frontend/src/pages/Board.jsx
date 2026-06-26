@@ -4,6 +4,9 @@ import axios from 'axios';
 import { toast } from 'react-toastify';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import useScreenSettings from '../useScreenSettings';
+import BoardWriteView from '../features/board/BoardWriteView.jsx';
+import BoardContentView from '../features/board/BoardContentView.jsx';
+import '../features/board/boardPage.css';
 import {
     BOARD_NOTICE,
     BOARD_FREE,
@@ -18,21 +21,16 @@ import {
     withBoardMarker,
     getPostBoardType,
     getBoardGuideText,
+    isTruthySessionFlag,
+    replaceSettingTokens,
+    getBoardDraftsNewestFirst,
+    saveBoardDraft,
+    removeBoardDraftAtNewestIndex,
+    clearBoardDrafts,
+    getBoardContentTextForValidation,
 } from '../features/board/boardUtils.js';
 
 const API_BASE = "";
-
-const isTruthySessionFlag = (value) => (
-    value === true || value === 1 || value === '1' || String(value || '').toLowerCase() === 'true'
-);
-
-const replaceSettingTokens = (text, values = {}) => {
-    let result = String(text || '');
-    Object.entries(values).forEach(([key, value]) => {
-        result = result.replaceAll(`{${key}}`, String(value ?? ''));
-    });
-    return result;
-};
 
 const Board = () => {
     const { getSetting } = useScreenSettings('board');
@@ -91,6 +89,8 @@ const Board = () => {
     
     const [title, setTitle] = useState('');
     const [content, setContent] = useState('');
+    const [contentJson, setContentJson] = useState('');
+    const [editorKey, setEditorKey] = useState(0);
     const [isEditing, setIsEditing] = useState(false);
     
     const [searchTerm, setSearchTerm] = useState('');
@@ -119,28 +119,44 @@ const Board = () => {
     const [noticeOrderMode, setNoticeOrderMode] = useState(false);
     const [noticeOrderIds, setNoticeOrderIds] = useState([]);
 
-    const tempStateRef = useRef({ title, content });
+    const tempStateRef = useRef({ title, content, contentJson });
+    const skipNextDraftSaveRef = useRef(false);
     
     useEffect(() => {
-        tempStateRef.current = { title, content };
-    }, [title, content]);
+        tempStateRef.current = { title, content, contentJson };
+    }, [title, content, contentJson]);
 
-    const saveToLocalList = (t, c, isAuto = false) => {
-        if (!t.trim() && !c.trim()) return;
-        
-        let saves = JSON.parse(localStorage.getItem('board_temp_list') || '[]');
-        const now = new Date();
-        const dateStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
-        
-        saves.push({ title: t, content: c, date: dateStr });
-        
-        if (saves.length >10) saves = saves.slice(saves.length - 10);
-        
-        localStorage.setItem('board_temp_list', JSON.stringify(saves));
+    const loadEditorState = useCallback((nextTitle = '', nextContent = '', nextContentJson = '') => {
+        setTitle(nextTitle || '');
+        setContent(nextContent || '');
+        setContentJson(nextContentJson || '');
+        setEditorKey((key) => key + 1);
+    }, []);
 
-        if (!isAuto) toast.success(t('draft.manual_saved', '수동으로 임시저장되었습니다.'), { autoClose: 2000 });
-        else toast.info(t('draft.auto_saved', '자동 임시저장되었습니다.'), { autoClose: 1500 });
-    }
+    const saveToLocalList = useCallback((draftTitle, draftContent, draftContentJson = '', rawOptions = {}) => {
+        const options = typeof rawOptions === 'boolean' ? { isAuto: rawOptions } : (rawOptions || {});
+        const isAuto = Boolean(options.isAuto);
+        const saved = saveBoardDraft(draftTitle, draftContent, draftContentJson, {
+            replaceLatest: options.replaceLatest !== false,
+            source: isAuto ? 'auto' : 'manual',
+        });
+        if (!saved) return false;
+        if (!options.silent) {
+            if (!isAuto) toast.success(t('draft.manual_saved', '수동으로 임시저장되었습니다.'), { autoClose: 2000 });
+            else toast.info(t('draft.auto_saved', '작성 중인 글을 임시저장했습니다.'), { autoClose: 1500 });
+        }
+        return true;
+    }, [t]);
+
+    const saveCurrentDraft = useCallback((options = {}) => {
+        const { title: draftTitle, content: draftContent, contentJson: draftContentJson } = tempStateRef.current;
+        return saveToLocalList(draftTitle, draftContent, draftContentJson, {
+            isAuto: true,
+            silent: true,
+            replaceLatest: true,
+            ...options,
+        });
+    }, [saveToLocalList]);
 
     useEffect(() => {
         const nextRoute = parseBoardRoute(routeSplat);
@@ -161,75 +177,62 @@ const Board = () => {
         // 따라서 현재 방식과 동일하게 로그인하지 않았다고 홈으로 돌려보내지 않고, 게시글 목록은 항상 불러옵니다.
         fetchPosts();
 
-        // 임시저장 이어쓰기 안내는 로그인 사용자에게만 보여줍니다.
-        // 비로그인 상태에서는 글쓰기 화면으로 이동시키지 않아야 합니다.
-        if (userId) {
-            const saves = JSON.parse(localStorage.getItem('board_temp_list') || '[]');
-            if (saves.length >0 && view === 'list') {
-                const latestSave = saves[saves.length - 1];
-                if (window.confirm(t('draft.resume_confirm', '가장 최근에 작성 중이던 임시저장 글이 있습니다. 이어서 작성하시겠습니까?\n(목록에서 다른 저장본도 불러올 수 있습니다)'))) {
-                    setTitle(latestSave.title || '');
-                    setContent(latestSave.content || '');
-                    navigate(getBoardWritePath(boardTab));
-                    setView('write');
-                }
-            }
-        } else {
+        // 임시저장 불러오기는 사용자가 글쓰기 화면의 불러오기 버튼을 직접 눌렀을 때만 열립니다.
+        if (!userId) {
             // 로그아웃 상태에서는 자유게시판을 볼 수 없으므로 공지게시판으로 되돌립니다.
             setBoardTab(BOARD_NOTICE);
             setSavedList([]);
         }
-    }, [boardTab, navigate, t, userId, view]);
+    }, [boardTab, userId]);
 
     useEffect(() => {
         if (view !== 'write' && !isEditing) return;
 
         const autoSave = setInterval(() => {
-            const { title: t, content: c } = tempStateRef.current;
-            if (t.trim() || c.trim()) saveToLocalList(t, c, true);
+            saveCurrentDraft({ isAuto: true, silent: true });
         }, 60000); 
 
         const handleBeforeUnload = () => {
-            const { title: t, content: c } = tempStateRef.current;
-            if (t.trim() || c.trim()) saveToLocalList(t, c, true);
+            saveCurrentDraft({ isAuto: true, silent: true });
         };
         window.addEventListener('beforeunload', handleBeforeUnload);
 
         return () => {
             clearInterval(autoSave);
             window.removeEventListener('beforeunload', handleBeforeUnload);
+            if (skipNextDraftSaveRef.current) {
+                skipNextDraftSaveRef.current = false;
+                return;
+            }
+            saveCurrentDraft({ isAuto: true, silent: true });
         };
-    }, [view, isEditing]);
+    }, [view, isEditing, saveCurrentDraft]);
 
     const handleManualSave = () => {
         // 임시저장은 사용자별 작성 기능이므로 로그인한 사용자만 허용합니다.
         if (!requireLogin()) return;
         if (!title.trim() && !content.trim()) return alert(t('draft.empty_save_alert', '저장할 내용이 없습니다.'));
-        saveToLocalList(title, content, false);
+        saveToLocalList(title, content, contentJson, { isAuto: false, silent: false, replaceLatest: true });
     };
 
     const openLoadModal = () => {
         // 불러오기는 로그인 사용자의 임시저장 목록에서만 사용합니다.
         if (!requireLogin()) return;
-        const saves = JSON.parse(localStorage.getItem('board_temp_list') || '[]');
-        setSavedList(saves.reverse());
+        setSavedList(getBoardDraftsNewestFirst());
         setShowLoadModal(true);
     };
 
     const loadSpecificSave = (saveItem) => {
         if(window.confirm(t('draft.load_confirm', '현재 작성 중인 내용이 덮어씌워집니다. 불러오시겠습니까?'))) {
-            setTitle(saveItem.title);
-            setContent(saveItem.content);
+            loadEditorState(saveItem.title, saveItem.content, saveItem.contentJson || '');
             setShowLoadModal(false);
         }
     };
 
     const handleDeleteDraft = (indexToDelete) => {
         if(!window.confirm(t('draft.delete_confirm', '정말 이 임시저장 글을 삭제하시겠습니까?'))) return;
-        const newSavedList = savedList.filter((_, idx) => idx !== indexToDelete);
+        const newSavedList = removeBoardDraftAtNewestIndex(savedList, indexToDelete);
         setSavedList(newSavedList);
-        const chronologicalSaves = [...newSavedList].reverse();
-        localStorage.setItem('board_temp_list', JSON.stringify(chronologicalSaves));
         toast.success(t('draft.delete_success', '임시저장한 글이 삭제되었습니다.'));
     };
 
@@ -268,13 +271,10 @@ const Board = () => {
         setCurrentPage(1);
     };
 
-    const handleContentChange = (e) => {
-        const text = e.target.value;
-        if (text.length >1000) {
-            alert(t('messages.content_limit_exceeded', '작성 가능한 내용이 1000자가 초과되었습니다.'));
-            setContent(text.substring(0, 1000));
-        } else { setContent(text); }
-    };
+    const handleEditorChange = useCallback((nextContent, nextContentJson) => {
+        setContent(nextContent || '');
+        setContentJson(nextContentJson || '');
+    }, []);
 
     const handleCommentChange = (e, isReply = false) => {
         const text = e.target.value;
@@ -299,7 +299,7 @@ const Board = () => {
             return;
         }
 
-        if (!title.trim() || !content.trim()) return alert(t('messages.need_title_content', '제목과 내용을 모두 입력해주세요.'));
+        if (!title.trim() || !getBoardContentTextForValidation(content)) return alert(t('messages.need_title_content', '제목과 내용을 모두 입력해주세요.'));
         try {
             // 핵심: 새 글은 현재 선택한 탭(boardTab)을 content 마커로 저장합니다.
             // - 최고관리자가 자유게시판에서 작성하면 FREE 마커가 붙으므로 공지게시판으로 자동 이동하지 않습니다.
@@ -309,6 +309,7 @@ const Board = () => {
                 ...getSessionAuth(),
                 title: getCleanTitle(title),
                 content: finalContent,
+                contentJson,
                 authorId: userId,
                 authorName: userName,
 
@@ -319,8 +320,9 @@ const Board = () => {
             });
             if (res.data.success) {
                 alert(t('messages.post_created', '게시글이 등록되었습니다.'));
-                localStorage.removeItem('board_temp_list'); 
-                setTitle(''); setContent('');
+                skipNextDraftSaveRef.current = true;
+                clearBoardDrafts();
+                loadEditorState('', '', '');
                 fetchPosts(); navigate(getBoardListPath(boardTab)); setView('list'); setCurrentPage(1);
             }
         } catch (err) { alert(t('messages.create_failed', '등록 실패: 서버 에러')); }
@@ -330,7 +332,7 @@ const Board = () => {
         e.preventDefault();
         // 비로그인 사용자는 게시글 수정 불가
         if (!requireLogin()) return;
-        if (!title.trim() || !content.trim()) return alert(t('messages.need_title_content', '제목과 내용을 모두 입력해주세요.'));
+        if (!title.trim() || !getBoardContentTextForValidation(content)) return alert(t('messages.need_title_content', '제목과 내용을 모두 입력해주세요.'));
         try {
             // 수정할 때는 현재 화면 탭이 아니라 "원래 글의 소속"을 유지합니다.
             // - 공지 등록/해제 또는 수정 때문에 게시판 탭이 바뀌는 것을 방지합니다.
@@ -340,13 +342,15 @@ const Board = () => {
                 ...getSessionAuth(),
                 userId,
                 title: getCleanTitle(title),
-                content: finalContent
+                content: finalContent,
+                contentJson
             });
             if (res.data.success) {
                 alert(t('messages.post_updated', '게시글이 수정되었습니다.'));
-                localStorage.removeItem('board_temp_list');
+                skipNextDraftSaveRef.current = true;
+                clearBoardDrafts();
                 setIsEditing(false); fetchPosts();
-                setCurrentPost({ ...currentPost, title: getCleanTitle(title), content: finalContent }); 
+                setCurrentPost({ ...currentPost, title: getCleanTitle(title), content: finalContent, contentJson });
                 navigate(getBoardPostPath(currentPost.id));
                 setView('detail');
             }
@@ -354,6 +358,8 @@ const Board = () => {
     };
 
     const handleCancelWrite = () => {
+        const saved = saveCurrentDraft({ isAuto: true, silent: true });
+        if (saved) toast.info(t('draft.left_saved', '작성 중인 글을 임시저장했습니다.'), { autoClose: 1500 });
         setIsEditing(false);
         setShowLoadModal(false);
 
@@ -749,55 +755,56 @@ const Board = () => {
             : t('guide.free', getBoardGuideText(boardTab));
 
         return (
-            <div className="board-page board-list-page wgs-typography-scope" style={{ width: '100%', maxWidth: '900px', margin: '10px auto', boxSizing: 'border-box', background: 'var(--wgs-button-muted)', padding: '20px', borderRadius: '12px', color: 'white' }}>
-                <div className="mobile-stack" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid var(--wgs-border)', paddingBottom: '10px', marginBottom: '20px', gap: '15px' }}>
-                    {/* 게시판 목록 제목은 공통 페이지 제목 클래스로 통일합니다. */}
-                    <h2 className="wgs-page-title" style={{ color: 'var(--wgs-title)', margin: 0, textAlign: 'center' }}>{pageTitle}</h2>
-                    <div className="mobile-stack" style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+            <div className="board-page board-list-page wgs-typography-scope">
+                <div className="board-topbar">
+                    <div className="board-title-wrap">
+                        <h2 className="board-page-title">{pageTitle}</h2>
+                    </div>
+                    <div className="board-action-row">
                         {isAdmin && (
                             <>
-                                <button className="mobile-stack-btn" onClick={handleNoticeRegister} style={{ padding: '10px 15px', background: noticeMode === 'register'? '#10b981' : '#f59e0b', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>
-                                    {noticeMode === 'register'? t('admin.notice_register_confirm_button', ' 등록 확인') : t('admin.notice_register_button', ' 공지 등록')}
+                                <button type="button" className={`board-button ${noticeMode === 'register' ? 'board-button-success' : 'board-button-warning'}`} onClick={handleNoticeRegister}>
+                                    {noticeMode === 'register'? t('admin.notice_register_confirm_button', '등록 확인') : t('admin.notice_register_button', '공지 등록')}
                                 </button>
-                                <button className="mobile-stack-btn" onClick={handleNoticeUnregister} style={{ padding: '10px 15px', background: noticeMode === 'unregister'? '#10b981' : '#ef4444', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>
-                                    {noticeMode === 'unregister'? t('admin.notice_unregister_confirm_button', ' 해제 확인') : t('admin.notice_unregister_button', ' 공지 해제')}
+                                <button type="button" className={`board-button ${noticeMode === 'unregister' ? 'board-button-success' : 'board-button-danger'}`} onClick={handleNoticeUnregister}>
+                                    {noticeMode === 'unregister'? t('admin.notice_unregister_confirm_button', '해제 확인') : t('admin.notice_unregister_button', '공지 해제')}
                                 </button>
-                                <button className="mobile-stack-btn" onClick={handleNoticeOrderToggle} style={{ padding: '10px 15px', background: noticeOrderMode ? '#10b981' : '#8b5cf6', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>
-                                    {noticeOrderMode ? t('admin.notice_order_save_button', ' 순서 저장') : t('admin.notice_order_button', ' 공지 순서')}
+                                <button type="button" className={`board-button ${noticeOrderMode ? 'board-button-success' : ''}`} onClick={handleNoticeOrderToggle}>
+                                    {noticeOrderMode ? t('admin.notice_order_save_button', '순서 저장') : t('admin.notice_order_button', '공지 순서')}
                                 </button>
-                                <button className="mobile-stack-btn" onClick={handleBoardMoveToggle} style={{ padding: '10px 15px', background: noticeMode === 'move'? '#10b981' : '#6366f1', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>
-                                    {noticeMode === 'move'? ` ${targetMoveLabel}` : ` ${targetMoveLabel}`}
+                                <button type="button" className={`board-button ${noticeMode === 'move' ? 'board-button-success' : ''}`} onClick={handleBoardMoveToggle}>
+                                    {targetMoveLabel}
                                 </button>
                                 {(noticeMode !== 'none' || noticeOrderMode) && (
-                                    <button onClick={() => { setNoticeMode('none'); setSelectedNoticeIds([]); setNoticeOrderMode(false); setNoticeOrderIds([]); }} style={{ padding: '10px', background: 'var(--wgs-border)', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>{t('common.cancel', '취소')}</button>
+                                    <button type="button" className="board-button" onClick={() => { setNoticeMode('none'); setSelectedNoticeIds([]); setNoticeOrderMode(false); setNoticeOrderIds([]); }}>{t('common.cancel', '취소')}</button>
                                 )}
                             </>
                         )}
                         {(isAdmin || boardTab === BOARD_FREE) && (
-                            <button className="mobile-stack-btn" onClick={() => { if (!requireLogin()) return; setActivityTab('posts'); setCheckedIds([]); setCurrentPage(1); navigate(getBoardActivityPath('posts')); setView('myActivity'); }} style={{ padding: '10px 15px', background: '#10b981', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>{t('list.my_activity_button', '내가 작성한 글/댓글')}</button>
+                            <button type="button" className="board-button board-button-success" onClick={() => { if (!requireLogin()) return; setActivityTab('posts'); setCheckedIds([]); setCurrentPage(1); navigate(getBoardActivityPath('posts')); setView('myActivity'); }}>{t('list.my_activity_button', '내가 작성한 글/댓글')}</button>
                         )}
                         {(isAdmin || boardTab === BOARD_FREE) && (
-                            <button className="mobile-stack-btn" onClick={() => { if (!requireLogin()) return; if (boardTab === BOARD_NOTICE && !isAdmin) return toast.error(t('messages.notice_write_admin_only', '공지게시판 글 등록은 관리자만 가능합니다.')); setTitle(''); setContent(''); setIsEditing(false); navigate(getBoardWritePath(boardTab)); setView('write'); }} style={{ padding: '10px 15px', background: '#3b82f6', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>{t('list.write_button', '게시글 등록')}</button>
+                            <button type="button" className="board-button board-button-primary" onClick={() => { if (!requireLogin()) return; if (boardTab === BOARD_NOTICE && !isAdmin) return toast.error(t('messages.notice_write_admin_only', '공지게시판 글 등록은 관리자만 가능합니다.')); loadEditorState('', '', ''); setIsEditing(false); navigate(getBoardWritePath(boardTab)); setView('write'); }}>{t('list.write_button', '게시글 등록')}</button>
                         )}
                     </div>
                 </div>
 
-                <div className="mobile-stack board-tab-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '20px' }}>
-                    <button type="button" onClick={() => handleChangeBoardTab(BOARD_NOTICE)} style={{ padding: '14px', borderRadius: '10px', border: boardTab === BOARD_NOTICE ? '1px solid #f59e0b' : '1px solid var(--wgs-border)', background: boardTab === BOARD_NOTICE ? 'rgba(245, 158, 11, 0.22)' : 'var(--wgs-button-muted)', color: boardTab === BOARD_NOTICE ? '#fcd34d' : 'white', fontWeight: 'bold', cursor: 'pointer' }}> {boardNoticeLabel}</button>
-                    <button type="button" onClick={() => handleChangeBoardTab(BOARD_FREE)} style={{ padding: '14px', borderRadius: '10px', border: boardTab === BOARD_FREE ? '1px solid #3b82f6' : '1px solid var(--wgs-border)', background: boardTab === BOARD_FREE ? 'rgba(59, 130, 246, 0.28)' : 'var(--wgs-button-muted)', color: 'white', fontWeight: 'bold', cursor: 'pointer' }}> {boardFreeLabel}</button>
+                <div className="board-tab-grid">
+                    <button type="button" className={`board-tab-button ${boardTab === BOARD_NOTICE ? 'is-active' : ''}`} onClick={() => handleChangeBoardTab(BOARD_NOTICE)}>{boardNoticeLabel}</button>
+                    <button type="button" className={`board-tab-button ${boardTab === BOARD_FREE ? 'is-active' : ''}`} onClick={() => handleChangeBoardTab(BOARD_FREE)}>{boardFreeLabel}</button>
                 </div>
 
-                <p style={{ margin: '0 0 24px 0', lineHeight: 1.6, color: 'var(--wgs-muted)' }}>{boardGuideText}</p>
+                <p className="board-guide">{boardGuideText}</p>
 
-                <div className="table-wrapper">
-                    <table style={{ width: '100%', minWidth: '600px', borderCollapse: 'collapse', textAlign: 'center' }}>
+                <div className="board-table-wrap table-wrapper">
+                    <table className="board-table">
                         <thead>
-                            <tr style={{ background: 'var(--wgs-practice-toggle-bg)', borderBottom: '1px solid var(--wgs-border)' }}>
-                                <th style={{ padding: '15px 10px', width: '10%' }}>{t('table.no_header', 'No')}</th>
-                                <th style={{ padding: '15px 10px', width: '40%' }}>{t('table.title_header', '제목')}</th>
-                                <th style={{ padding: '15px 10px', width: '20%' }}>{t('table.author_header', '작성자')}</th>
-                                <th style={{ padding: '15px 10px', width: '15%' }}>{t('table.views_likes_header', '조회/추천')}</th>
-                                <th style={{ padding: '15px 10px', width: '15%' }}>{t('table.date_header', '작성일')}</th>
+                            <tr>
+                                <th>{t('table.no_header', 'No')}</th>
+                                <th>{t('table.title_header', '제목')}</th>
+                                <th>{t('table.author_header', '작성자')}</th>
+                                <th>{t('table.views_likes_header', '조회/추천')}</th>
+                                <th>{t('table.date_header', '작성일')}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -808,44 +815,44 @@ const Board = () => {
                                 const totalComments = post.comments.reduce((acc, c) => acc + 1 + (c.replies ? c.replies.length : 0), 0);
                                 const isSelectableMode = noticeMode !== 'none';
                                 return (
-                                    <tr key={post.id} style={{ borderBottom: '1px solid var(--wgs-border)', transition: '0.2s', cursor: isSelectableMode || noticeOrderMode ? 'default' : 'pointer', background: post.isNotice ? 'rgba(245, 158, 11, 0.15)' : 'transparent' }} onMouseOver={e => e.currentTarget.style.background = post.isNotice ? 'rgba(245, 158, 11, 0.22)' : 'var(--wgs-input-bg)'} onMouseOut={e => e.currentTarget.style.background = post.isNotice ? 'rgba(245, 158, 11, 0.15)' : 'transparent'}>
-                                        <td style={{ padding: '15px 10px', color: post.isNotice ? '#f59e0b' : 'var(--wgs-subtle)', fontWeight: post.isNotice ? 'bold' : 'normal' }}>
+                                    <tr key={post.id} className={`board-table-row ${post.isNotice ? 'is-notice' : ''}`}>
+                                        <td>
                                             {noticeOrderMode ? (
-                                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
-                                                    <button type="button" onClick={() => moveNoticeItem(post.id, -1)} disabled={idx === 0} title={t('admin.move_up_title', '위로 이동')} style={{ padding: '4px 7px', borderRadius: '6px', border: '1px solid var(--wgs-border)', background: idx === 0 ? 'var(--wgs-practice-toggle-bg)' : '#374151', color: idx === 0 ? '#64748b' : 'white', cursor: idx === 0 ? 'not-allowed' : 'pointer' }}>{t('admin.move_up_button', '위')}</button>
-                                                    <span style={{ minWidth: '28px', color: '#fcd34d' }}>{idx + 1}</span>
-                                                    <button type="button" onClick={() => moveNoticeItem(post.id, 1)} disabled={idx === currentPosts.length - 1} title={t('admin.move_down_title', '아래로 이동')} style={{ padding: '4px 7px', borderRadius: '6px', border: '1px solid var(--wgs-border)', background: idx === currentPosts.length - 1 ? 'var(--wgs-practice-toggle-bg)' : '#374151', color: idx === currentPosts.length - 1 ? '#64748b' : 'white', cursor: idx === currentPosts.length - 1 ? 'not-allowed' : 'pointer' }}>{t('admin.move_down_button', '아래')}</button>
+                                                <div className="board-order-controls">
+                                                    <button type="button" className="board-button" onClick={() => moveNoticeItem(post.id, -1)} disabled={idx === 0} title={t('admin.move_up_title', '위로 이동')}>{t('admin.move_up_button', '위')}</button>
+                                                    <span>{idx + 1}</span>
+                                                    <button type="button" className="board-button" onClick={() => moveNoticeItem(post.id, 1)} disabled={idx === currentPosts.length - 1} title={t('admin.move_down_title', '아래로 이동')}>{t('admin.move_down_button', '아래')}</button>
                                                 </div>
                                             ) : isSelectableMode ? (
-                                                <input type="checkbox" checked={selectedNoticeIds.includes(post.id)} onChange={() => toggleNoticeCheckbox(post.id)} style={{ transform: 'scale(1.3)' }} />
-                                            ) : post.isNotice ? t('table.notice_cell', ' 공지') : displayNo}
+                                                <input type="checkbox" checked={selectedNoticeIds.includes(post.id)} onChange={() => toggleNoticeCheckbox(post.id)} />
+                                            ) : post.isNotice ? t('table.notice_cell', '공지') : displayNo}
                                         </td>
-                                        <td style={{ padding: '15px 10px', textAlign: 'left', color: post.isNotice ? '#fcd34d' : '#e2e8f0', fontWeight: 'bold' }} onClick={() => !isSelectableMode && !noticeOrderMode && handleViewPost(post)}>
-                                            {post.isNotice && <span style={{ color: '#f59e0b', fontSize: '12px', marginRight: '5px' }}>{t('table.notice_badge', '[공지]')}</span>}
-                                            {getCleanTitle(post.title)} {totalComments >0 && <span style={{ color: '#fbbf24', fontSize: '12px', marginLeft: '5px' }}>[{totalComments}]</span>}
+                                        <td className="board-table-title" onClick={() => !isSelectableMode && !noticeOrderMode && handleViewPost(post)}>
+                                            {post.isNotice && <span className="board-notice-badge">{t('table.notice_badge', '[공지]')}</span>}
+                                            {getCleanTitle(post.title)} {totalComments >0 && <span className="board-count-badge">[{totalComments}]</span>}
                                         </td>
-                                        <td style={{ padding: '15px 10px', color: 'var(--wgs-muted)' }}>{post.authorName}</td>
-                                        <td style={{ padding: '15px 10px', color: 'var(--wgs-muted)', fontSize: '13px' }}>{formatSetting('table.views_likes_value', ' {views} /  {likes}', { views: post.views || 0, likes: post.likes || 0 })}</td>
-                                        <td style={{ padding: '15px 10px', color: 'var(--wgs-subtle)', fontSize: '13px' }}>{formatDateForList(post.date)}</td>
+                                        <td className="board-subtle-text">{post.authorName}</td>
+                                        <td className="board-subtle-text">{formatSetting('table.views_likes_value', '{views} / {likes}', { views: post.views || 0, likes: post.likes || 0 })}</td>
+                                        <td className="board-subtle-text">{formatDateForList(post.date)}</td>
                                     </tr>
                                 );
-                            }) : ( <tr><td colSpan="5" style={{ padding: '30px', color: 'var(--wgs-subtle)' }}>{t('table.empty_posts', '게시글이 없습니다.')}</td></tr> )}
+                            }) : ( <tr><td colSpan="5" className="board-subtle-text">{t('table.empty_posts', '게시글이 없습니다.')}</td></tr> )}
                         </tbody>
                     </table>
                 </div>
 
-                <div className="mobile-stack" style={{ display: 'flex', gap: '10px', marginTop: '20px', marginBottom: '20px', alignItems: 'center' }}>
-                    <select value={sortOrder} onChange={(e) => { setSortOrder(e.target.value); setCurrentPage(1); }} style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid var(--wgs-border)', background: 'var(--wgs-input-bg)', color: 'white', cursor: 'pointer' }}>
+                <div className="board-controls">
+                    <select className="board-select" value={sortOrder} onChange={(e) => { setSortOrder(e.target.value); setCurrentPage(1); }}>
                         <option value="desc">{t('sort.desc_label', '최근 작성일 내림차순 정렬')}</option>
                         <option value="asc">{t('sort.asc_label', '최근 작성일 오름차순 정렬')}</option>
                     </select>
-                    <input type="text" placeholder={t('search.placeholder', '제목 또는 내용 검색')} value={searchTerm} onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }} style={{ width: '100%', boxSizing: 'border-box', padding: '12px', borderRadius: '8px', border: '1px solid var(--wgs-border)', background: 'var(--wgs-input-bg)', color: 'white' }} />
+                    <input className="board-input" type="text" placeholder={t('search.placeholder', '제목 또는 내용 검색')} value={searchTerm} onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }} />
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '20px' }}>
-                    <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={noticeOrderMode || safeCurrentPage === 1} style={{ padding: '10px 20px', borderRadius: '8px', border: '1px solid var(--wgs-border)', background: noticeOrderMode || safeCurrentPage === 1 ? 'var(--wgs-practice-toggle-bg)' : '#3b82f6', color: noticeOrderMode || safeCurrentPage === 1 ? '#64748b' : 'white', cursor: noticeOrderMode || safeCurrentPage === 1 ? 'not-allowed' : 'pointer', fontWeight: 'bold' }}>{t('pagination.prev_button', ' 이전')}</button>
-                    <span style={{ color: 'var(--wgs-muted)', fontWeight: 'bold' }}>{noticeOrderMode ? 1 : safeCurrentPage} <span style={{ color: '#64748b' }}>/ {noticeOrderMode ? 1 : totalPages}</span></span>
-                    <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={noticeOrderMode || safeCurrentPage === totalPages} style={{ padding: '10px 20px', borderRadius: '8px', border: '1px solid var(--wgs-border)', background: noticeOrderMode || safeCurrentPage === totalPages ? 'var(--wgs-practice-toggle-bg)' : '#3b82f6', color: noticeOrderMode || safeCurrentPage === totalPages ? '#64748b' : 'white', cursor: noticeOrderMode || safeCurrentPage === totalPages ? 'not-allowed' : 'pointer', fontWeight: 'bold' }}>{t('pagination.next_button', '다음 ')}</button>
+                <div className="board-pagination">
+                    <button type="button" className="board-button" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={noticeOrderMode || safeCurrentPage === 1}>{t('pagination.prev_button', '이전')}</button>
+                    <span className="board-subtle-text">{noticeOrderMode ? 1 : safeCurrentPage} / {noticeOrderMode ? 1 : totalPages}</span>
+                    <button type="button" className="board-button" onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={noticeOrderMode || safeCurrentPage === totalPages}>{t('pagination.next_button', '다음')}</button>
                 </div>
             </div>
         );
@@ -860,26 +867,26 @@ const Board = () => {
         const currentItems = activeData.slice(idxFirst, idxLast);
 
         return (
-            <div className="board-page board-my-page wgs-typography-scope" style={{ width: '100%', maxWidth: '900px', margin: '10px auto', boxSizing: 'border-box', background: 'var(--wgs-button-muted)', padding: '20px', borderRadius: '12px', color: 'white' }}>
-                <div className="mobile-stack" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', gap: '15px' }}>
-                    <button className="mobile-stack-btn" onClick={() => { navigate(getBoardListPath(boardTab)); setView('list'); setCurrentPage(1); }} style={{ padding: '10px 15px', background: 'var(--wgs-practice-toggle-bg)', color: 'white', border: '1px solid var(--wgs-border)', borderRadius: '6px', cursor: 'pointer' }}>{t('common.back_to_list', ' 목록으로')}</button>
-                    <h2 style={{ color: '#10b981', margin: 0, textAlign: 'center' }}>{t('activity.title', ' 내가 작성한 활동')}</h2>
+            <div className="board-page board-my-page wgs-typography-scope">
+                <div className="board-activity-toolbar">
+                    <button type="button" className="board-button" onClick={() => { navigate(getBoardListPath(boardTab)); setView('list'); setCurrentPage(1); }}>{t('common.back_to_list', '목록으로')}</button>
+                    <h2 className="board-page-title">{t('activity.title', '내가 작성한 활동')}</h2>
                 </div>
-                <div className="mobile-stack" style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
-                    <button onClick={() => { setActivityTab('posts'); setCheckedIds([]); setCurrentPage(1); navigate(getBoardActivityPath('posts')); }} style={{ flex: 1, padding: '12px', background: activityTab === 'posts'? '#3b82f6' : 'var(--wgs-practice-toggle-bg)', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>{formatSetting('activity.posts_tab', '내가 작성한 글 ({count})', { count: myPosts.length })}</button>
-                    <button onClick={() => { setActivityTab('comments'); setCheckedIds([]); setCurrentPage(1); navigate(getBoardActivityPath('comments')); }} style={{ flex: 1, padding: '12px', background: activityTab === 'comments'? '#3b82f6' : 'var(--wgs-practice-toggle-bg)', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>{formatSetting('activity.comments_tab', '내가 작성한 댓글 ({count})', { count: myComments.length })}</button>
+                <div className="board-tab-grid">
+                    <button type="button" className={`board-tab-button ${activityTab === 'posts' ? 'is-active' : ''}`} onClick={() => { setActivityTab('posts'); setCheckedIds([]); setCurrentPage(1); navigate(getBoardActivityPath('posts')); }}>{formatSetting('activity.posts_tab', '내가 작성한 글 ({count})', { count: myPosts.length })}</button>
+                    <button type="button" className={`board-tab-button ${activityTab === 'comments' ? 'is-active' : ''}`} onClick={() => { setActivityTab('comments'); setCheckedIds([]); setCurrentPage(1); navigate(getBoardActivityPath('comments')); }}>{formatSetting('activity.comments_tab', '내가 작성한 댓글 ({count})', { count: myComments.length })}</button>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginBottom: '10px' }}>
-                    <button onClick={() => handleSelectAll(currentItems)} style={{ padding: '8px 12px', background: 'var(--wgs-border)', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '13px' }}>{t('activity.select_all_button', '전체선택')}</button>
-                    <button onClick={handleDeleteSelectedActivity} style={{ padding: '8px 12px', background: 'transparent', color: '#ef4444', border: '1px solid #ef4444', borderRadius: '4px', cursor: 'pointer', fontSize: '13px' }}>{t('activity.delete_selected_button', '선택 삭제')}</button>
+                <div className="board-action-row">
+                    <button type="button" className="board-button" onClick={() => handleSelectAll(currentItems)}>{t('activity.select_all_button', '전체선택')}</button>
+                    <button type="button" className="board-button board-button-danger" onClick={handleDeleteSelectedActivity}>{t('activity.delete_selected_button', '선택 삭제')}</button>
                 </div>
-                <div className="table-wrapper">
-                    <table style={{ width: '100%', minWidth: '500px', borderCollapse: 'collapse', textAlign: 'center', marginBottom: '20px' }}>
+                <div className="board-table-wrap table-wrapper">
+                    <table className="board-table">
                         <thead>
-                            <tr style={{ background: 'var(--wgs-practice-toggle-bg)', borderBottom: '1px solid var(--wgs-border)' }}>
-                                <th style={{ padding: '15px 10px', width: '5%' }}></th>
-                                <th style={{ padding: '15px 10px', width: '65%' }}>{activityTab === 'posts'? t('table.title_header', '제목') : t('activity.comment_table_header', '댓글 내용 / 원문 제목')}</th>
-                                <th style={{ padding: '15px 10px', width: '30%' }}>{t('table.date_header', '작성일')}</th>
+                            <tr>
+                                <th></th>
+                                <th>{activityTab === 'posts'? t('table.title_header', '제목') : t('activity.comment_table_header', '댓글 내용 / 원문 제목')}</th>
+                                <th>{t('table.date_header', '작성일')}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -887,24 +894,24 @@ const Board = () => {
                                 const uniqueKey = item.uniqueId || item.id;
                                 const isChecked = checkedIds.includes(uniqueKey);
                                 return (
-                                    <tr key={uniqueKey} style={{ borderBottom: '1px solid var(--wgs-border)', background: isChecked ? 'var(--wgs-practice-toggle-bg)' : 'transparent' }}>
-                                        <td style={{ padding: '15px 10px' }}>
+                                    <tr key={uniqueKey} className={`board-table-row ${isChecked ? 'is-selected' : ''}`}>
+                                        <td>
                                             <input type="checkbox" checked={isChecked} onChange={() => toggleCheck(uniqueKey)} />
                                         </td>
-                                        <td style={{ padding: '15px 10px', textAlign: 'left', cursor: 'pointer' }} onClick={() => goToPostById(item.postId || item.id)}>
-                                            {activityTab === 'posts'? <span style={{ color: '#e2e8f0', fontWeight: 'bold' }}>{getCleanTitle(item.title)}</span> : <div><div style={{ color: '#e2e8f0', fontWeight: 'bold' }}>{item.text}</div><div style={{ color: '#64748b', fontSize: '12px' }}>{formatSetting('activity.original_title_label', '원본: {title}', { title: item.postTitle })}</div></div>}
+                                        <td className="board-table-title" onClick={() => goToPostById(item.postId || item.id)}>
+                                            {activityTab === 'posts'? <span>{getCleanTitle(item.title)}</span> : <div><div>{item.text}</div><div className="board-original-title">{formatSetting('activity.original_title_label', '원본: {title}', { title: item.postTitle })}</div></div>}
                                         </td>
-                                        <td style={{ padding: '15px 10px', color: 'var(--wgs-subtle)' }}>{formatDateForList(item.date)}</td>
+                                        <td className="board-subtle-text">{formatDateForList(item.date)}</td>
                                     </tr>
                                 );
                             })}
                         </tbody>
                     </table>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '20px' }}>
-                    <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={safeCurrentPageAct === 1} style={{ padding: '10px 20px', background: '#3b82f6', color: 'white', borderRadius: '8px', cursor: 'pointer' }}>{t('pagination.prev_button', '이전')}</button>
-                    <span>{safeCurrentPageAct} / {totalPagesAct}</span>
-                    <button onClick={() => setCurrentPage(p => Math.min(totalPagesAct, p + 1))} disabled={safeCurrentPageAct === totalPagesAct} style={{ padding: '10px 20px', background: '#3b82f6', color: 'white', borderRadius: '8px', cursor: 'pointer' }}>{t('pagination.next_button', '다음')}</button>
+                <div className="board-pagination">
+                    <button type="button" className="board-button" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={safeCurrentPageAct === 1}>{t('pagination.prev_button', '이전')}</button>
+                    <span className="board-subtle-text">{safeCurrentPageAct} / {totalPagesAct}</span>
+                    <button type="button" className="board-button" onClick={() => setCurrentPage(p => Math.min(totalPagesAct, p + 1))} disabled={safeCurrentPageAct === totalPagesAct}>{t('pagination.next_button', '다음')}</button>
                 </div>
             </div>
         );
@@ -912,93 +919,90 @@ const Board = () => {
 
     if (view === 'write') {
         return (
-            <div className="board-page board-detail-page wgs-typography-scope" style={{ width: '100%', maxWidth: '800px', margin: '10px auto', boxSizing: 'border-box', background: 'var(--wgs-button-muted)', padding: '20px', borderRadius: '12px', color: 'white', position: 'relative' }}>
-                <h2 style={{ borderBottom: '2px solid var(--wgs-border)', paddingBottom: '10px', color: 'var(--wgs-title)' }}> {isEditing ? t('write.edit_title', '게시글 수정') : formatSetting('write.create_title', '{board} 글 작성', { board: getBoardLabel(boardTab) })}</h2>
-                <form onSubmit={isEditing ? handleUpdatePost : handleCreatePost} style={{ display: 'flex', flexDirection: 'column', gap: '20px', marginTop: '20px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-                        <button type="button" onClick={openLoadModal} style={{ padding: '8px 15px', background: '#10b981', color: 'white', borderRadius: '6px', cursor: 'pointer' }}>{t('write.load_button', ' 불러오기')}</button>
-                        <button type="button" onClick={handleManualSave} style={{ padding: '8px 15px', background: '#f59e0b', color: 'white', borderRadius: '6px', cursor: 'pointer' }}>{t('write.temp_save_button', ' 임시저장')}</button>
-                    </div>
-                    <input type="text" value={title} onChange={e => setTitle(e.target.value)} placeholder={t('write.title_placeholder', '제목을 입력하세요')} required style={{ width: '100%', padding: '15px', boxSizing: 'border-box', borderRadius: '8px', background: 'var(--wgs-input-bg)', color: 'white', border: '1px solid var(--wgs-border)' }} />
-                    <textarea value={content} onChange={handleContentChange} placeholder={t('write.content_placeholder', '내용을 입력하세요')} required rows="12" style={{ width: '100%', padding: '15px', boxSizing: 'border-box', borderRadius: '8px', background: 'var(--wgs-input-bg)', color: 'white', border: '1px solid var(--wgs-border)', resize: 'vertical' }} />
-                    <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-                        <button type="button" onClick={handleCancelWrite} style={{ padding: '15px 20px', background: 'var(--wgs-border)', color: 'white', borderRadius: '8px', cursor: 'pointer' }}>{t('common.cancel', '취소')}</button>
-                        <button type="submit" style={{ padding: '15px 30px', background: '#3b82f6', color: 'white', borderRadius: '8px', cursor: 'pointer' }}>{isEditing ? t('write.update_submit_button', '수정완료') : t('write.create_submit_button', '등록')}</button>
-                    </div>
-                </form>
-
-                {showLoadModal && (
-                    <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.8)', borderRadius: '12px', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100 }}>
-                        <div style={{ background: 'var(--wgs-practice-toggle-bg)', width: '90%', maxWidth: '500px', padding: '20px', borderRadius: '12px' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--wgs-border)', paddingBottom: '10px' }}>
-                                <h3 style={{ color: '#10b981' }}>{t('draft.modal_title', ' 임시저장 목록')}</h3>
-                                <button onClick={() => setShowLoadModal(false)} style={{ background: 'none', color: 'white', border: 'none', cursor: 'pointer', fontSize: '14px', fontWeight: 'bold' }}>{t('draft.close_button', '닫기')}</button>
-                            </div>
-                            <div style={{ maxHeight: '300px', overflowY: 'auto', marginTop: '15px' }}>
-                                {savedList.map((item, idx) => (
-                                    <div key={idx} style={{ background: 'var(--wgs-input-bg)', padding: '10px', marginBottom: '10px', borderRadius: '6px', cursor: 'pointer', display: 'flex', justifyContent: 'space-between' }} onClick={() => loadSpecificSave(item)}>
-                                        <div><div style={{ fontWeight: 'bold' }}>{item.title || t('draft.no_title', '제목 없음')}</div><div style={{ fontSize: '12px', color: 'var(--wgs-subtle)' }}>{item.date}</div></div>
-                                        <button onClick={(e) => { e.stopPropagation(); handleDeleteDraft(idx); }} style={{ color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer' }}>{t('common.delete', '삭제')}</button>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
-                )}
-            </div>
+            <BoardWriteView
+                t={t}
+                formatSetting={formatSetting}
+                isEditing={isEditing}
+                boardTab={boardTab}
+                getBoardLabel={getBoardLabel}
+                title={title}
+                content={content}
+                contentJson={contentJson}
+                editorKey={editorKey}
+                uploadAuth={getSessionAuth()}
+                uploadUrl={`${API_BASE}/api/posts/upload-file`}
+                onTitleChange={(event) => setTitle(event.target.value)}
+                onEditorChange={handleEditorChange}
+                onCreatePost={handleCreatePost}
+                onUpdatePost={handleUpdatePost}
+                onCancelWrite={handleCancelWrite}
+                onOpenLoadModal={openLoadModal}
+                onManualSave={handleManualSave}
+                showLoadModal={showLoadModal}
+                savedList={savedList}
+                onCloseLoadModal={() => setShowLoadModal(false)}
+                onLoadDraft={loadSpecificSave}
+                onDeleteDraft={handleDeleteDraft}
+            />
         );
     }
 
     if (view === 'detail' && currentPost) {
         const totalComments = currentPost.comments.reduce((acc, c) => acc + 1 + (c.replies ? c.replies.length : 0), 0);
         return (
-            <div className="board-page board-editor-page wgs-typography-scope" style={{ width: '100%', maxWidth: '800px', margin: '10px auto', boxSizing: 'border-box', background: 'var(--wgs-button-muted)', padding: '20px', borderRadius: '12px', color: 'white' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
-                    <button onClick={() => { navigate(getBoardListPath(boardTab)); setView('list'); }} style={{ padding: '10px 15px', background: 'var(--wgs-practice-toggle-bg)', border: '1px solid var(--wgs-border)', color: 'white', borderRadius: '6px', cursor: 'pointer' }}>{t('common.back_to_list', ' 목록으로')}</button>
-                    <div style={{ display: 'flex', gap: '10px' }}>
+            <div className="board-page board-editor-page wgs-typography-scope">
+                <div className="board-detail-toolbar">
+                    <button type="button" className="board-button" onClick={() => { navigate(getBoardListPath(boardTab)); setView('list'); }}>{t('common.back_to_list', '목록으로')}</button>
+                    <div className="board-inline-actions">
                         {(userId === currentPost.authorId || isAdmin) && (
                             <>
-                                <button onClick={() => { setTitle(getCleanTitle(currentPost.title)); setContent(getCleanContent(currentPost.content)); setIsEditing(true); navigate(getBoardWritePath(getPostBoardType(currentPost))); setView('write'); }} style={{ color: '#10b981', border: '1px solid #10b981', background: 'none', padding: '10px', borderRadius: '6px', cursor: 'pointer' }}>{t('common.edit', '수정')}</button>
-                                <button onClick={() => handleDeletePost(currentPost.id)} style={{ color: '#ef4444', border: '1px solid #ef4444', background: 'none', padding: '10px', borderRadius: '6px', cursor: 'pointer' }}>{t('common.delete', '삭제')}</button>
+                                <button type="button" className="board-button board-button-success" onClick={() => { loadEditorState(getCleanTitle(currentPost.title), getCleanContent(currentPost.content), currentPost.contentJson || ''); setIsEditing(true); navigate(getBoardWritePath(getPostBoardType(currentPost))); setView('write'); }}>{t('common.edit', '수정')}</button>
+                                <button type="button" className="board-button board-button-danger" onClick={() => handleDeletePost(currentPost.id)}>{t('common.delete', '삭제')}</button>
                             </>
                         )}
                     </div>
                 </div>
-                <h1 className="wgs-page-title" style={{ color: 'var(--wgs-title)' }}>{currentPost.isNotice && t('detail.notice_prefix', '[공지] ')}{getCleanTitle(currentPost.title)}</h1>
-                <div style={{ color: 'var(--wgs-subtle)', fontSize: '14px', marginBottom: '20px' }}>{formatSetting('detail.meta_line', '작성자: {author} | 조회: {views} | 일시: {date}', { author: currentPost.authorName, views: currentPost.views, date: currentPost.date })}</div>
-                <div style={{ minHeight: '300px', whiteSpace: 'pre-wrap', lineHeight: '1.6' }}>{getCleanContent(currentPost.content)}</div>
-                <div style={{ display: 'flex', justifyContent: 'center', margin: '40px 0' }}>
-                    <button onClick={handleToggleLike} style={{ padding: '15px 30px', borderRadius: '30px', background: currentPost.likedUsers?.includes(userId) ? '#ef4444' : 'var(--wgs-practice-toggle-bg)', border: '1px solid #ef4444', color: 'white', cursor: 'pointer' }}>{formatSetting('detail.like_button', ' 추천 {count}', { count: currentPost.likes || 0 })}</button>
+                <h1 className="board-page-title">{currentPost.isNotice && t('detail.notice_prefix', '[공지] ')}{getCleanTitle(currentPost.title)}</h1>
+                <div className="board-meta">{formatSetting('detail.meta_line', '작성자: {author} | 조회: {views} | 일시: {date}', { author: currentPost.authorName, views: currentPost.views, date: currentPost.date })}</div>
+                <BoardContentView content={currentPost.content} contentJson={currentPost.contentJson} />
+                <div className="board-like-row">
+                    <button type="button" className={`board-button board-like-button ${currentPost.likedUsers?.includes(userId) ? 'is-liked' : ''}`} onClick={handleToggleLike}>{formatSetting('detail.like_button', '추천 {count}', { count: currentPost.likes || 0 })}</button>
                 </div>
-                <div style={{ background: 'var(--wgs-practice-toggle-bg)', padding: '20px', borderRadius: '8px' }}>
-                    <h3 style={{ color: '#fcd34d' }}>{formatSetting('comments.title', ' 댓글 ({count})', { count: totalComments })}</h3>
-                    {currentPost.comments.map(c => (
-                        <div key={c.id} style={{ marginBottom: '15px', borderLeft: '3px solid #3b82f6', paddingLeft: '15px' }}>
-                            <div style={{ fontWeight: 'bold' }}>{c.authorName} <span style={{ fontSize: '12px', color: '#64748b' }}>{c.date}</span></div>
-                            <div style={{ margin: '5px 0' }}>{c.text}</div>
-                            <div style={{ display: 'flex', gap: '10px' }}>
-                                <button onClick={() => { if (!requireLogin()) return; setReplyingTo(replyingTo === c.id ? null : c.id); }} style={{ background: 'none', border: 'none', color: '#3b82f6', fontSize: '12px', cursor: 'pointer' }}>{t('comments.reply_button', '답글')}</button>
-                                {(userId === c.authorId || isAdmin) && <button onClick={() => handleDeleteComment(c.id, c.replies?.length >0)} style={{ background: 'none', border: 'none', color: '#ef4444', fontSize: '12px', cursor: 'pointer' }}>{t('common.delete', '삭제')}</button>}
-                            </div>
-                            {replyingTo === c.id && (
-                                <form onSubmit={(e) => handleAddReply(e, c.id)} style={{ marginTop: '10px', display: 'flex', gap: '10px' }}>
-                                    <textarea value={replyText} readOnly={!isLoggedIn} placeholder={t('comments.reply_placeholder', '답글을 입력하세요')} onFocus={() => !isLoggedIn && requireLogin()} onChange={(e) => { if (!requireLogin()) return; handleCommentChange(e, true); }} style={{ flex: 1, background: 'var(--wgs-input-bg)', color: 'white', borderRadius: '4px', border: '1px solid var(--wgs-border)' }} />
-                                    <button type="submit" style={{ background: '#3b82f6', color: 'white', border: 'none', borderRadius: '4px', padding: '10px' }}>{t('common.submit', '등록')}</button>
-                                </form>
-                            )}
-                            {c.replies?.map(r => (
-                                <div key={r.id} style={{ marginLeft: '20px', borderLeft: '2px solid var(--wgs-border)', paddingLeft: '10px', marginTop: '10px', fontSize: '14px' }}>
-                                    <div style={{ fontWeight: 'bold' }}>↳ {r.authorName}</div>
-                                    <div>{r.text}</div>
+                <section className="board-comment-section">
+                    <h3>{formatSetting('comments.title', '댓글 ({count})', { count: totalComments })}</h3>
+                    <div className="board-comment-list">
+                        {currentPost.comments.map(c => (
+                            <article key={c.id} className="board-comment-item">
+                                <div className="board-comment-head">{c.authorName} <span className="board-comment-date">{c.date}</span></div>
+                                <div>{c.text}</div>
+                                <div className="board-comment-actions">
+                                    <button type="button" className="board-button-link" onClick={() => { if (!requireLogin()) return; setReplyingTo(replyingTo === c.id ? null : c.id); }}>{t('comments.reply_button', '답글')}</button>
+                                    {(userId === c.authorId || isAdmin) && <button type="button" className="board-button-link board-button-danger" onClick={() => handleDeleteComment(c.id, c.replies?.length >0)}>{t('common.delete', '삭제')}</button>}
                                 </div>
-                            ))}
-                        </div>
-                    ))}
-                    <form onSubmit={handleAddComment} style={{ marginTop: '20px', display: 'flex', gap: '10px' }}>
-                        <textarea value={commentText} readOnly={!isLoggedIn} placeholder={t('comments.comment_placeholder', '댓글을 입력하세요')} onFocus={() => !isLoggedIn && requireLogin()} onChange={(e) => { if (!requireLogin()) return; handleCommentChange(e, false); }} style={{ flex: 1, background: 'var(--wgs-input-bg)', color: 'white', borderRadius: '8px', border: '1px solid var(--wgs-border)', padding: '10px' }} />
-                        <button type="submit" style={{ background: '#3b82f6', color: 'white', border: 'none', borderRadius: '8px', padding: '15px' }}>{t('common.submit', '등록')}</button>
+                                {replyingTo === c.id && (
+                                    <form onSubmit={(e) => handleAddReply(e, c.id)} className="board-reply-form">
+                                        <textarea className="board-textarea" value={replyText} readOnly={!isLoggedIn} placeholder={t('comments.reply_placeholder', '답글을 입력하세요')} onFocus={() => !isLoggedIn && requireLogin()} onChange={(e) => { if (!requireLogin()) return; handleCommentChange(e, true); }} />
+                                        <button type="submit" className="board-button board-button-primary">{t('common.submit', '등록')}</button>
+                                    </form>
+                                )}
+                                {c.replies?.length > 0 && (
+                                    <div className="board-reply-list">
+                                        {c.replies.map(r => (
+                                            <article key={r.id} className="board-reply-item">
+                                                <div className="board-comment-head">{r.authorName}</div>
+                                                <div>{r.text}</div>
+                                            </article>
+                                        ))}
+                                    </div>
+                                )}
+                            </article>
+                        ))}
+                    </div>
+                    <form onSubmit={handleAddComment} className="board-comment-form">
+                        <textarea className="board-textarea" value={commentText} readOnly={!isLoggedIn} placeholder={t('comments.comment_placeholder', '댓글을 입력하세요')} onFocus={() => !isLoggedIn && requireLogin()} onChange={(e) => { if (!requireLogin()) return; handleCommentChange(e, false); }} />
+                        <button type="submit" className="board-button board-button-primary">{t('common.submit', '등록')}</button>
                     </form>
-                </div>
+                </section>
             </div>
         );
     }

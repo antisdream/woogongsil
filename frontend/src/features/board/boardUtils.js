@@ -4,6 +4,19 @@ export const BOARD_FREE = 'free';
 export const BOARD_MARKER_NOTICE = '[[UGONGSIL_BOARD:NOTICE]]';
 export const BOARD_MARKER_FREE = '[[UGONGSIL_BOARD:FREE]]';
 export const BOARD_MARKER_REGEX = /\n?\[\[UGONGSIL_BOARD:(NOTICE|FREE)\]\]\s*$/;
+export const BOARD_DRAFT_STORAGE_KEY = 'board_temp_list';
+
+export const isTruthySessionFlag = (value) => (
+    value === true || value === 1 || value === '1' || String(value || '').toLowerCase() === 'true'
+);
+
+export const replaceSettingTokens = (text, values = {}) => {
+    let result = String(text || '');
+    Object.entries(values).forEach(([key, value]) => {
+        result = result.replaceAll(`{${key}}`, String(value ?? ''));
+    });
+    return result;
+};
 
 export const normalizeBoardTab = (value) => (value === BOARD_FREE ? BOARD_FREE : BOARD_NOTICE);
 
@@ -66,9 +79,90 @@ export const getPostBoardType = (post) => {
     return BOARD_FREE;
 };
 
+export const parseBoardContentJson = (rawContentJson) => {
+    if (!rawContentJson) return null;
+
+    try {
+        const parsed = typeof rawContentJson === 'string' ? JSON.parse(rawContentJson) : rawContentJson;
+        return Array.isArray(parsed) && parsed.length > 0 ? parsed : null;
+    } catch {
+        return null;
+    }
+};
+
+export const createBlockNoteDocumentFromText = (rawContent = '') => {
+    const cleanContent = getCleanContent(rawContent);
+    const normalizedLines = cleanContent ? cleanContent.replace(/\r\n/g, '\n').split('\n') : [''];
+    const lines = normalizedLines.length > 0 ? normalizedLines : [''];
+
+    return lines.map((line) => ({
+        type: 'paragraph',
+        content: line,
+    }));
+};
+
+export const getBoardEditorInitialContent = (rawContent = '', rawContentJson = '') => (
+    parseBoardContentJson(rawContentJson) || createBlockNoteDocumentFromText(rawContent)
+);
+
+export const getBoardContentTextForValidation = (rawContent = '') => (
+    getCleanContent(rawContent).replace(/\s+/g, ' ').trim()
+);
+
 export const getBoardGuideText = (boardTab) => {
     if (boardTab === BOARD_NOTICE) {
         return '공지게시판은 우공실 공식 안내를 확인하는 공간입니다.';
     }
     return '자유게시판은 질문, 오류 제보, 학습 정보 공유, 개선 의견을 자유롭게 남길 수 있습니다.';
+};
+
+export const getBoardDrafts = () => {
+    try {
+        const rawDrafts = JSON.parse(localStorage.getItem(BOARD_DRAFT_STORAGE_KEY) || '[]');
+        return Array.isArray(rawDrafts) ? rawDrafts : [];
+    } catch {
+        return [];
+    }
+};
+
+export const getBoardDraftsNewestFirst = () => [...getBoardDrafts()].reverse();
+
+export const saveBoardDraft = (draftTitle, draftContent, draftContentJson = '', options = {}) => {
+    if (!String(draftTitle || '').trim() && !String(draftContent || '').trim()) return false;
+
+    let saves = getBoardDrafts();
+    const now = new Date();
+    const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+
+    const draftId = options.draftId || 'board-latest-draft';
+    const nextDraft = {
+        title: draftTitle,
+        content: draftContent,
+        contentJson: draftContentJson || '',
+        date: dateStr,
+        draftId,
+        source: options.source || 'manual',
+    };
+
+    if (options.replaceLatest) {
+        saves = saves.filter((draft) => draft?.draftId !== draftId);
+        saves.push(nextDraft);
+    } else {
+        saves.push(nextDraft);
+    }
+
+    if (saves.length > 10) saves = saves.slice(saves.length - 10);
+
+    localStorage.setItem(BOARD_DRAFT_STORAGE_KEY, JSON.stringify(saves));
+    return true;
+};
+
+export const removeBoardDraftAtNewestIndex = (draftsNewestFirst, indexToDelete) => {
+    const nextDraftsNewestFirst = draftsNewestFirst.filter((_, idx) => idx !== indexToDelete);
+    localStorage.setItem(BOARD_DRAFT_STORAGE_KEY, JSON.stringify([...nextDraftsNewestFirst].reverse()));
+    return nextDraftsNewestFirst;
+};
+
+export const clearBoardDrafts = () => {
+    localStorage.removeItem(BOARD_DRAFT_STORAGE_KEY);
 };
