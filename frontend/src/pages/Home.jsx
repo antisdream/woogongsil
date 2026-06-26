@@ -1,5 +1,5 @@
 // 홈 라우트 페이지 컴포넌트입니다.
-import React, { useCallback, useState, useEffect } from 'react';
+import React, { useCallback, useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import useScreenSettings, { resolveWgsAssetUrl } from '../useScreenSettings';
 import RealCalendar from '../features/home/RealCalendar.jsx';
@@ -9,10 +9,14 @@ import HomeQrModal from '../features/home/HomeQrModal.jsx';
 import HomeRankingSection from '../features/home/HomeRankingSection.jsx';
 import HomeRealtimePanel from '../features/home/HomeRealtimePanel.jsx';
 import { getKstTodayString, normalizeScheduleToCalendarEvent } from '../features/home/calendarUtils.js';
+import { buildMobileAccessUrl, buildQrImageUrls, normalizeQuickLinkUrl } from '../features/home/homeLinks.js';
+import { getHomeRankingLabel, normalizeExamCatalogList } from '../features/home/homeRankingUtils.js';
 import { openChatPopupWindow as openHomeChatPopupWindow } from '../features/home/openChatPopupWindow.js';
 import '../styles/global/home-realtime.css';
 
-const API_BASE = ""; 
+const API_BASE = "";
+const DEFAULT_NOTION_URL = 'https://app.notion.com/p/SKN-29th-328031734e3e805ba1a8d60026dcaf94?source=copy_link';
+const DEFAULT_DEVELOPER_URL = 'https://blog.naver.com/andisdream';
 
 
 // App.jsx와 동일한 세션/toast 키를 사용합니다.
@@ -63,8 +67,14 @@ const Home = () => {
     const homeDeveloperButtonLabel = getHomeScreenSetting('quick_links.developer_button_label', '개발자');
     const homeMobileButtonLabel = getHomeScreenSetting('quick_links.mobile_button_label', '모바일');
     const homeExamButtonUrl = getHomeScreenSetting('quick_links.exam_button_url', 'https://www.q-net.or.kr');
-    const homeNotionButtonUrl = getHomeScreenSetting('quick_links.notion_button_url', '#');
-    const homeDeveloperButtonUrl = getHomeScreenSetting('quick_links.developer_button_url', '#');
+    const homeNotionButtonUrl = normalizeQuickLinkUrl(
+        getHomeScreenSetting('quick_links.notion_button_url', DEFAULT_NOTION_URL),
+        DEFAULT_NOTION_URL
+    );
+    const homeDeveloperButtonUrl = normalizeQuickLinkUrl(
+        getHomeScreenSetting('quick_links.developer_button_url', DEFAULT_DEVELOPER_URL),
+        DEFAULT_DEVELOPER_URL
+    );
     const liveChatSectionTitle = getHomeScreenSetting('live_chat.section_title', '실시간 접속자 & 채팅');
     const liveChatSectionDesc = getHomeScreenSetting('live_chat.section_desc', '접속자 목록은 새로고침 버튼을 눌렀을 때 갱신되고, 채팅은 실시간으로 로그인 중인 사용자들끼리 채팅 할 수 있습니다.');
     const liveChatVisitorsTitle = getHomeScreenSetting('live_chat.visitors_title', '접속자 목록');
@@ -181,41 +191,6 @@ const Home = () => {
     const [pastSession, setPastSession] = useState(null);
     const [rankingData, setRankingData] = useState([]);
 
-    // - 필기 기출은 questions 테이블 기준, 실기 기출은 ipep_exam_catalog 기준으로 가져옵니다.
-    // - 새 회차를 DB에 추가하면 홈 랭킹 필터도 자동으로 확장됩니다.
-    const normalizeExamCatalogList = (rawCatalog = []) => {
-        const map = new Map();
-
-        (Array.isArray(rawCatalog) ? rawCatalog : []).forEach((item) => {
-            const year = Number(item?.year);
-            const rawSessions = Array.isArray(item?.sessions) ? item.sessions : [item?.session];
-
-            if (!Number.isFinite(year)) return;
-
-            if (!map.has(year)) {
-                map.set(year, { year, sessions: [] });
-            }
-
-            const entry = map.get(year);
-            rawSessions
-                .map((session) => Number(session))
-                .filter((session) => Number.isFinite(session))
-                .forEach((session) => {
-                    if (!entry.sessions.includes(session)) {
-                        entry.sessions.push(session);
-                    }
-                });
-        });
-
-        return Array.from(map.values())
-            .map((entry) => ({
-                ...entry,
-                sessions: entry.sessions.sort((a, b) => a - b),
-            }))
-            .filter((entry) => entry.sessions.length >0)
-            .sort((a, b) => b.year - a.year);
-    };
-
     const [examCatalogs, setExamCatalogs] = useState({
         written: [],
         ipep_past: [],
@@ -282,9 +257,34 @@ const Home = () => {
                 const res = await axios.get(`${API_BASE}/api/class-schedules`, {
                     headers: { 'Cache-Control': 'no-cache' },
                 });
-                const nextSchedules = Array.isArray(res.data?.schedules)
+                const commonSchedules = Array.isArray(res.data?.schedules)
                     ? res.data.schedules.map(normalizeScheduleToCalendarEvent).filter(Boolean)
                     : [];
+                let userSchedules = [];
+                const calendarUserId = sessionStorage.getItem('userId') || '';
+                const calendarSessionToken = sessionStorage.getItem('sessionToken') || '';
+                const calendarServerInstanceId = sessionStorage.getItem(SERVER_INSTANCE_ID_KEY) || localStorage.getItem(SERVER_INSTANCE_ID_KEY) || '';
+
+                if (calendarUserId && calendarSessionToken) {
+                    try {
+                        const userCalendarRes = await axios.get(`${API_BASE}/api/user/calendar-events`, {
+                            params: {
+                                id: calendarUserId,
+                                sessionToken: calendarSessionToken,
+                                serverInstanceId: calendarServerInstanceId,
+                                active: '1',
+                            },
+                            headers: { 'Cache-Control': 'no-cache' },
+                        });
+                        userSchedules = Array.isArray(userCalendarRes.data?.schedules)
+                            ? userCalendarRes.data.schedules.map(normalizeScheduleToCalendarEvent).filter(Boolean)
+                            : [];
+                    } catch (userCalendarError) {
+                        console.warn('[home calendar] user schedules fetch failed:', userCalendarError);
+                        userSchedules = [];
+                    }
+                }
+                const nextSchedules = [...commonSchedules, ...userSchedules];
 
                 if (isMounted) {
                     setClassSchedules(nextSchedules);
@@ -701,7 +701,12 @@ const Home = () => {
     const isPastRankingTab = rankingTab === 'past' || rankingTab === 'ipep_past';
     const canShowChart = rankingTab === 'random' || rankingTab === 'ipep_random' || (isPastRankingTab && pastYear && pastSession);
     // 랭킹 탭 표시명을 한 곳에서 관리해서 필기/실기 구분 문구가 흔들리지 않게 합니다.
-    const rankingLabel = rankingTab === 'random'? rankingRandomTabLabel : rankingTab === 'past'? rankingPastTabLabel : rankingTab === 'ipep_random'? rankingIpepRandomTabLabel : rankingIpepPastTabLabel;
+    const rankingLabel = getHomeRankingLabel(rankingTab, {
+        random: rankingRandomTabLabel,
+        past: rankingPastTabLabel,
+        ipepRandom: rankingIpepRandomTabLabel,
+        ipepPast: rankingIpepPastTabLabel,
+    });
     // - 필기/실기 기출 랭킹 필터는 더 이상 2021~2025, 1~3회차를 하드코딩하지 않습니다.
     // - 서버 DB 카탈로그에 존재하는 연도/회차만 체크박스로 표시합니다.
     const activePastCatalog = rankingTab === 'ipep_past'? examCatalogs.ipep_past : examCatalogs.written;
@@ -739,8 +744,13 @@ const Home = () => {
 
     // 모바일에서 접속할 주소입니다.
     // 개발 PC가 localhost로 접속 중이어도 QR에는 localhost가 아니라 LAN IP가 들어가도록 처리했습니다.
-    const currentUrl = `${protocol}//${mobileHost}${port}`;
-    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(currentUrl)}`;
+    const currentUrl = buildMobileAccessUrl({
+        protocol,
+        hostValue: mobileHost,
+        fallbackHost: window.location.hostname,
+        port,
+    });
+    const qrUrl = useMemo(() => buildQrImageUrls(currentUrl, API_BASE), [currentUrl]);
 
 
     // 정답률 표기 유틸

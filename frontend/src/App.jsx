@@ -6,6 +6,10 @@ import axios from 'axios';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import './App.css';
+import './styles/app/home.css';
+import './styles/app/realtime-chat.css';
+import './styles/app/page-adjustments.css';
+import './styles/app/responsive.css';
 import './styles/global/app-overrides.css';
 import './styles/global/auth.css';
 import './styles/admin/admin.css';
@@ -14,6 +18,9 @@ import './styles/admin/admin-notice-maintenance.css';
 import './styles/admin/admin-questions-tabs.css';
 import './styles/admin/admin-display.css';
 import './styles/admin/admin-calendar.css';
+import './styles/admin/admin-calendar-hardening.css';
+import './styles/admin/mypage-calendar-hardening.css';
+import './styles/admin/admin-calendar-user-picker.css';
 import './styles/admin/admin-user-approval.css';
 import './styles/admin/admin-operation.css';
 import './styles/admin/admin-user-overrides.css';
@@ -31,6 +38,12 @@ import './styles/admin/admin-theme-fixes.css';
 import useScreenSettings from './useScreenSettings';
 import RealTimeClock from './components/app/RealTimeClock';
 import ThemeModeToggle from './components/app/ThemeModeToggle';
+import {
+    buildThemeToneVariables,
+    clampThemeTone,
+    getStoredThemeTone,
+    getThemeToneStorageKey,
+} from './features/app/themeToneUtils.js';
 
 const Home = lazy(() => import('./pages/Home'));
 const Login = lazy(() => import('./pages/Login'));
@@ -44,6 +57,7 @@ const Fortune = lazy(() => import('./pages/Fortune'));
 const FAQ = lazy(() => import('./pages/FAQ'));
 const ChangePW = lazy(() => import('./pages/ChangePW'));
 const Board = lazy(() => import('./pages/Board'));
+const StudyNotes = lazy(() => import('./pages/StudyNotes'));
 const IpepPractice = lazy(() => import('./pages/IpepPractice'));
 const WrittenLobby = lazy(() => import('./pages/WrittenLobby'));
 const CertificateIpeHome = lazy(() => import('./pages/CertificateIpeHome'));
@@ -110,7 +124,8 @@ const CERT_IPE_PATHS = [
     '/cert/ipe/written-past',
     '/cert/ipe/practical',
     '/cert/ipe/practical-bank',
-    '/cert/ipe/practical-past'
+    '/cert/ipe/practical-past',
+    '/cert/ipe/practical-three-week'
 ];
 
 const LOGOUT_NOTICE_MESSAGES = {
@@ -120,153 +135,6 @@ const LOGOUT_NOTICE_MESSAGES = {
 };
 
 const getToastTheme = () => (localStorage.getItem('wgsThemeMode') === 'light'? 'light' : 'dark');
-
-const THEME_TONE_MIN = 10;
-const THEME_TONE_MAX = 100;
-const THEME_TONE_STEP = 10;
-const THEME_TONE_DEFAULT = 50;
-const THEME_TONE_STORAGE_KEYS = {
-    light: 'wgsSessionThemeToneLight',
-    dark: 'wgsSessionThemeToneDark',
-};
-
-// 밝기 조절은 전체 filter 대신 주요 배경/UI 토큰만 다시 계산합니다.
-const THEME_TONE_BASE_TOKENS = {
-    light: {
-        '--wgs-page-bg': '#f7fbff',
-        '--wgs-panel': '#ffffff',
-        '--wgs-card': '#ffffff',
-        '--wgs-card-soft': '#f8fafc',
-        '--wgs-surface': '#ffffff',
-        '--wgs-surface-2': '#f3f7ff',
-        '--wgs-deep-bg': '#eaf3ff',
-        '--wgs-neutral-bg': '#f8fafc',
-        '--wgs-panel-soft': '#f0f7ff',
-        '--wgs-panel-strong': '#ffffff',
-        '--wgs-button-muted': '#ebf4ff',
-        '--wgs-input-bg': '#ffffff',
-        '--wgs-choice-bg': '#ffffff',
-        '--wgs-question-bg': '#ffffff',
-        '--wgs-exam-card': '#ffffff',
-    },
-    dark: {
-        '--wgs-page-bg': '#061321',
-        '--wgs-panel': '#0f1e31',
-        '--wgs-card': '#0d1b2d',
-        '--wgs-card-soft': '#122338',
-        '--wgs-surface': '#0e1d31',
-        '--wgs-surface-2': '#12243a',
-        '--wgs-deep-bg': '#020817',
-        '--wgs-neutral-bg': '#0b1727',
-        '--wgs-panel-soft': '#0f1e31',
-        '--wgs-panel-strong': '#0d1b2d',
-        '--wgs-button-muted': '#111f33',
-        '--wgs-input-bg': '#020a17',
-        '--wgs-choice-bg': '#071426',
-        '--wgs-question-bg': '#071426',
-        '--wgs-exam-card': '#0b1727',
-    },
-};
-
-const THEME_TONE_ALPHA_TOKENS = {
-    light: {
-        '--wgs-panel': 0.86,
-        '--wgs-card': 0.92,
-        '--wgs-card-soft': 0.92,
-        '--wgs-panel-soft': 0.88,
-        '--wgs-button-muted': 0.88,
-        '--wgs-input-bg': 0.96,
-    },
-    dark: {
-        '--wgs-panel': 0.88,
-        '--wgs-card': 0.92,
-        '--wgs-card-soft': 0.82,
-        '--wgs-panel-soft': 0.72,
-        '--wgs-button-muted': 0.92,
-        '--wgs-input-bg': 0.92,
-    },
-};
-
-const THEME_TONE_MIX_LIMITS = {
-    light: { dim: 0.24, brighten: 0.10 },
-    dark: { dim: 0.72, brighten: 0.36 },
-};
-
-const clampThemeTone = (value) => {
-    const numericValue = Number(value);
-    if (!Number.isFinite(numericValue)) return THEME_TONE_DEFAULT;
-
-    const steppedValue = Math.round(numericValue / THEME_TONE_STEP) * THEME_TONE_STEP;
-    return Math.min(THEME_TONE_MAX, Math.max(THEME_TONE_MIN, steppedValue));
-};
-
-const getThemeToneStorageKey = (mode) => THEME_TONE_STORAGE_KEYS[mode === 'dark'? 'dark' : 'light'];
-
-const getStoredThemeTone = (mode) => {
-    const savedValue = sessionStorage.getItem(getThemeToneStorageKey(mode));
-    return clampThemeTone(savedValue ?? THEME_TONE_DEFAULT);
-};
-
-const hexToRgb = (hexColor) => {
-    const cleanHex = String(hexColor || '').replace('#', '');
-    const fullHex = cleanHex.length === 3
-        ? cleanHex.split('').map((char) => `${char}${char}`).join('')
-        : cleanHex;
-    const parsedValue = Number.parseInt(fullHex, 16);
-
-    if (!Number.isFinite(parsedValue)) return [0, 0, 0];
-    return [
-        (parsedValue >> 16) & 255,
-        (parsedValue >> 8) & 255,
-        parsedValue & 255,
-    ];
-};
-
-const mixRgb = (baseRgb, targetRgb, ratio) => (
-    baseRgb.map((channel, index) => Math.round(channel + (targetRgb[index] - channel) * ratio))
-);
-
-const toRgbText = ([red, green, blue], alpha) => (
-    alpha === undefined
-        ? `rgb(${red}, ${green}, ${blue})`
-        : `rgba(${red}, ${green}, ${blue}, ${alpha})`
-);
-
-const adjustThemeRgb = (hexColor, tone, mode) => {
-    const toneDelta = clampThemeTone(tone) - THEME_TONE_DEFAULT;
-    const baseRgb = hexToRgb(hexColor);
-    if (toneDelta === 0) return baseRgb;
-
-    const normalizedMode = mode === 'dark' ? 'dark' : 'light';
-    const limit = toneDelta > 0
-        ? THEME_TONE_MIX_LIMITS[normalizedMode].brighten
-        : THEME_TONE_MIX_LIMITS[normalizedMode].dim;
-    const range = toneDelta > 0
-        ? THEME_TONE_MAX - THEME_TONE_DEFAULT
-        : THEME_TONE_DEFAULT - THEME_TONE_MIN;
-    const targetRgb = toneDelta > 0 ? [255, 255, 255] : [0, 0, 0];
-    const mixRatio = (Math.abs(toneDelta) / range) * limit;
-
-    return mixRgb(baseRgb, targetRgb, mixRatio);
-};
-
-const buildThemeToneVariables = (mode, tone) => {
-    const normalizedMode = mode === 'dark' ? 'dark' : 'light';
-    const baseTokens = THEME_TONE_BASE_TOKENS[normalizedMode];
-    const alphaTokens = THEME_TONE_ALPHA_TOKENS[normalizedMode];
-
-    return Object.entries(baseTokens).reduce((nextTokens, [tokenName, tokenValue]) => {
-        const adjustedRgb = adjustThemeRgb(tokenValue, tone, normalizedMode);
-        const alpha = alphaTokens[tokenName];
-
-        nextTokens[tokenName] = alpha === undefined
-            ? toRgbText(adjustedRgb)
-            : toRgbText(adjustedRgb, alpha);
-        return nextTokens;
-    }, {
-        '--wgs-theme-tone': String(clampThemeTone(tone)),
-    });
-};
 
 const showWgsToast = (message, type = 'info') => {
     const toastByType = toast[type] || toast.info;
@@ -359,6 +227,7 @@ function App() {
     const navMealMapLabel = getGlobalScreenSetting('nav.mealmap_label', '회식맵');
     const navMyPageLabel = getGlobalScreenSetting('nav.mypage_label', '마이페이지');
     const navBoardLabel = getGlobalScreenSetting('nav.board_label', '게시판');
+    const navStudyLabel = getGlobalScreenSetting('nav.study_label', '학습노트');
     const navFaqLabel = getGlobalScreenSetting('nav.faq_label', 'FAQ');
     const navFortuneLabel = getGlobalScreenSetting('nav.fortune_label', '운세');
     const navAdminLabel = getGlobalScreenSetting('nav.admin_label', '관리자');
@@ -756,7 +625,7 @@ function App() {
 
         // 로그인이 필요한 메뉴 목록입니다.
         // 학습 라우트는 하위 호환 경로와 신규 화면 경로를 함께 제공합니다.
-        const loginRequiredPaths = ['/written', '/practice', '/exam', '/multiplayer', '/ipep', '/cert/ipe', '/mealmap', '/mypage', '/fortune', '/admin'];
+        const loginRequiredPaths = ['/written', '/practice', '/exam', '/multiplayer', '/ipep', '/cert/ipe', '/mealmap', '/mypage', '/study', '/fortune', '/admin'];
 
         if (!loggedInUser && (loginRequiredPaths.includes(path) || CERT_IPE_PATHS.includes(path) || path.startsWith('/cert/ipe/'))) {
             alert('로그인이 필요한 서비스입니다.');
@@ -866,7 +735,7 @@ function App() {
                 <header className="wgs-header">
                     {/* 사이트 로고성 제목은 공통 로고 폰트 토큰을 사용하는 .wgs-site-logo 클래스로 통일합니다.
                         기존 제목 문구와 라우팅/로그인 로직은 유지합니다. */}
-                    <h1 className="wgs-site-logo wgs-type-logo" style={{ color: 'var(--wgs-title)', padding: '10px 0', margin: '0 0 15px 0', fontSize: '26px', textAlign: 'center', fontWeight: '900', letterSpacing: '1px' }}>{getGlobalScreenSetting('global.site_title', 'SKN29th_우공실')}</h1>
+                    <h1 className="wgs-site-logo wgs-type-logo" style={{ color: 'var(--wgs-title)', padding: '10px 0', margin: '0 0 15px 0', fontSize: '26px', textAlign: 'center', fontWeight: '900', letterSpacing: '1px' }}>{getGlobalScreenSetting('global.site_title', 'SKN_우공실')}</h1>
 
                     <ThemeModeToggle
                         themeMode={themeMode}
@@ -908,6 +777,7 @@ function App() {
                         <NavItem path="/multiplayer" color="#8b5cf6">{navMultiplayerLabel}</NavItem>
                         <NavItem path="/mealmap" color="#fb7185">{navMealMapLabel}</NavItem>
                         {loggedInUser && <NavItem path="/mypage" color="#a78bfa">{navMyPageLabel}</NavItem>}
+                        {loggedInUser && <NavItem path="/study" color="#14b8a6" activePaths={['/study/*']}>{navStudyLabel}</NavItem>}
                         <NavItem path="/board" color="#f97316">{navBoardLabel}</NavItem>
                         <NavItem path="/faq" color="#facc15">{navFaqLabel}</NavItem>
                         <NavItem path="/fortune" color="#fb7185">{navFortuneLabel}</NavItem>
@@ -960,10 +830,12 @@ function App() {
                             <Route path="/cert/ipe/practical" element={<IpepPractice key="ipep-lobby" setIsExamActive={setIsExamActive} initialMode="lobby" />} />
                             <Route path="/cert/ipe/practical-bank" element={<IpepPractice key="ipep-random" setIsExamActive={setIsExamActive} initialMode="random" />} />
                             <Route path="/cert/ipe/practical-past" element={<IpepPractice key="ipep-past" setIsExamActive={setIsExamActive} initialMode="past" />} />
+                            <Route path="/cert/ipe/practical-three-week" element={<IpepPractice key="ipep-three-week" setIsExamActive={setIsExamActive} initialMode="threeWeek" />} />
                             <Route path="/multiplayer" element={<PastExamMultiplayer setIsExamActive={setIsExamActive} />} />
                             <Route path="/multiplayer/:mpTab" element={<PastExamMultiplayer setIsExamActive={setIsExamActive} />} />
                             <Route path="/mealmap/*" element={<MealMap />} />
                             <Route path="/mypage" element={<MyPage />} />
+                            <Route path="/study/*" element={<StudyNotes />} />
                             <Route path="/wrong" element={<WrongPractice />} />
                             <Route path="/wrong/:wrongTab" element={<WrongPractice />} />
                             <Route path="/fortune" element={<Fortune />} />

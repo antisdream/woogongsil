@@ -82,11 +82,14 @@ export function openChatPopupWindow({
     .messages { flex: 1; min-height: 300px; max-height: calc(100vh - 250px); overflow-y: auto; padding: 12px; border: 1px solid rgba(148,163,184,.28); border-radius: 14px; background: #020617; display: flex; flex-direction: column; gap: 10px; }
     .msg { border: 1px solid rgba(148,163,184,.22); border-radius: 13px; background: rgba(15,23,42,.72); padding: 11px 13px; word-break: break-word; }
     .msg.mine { border-color: rgba(16,185,129,.55); background: rgba(6,78,59,.34); }
+    .msg.admin { border-color: rgba(96,165,250,.72); background: rgba(30,64,175,.40); }
     .msg-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 5px; }
     .msg-time { color: #93c5fd; font-size: 11px; font-weight: 800; }
     .msg-name { color: #f8fafc; font-size: 14px; font-weight: 900; }
     .msg.mine .msg-name { color: #6ee7b7; }
+    .msg.admin .msg-name { color: #bfdbfe; }
     .msg-me { color: #10b981; font-size: 11px; font-weight: 900; }
+    .msg-admin { color: #dbeafe; background: rgba(96,165,250,.18); border: 1px solid rgba(96,165,250,.55); border-radius: 999px; padding: 2px 7px; font-size: 11px; font-weight: 900; line-height: 1.2; white-space: nowrap; }
     .msg-text { color: #f8fafc; font-size: 15px; font-weight: 750; line-height: 1.55; }
     .empty, .error { text-align: center; color: #94a3b8; padding: 24px 8px; }
     .error { color: #fca5a5; }
@@ -220,9 +223,11 @@ export function openChatPopupWindow({
         }
         messagesEl.innerHTML = list.map(function(msg){
             var mine = String(msg.userId) === String(userId);
-            return '<div class="msg ' + (mine ? 'mine' : '') + '">'
+            var admin = msg.isAdmin === true || msg.role === 'admin';
+            return '<div class="msg ' + (mine ? 'mine ' : '') + (admin ? 'admin' : '') + '">'
                 + '<div class="msg-head"><span class="msg-time">' + localTime(msg.createdAt) + '</span>'
                 + '<span class="msg-name">' + escapeHtml(msg.userName || msg.userId) + '</span>'
+                + (admin ? '<span class="msg-admin">관리자</span>' : '')
                 + (mine ? '<span class="msg-me">(나)</span>' : '') + '</div>'
                 + '<div class="msg-text">' + renderRich(msg.text) + '</div></div>';
         }).join('');

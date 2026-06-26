@@ -1,0 +1,87 @@
+/* FAQ / 게시판 / 문제풀이 / 마이페이지 보정 */
+.faq-card { padding: clamp(22px, 3vw, 42px) !important; }
+.faq-header h2 { color: var(--wgs-title) !important; font-family: var(--wgs-font-h2) !important; }
+
+.faq-table th,
+.faq-table td { vertical-align: middle !important; }
+
+.faq-question-cell { color: var(--wgs-title) !important; font-family: var(--wgs-font-h3) !important; }
+
+.faq-category-badge {
+  background: var(--wgs-active-bg) !important;
+  color: var(--wgs-primary) !important;
+  border: 1px solid var(--wgs-focus) !important;
+}
+
+.faq-pagination {
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  gap: 9px !important;
+  margin: 22px 0 !important;
+}
+
+.faq-pagination button {
+  width: 42px !important;
+  height: 42px !important;
+  min-width: 42px !important;
+  min-height: 42px !important;
+  padding: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
+  line-height: 1 !important;
+  border-radius: 13px !important;
+  font-family: var(--wgs-font-h3) !important;
+  font-size: 15px !important;
+}
+
+.board-tab-grid,
+.wrong-note-tabs,
+.home-ranking-tabs,
+.mypage-summary-grid,
+.ipep-lobby-grid,
+.written-lobby-grid {
+  gap: 16px !important;
+}
+
+.board-page h2,
+.exam-page h2,
+.written-exam-page h2,
+.ipep-page h2,
+.wrong-note-page h2,
+.mypage h2,
+.random-practice-page h2,
+.past-exam-page h2,
+.written-lobby-page h2 {
+  color: var(--wgs-title) !important;
+  font-family: var(--wgs-font-h2) !important;
+}
+
+.exam-question-title-row,
+.past-exam-toolbar,
+.ipep-action-row,
+.past-exam-action-row,
+.wrong-note-action-row,
+.wrong-note-current-row,
+.mypage-header-row,
+.mypage-login-history-row {
+  gap: 12px !important;
+  flex-wrap: wrap !important;
+}
+
+.exam-page img,
+.random-practice-page img,
+.past-exam-page img,
+.ipep-page img,
+.wrong-note-page img {
+  max-width: 100% !important;
+  height: auto !important;
+  object-fit: contain !important;
+}
+
+.option-btn,
+button.primary {
+  border-radius: 12px !important;
+}

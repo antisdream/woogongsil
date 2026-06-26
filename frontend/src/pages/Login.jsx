@@ -204,7 +204,7 @@ const Login = () => {
         <div className="wgs-auth-page">
             <div className="wgs-auth-hero">
                 <div>
-                    <span className="wgs-auth-kicker">{getSetting('hero.eyebrow', 'SKN29th_우공실 계정')}</span>
+                    <span className="wgs-auth-kicker">{getSetting('hero.eyebrow', 'SKN_우공실 계정')}</span>
                     <h1>{getSetting('hero.title', '로그인 센터')}</h1>
                     <p>{getSetting('hero.desc', '로그인, 회원가입, 아이디/비밀번호 찾기를 한 페이지에서 처리합니다.')}</p>
                 </div>

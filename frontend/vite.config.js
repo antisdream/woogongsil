@@ -27,6 +27,10 @@ export default defineConfig({
                 target: 'http://localhost:5000',
                 changeOrigin: true,
             },
+            '/question_image': {
+                target: 'http://localhost:5000',
+                changeOrigin: true,
+            },
         },
     },
 

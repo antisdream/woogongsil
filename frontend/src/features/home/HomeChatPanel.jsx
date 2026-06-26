@@ -169,17 +169,18 @@ export default function HomeChatPanel({
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     {chatMessages.map((message) => {
                         const isMine = String(message.userId) === String(sessionStorage.getItem('userId'));
+                        const isAdminMessage = message.isAdmin === true || message.role === 'admin';
                         return (
                             <div
                                 key={message.id}
-                                className={isMine ? 'wgs-chat-message-row is-mine' : 'wgs-chat-message-row'}
+                                className={`wgs-chat-message-row${isMine ? ' is-mine' : ''}${isAdminMessage ? ' is-admin' : ''}`}
                                 style={{
                                     color: 'var(--wgs-chat-text)',
                                     fontSize: '13px',
                                     lineHeight: 1.5,
                                     wordBreak: 'break-word',
-                                    background: isMine ? 'var(--wgs-chat-message-mine-bg)' : 'var(--wgs-chat-message-bg)',
-                                    border: isMine ? '1px solid var(--wgs-chat-message-mine-border)' : '1px solid var(--wgs-chat-message-border)',
+                                    background: isAdminMessage ? 'var(--wgs-chat-message-admin-bg)' : (isMine ? 'var(--wgs-chat-message-mine-bg)' : 'var(--wgs-chat-message-bg)'),
+                                    border: isAdminMessage ? '1px solid var(--wgs-chat-message-admin-border)' : (isMine ? '1px solid var(--wgs-chat-message-mine-border)' : '1px solid var(--wgs-chat-message-border)'),
                                     borderRadius: '12px',
                                     padding: '10px 12px'
                                 }}
@@ -188,9 +189,10 @@ export default function HomeChatPanel({
                                     <span style={{ color: 'var(--wgs-chat-time)', fontSize: '11px', fontWeight: 700, letterSpacing: '-0.01em' }}>
                                         {formatChatDateTime(message.createdAt)}
                                     </span>
-                                    <span style={{ color: isMine ? 'var(--wgs-chat-mine-name)' : 'var(--wgs-chat-name)', fontSize: '14px', fontWeight: 900 }}>
+                                    <span style={{ color: isAdminMessage ? 'var(--wgs-chat-admin-name)' : (isMine ? 'var(--wgs-chat-mine-name)' : 'var(--wgs-chat-name)'), fontSize: '14px', fontWeight: 900 }}>
                                         {message.userName || message.userId}
                                     </span>
+                                    {isAdminMessage && <span className="wgs-chat-admin-badge">관리자</span>}
                                     {isMine && <span style={{ color: 'var(--wgs-action-green)', fontSize: '11px', fontWeight: 800 }}>{liveChatMeLabel}</span>}
                                 </div>
                                 <div style={{ color: 'var(--wgs-chat-text-strong)', fontSize: '15px', fontWeight: 700, lineHeight: 1.55 }}>

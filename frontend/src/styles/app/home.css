@@ -1,0 +1,147 @@
+/* 홈 화면: 여름 컨셉 랜딩 + 로그인/대시보드/캘린더 */
+.home-page { max-width: 1480px !important; }
+
+.wgs-landing-hero {
+  --wgs-home-hero-top: color-mix(in srgb, var(--wgs-surface) 78%, var(--wgs-page-bg));
+  --wgs-home-hero-mid: color-mix(in srgb, var(--wgs-surface-2) 68%, var(--wgs-page-bg));
+  --wgs-home-hero-sky: color-mix(in srgb, var(--wgs-blue) 34%, var(--wgs-deep-bg));
+  --wgs-home-hero-sea: color-mix(in srgb, var(--wgs-primary) 42%, var(--wgs-deep-bg));
+  --wgs-home-hero-ground: color-mix(in srgb, var(--wgs-warning) 24%, var(--wgs-page-bg));
+  --wgs-home-hero-overlay-strong: color-mix(in srgb, var(--wgs-card) 88%, transparent);
+  --wgs-home-hero-overlay-soft: color-mix(in srgb, var(--wgs-card) 48%, transparent);
+  --wgs-home-hero-overlay-clear: color-mix(in srgb, var(--wgs-card) 16%, transparent);
+  --wgs-home-hero-wave-light: color-mix(in srgb, var(--wgs-card) 70%, transparent);
+  --wgs-home-hero-wave-blue: color-mix(in srgb, var(--wgs-blue) 44%, var(--wgs-deep-bg));
+  --wgs-home-hero-wave-fill: color-mix(in srgb, var(--wgs-primary) 20%, var(--wgs-deep-bg));
+  position: relative !important;
+  overflow: hidden !important;
+  min-height: clamp(320px, 42vw, 520px) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+  align-items: center !important;
+  gap: 18px !important;
+  padding: clamp(46px, 7vw, 94px) clamp(22px, 5vw, 80px) !important;
+  border-radius: 30px !important;
+  border: 1px solid var(--wgs-border) !important;
+  background:
+    linear-gradient(180deg, var(--wgs-home-hero-overlay-strong) 0%, var(--wgs-home-hero-overlay-soft) 38%, var(--wgs-home-hero-overlay-clear) 100%),
+    radial-gradient(circle at 80% 18%, var(--wgs-home-hero-overlay-soft), transparent 20%),
+    linear-gradient(180deg, var(--wgs-home-hero-top) 0%, var(--wgs-home-hero-mid) 39%, var(--wgs-home-hero-sky) 58%, var(--wgs-home-hero-sea) 72%, var(--wgs-home-hero-ground) 100%) !important;
+  box-shadow: var(--wgs-shadow) !important;
+  text-align: center !important;
+}
+
+body.wgs-theme-dark .wgs-landing-hero {
+  --wgs-home-hero-top: color-mix(in srgb, var(--wgs-deep-bg) 82%, var(--wgs-surface));
+  --wgs-home-hero-mid: color-mix(in srgb, var(--wgs-card) 74%, var(--wgs-deep-bg));
+  --wgs-home-hero-sky: color-mix(in srgb, var(--wgs-blue) 36%, var(--wgs-deep-bg));
+  --wgs-home-hero-sea: color-mix(in srgb, var(--wgs-primary) 42%, var(--wgs-deep-bg));
+  --wgs-home-hero-ground: color-mix(in srgb, var(--wgs-deep-bg) 82%, var(--wgs-warning));
+  --wgs-home-hero-overlay-strong: color-mix(in srgb, var(--wgs-deep-bg) 64%, transparent);
+  --wgs-home-hero-overlay-soft: color-mix(in srgb, var(--wgs-card) 42%, transparent);
+  --wgs-home-hero-overlay-clear: color-mix(in srgb, var(--wgs-deep-bg) 70%, transparent);
+  --wgs-home-hero-wave-light: color-mix(in srgb, var(--wgs-card) 50%, transparent);
+  --wgs-home-hero-wave-blue: color-mix(in srgb, var(--wgs-blue) 40%, var(--wgs-deep-bg));
+  --wgs-home-hero-wave-fill: color-mix(in srgb, var(--wgs-primary) 24%, var(--wgs-deep-bg));
+}
+
+.wgs-landing-hero::before {
+  content: '';
+  position: absolute;
+  inset: auto -5% 0 -5%;
+  height: 36%;
+  background:
+    radial-gradient(ellipse at 50% 0%, var(--wgs-home-hero-wave-light), transparent 46%),
+    repeating-linear-gradient(175deg, var(--wgs-home-hero-wave-light) 0 18px, var(--wgs-home-hero-wave-blue) 18px 36px),
+    linear-gradient(180deg, color-mix(in srgb, var(--wgs-home-hero-wave-fill) 55%, transparent), color-mix(in srgb, var(--wgs-home-hero-wave-fill) 86%, transparent));
+  transform: skewY(-2deg);
+  opacity: .88;
+  pointer-events: none;
+}
+
+.wgs-landing-hero::after {
+  content: '';
+  position: absolute;
+  left: -6%;
+  right: -6%;
+  bottom: -3%;
+  height: 13%;
+  background: linear-gradient(90deg, var(--wgs-home-hero-ground), color-mix(in srgb, var(--wgs-home-hero-ground) 72%, var(--wgs-card)), var(--wgs-home-hero-ground));
+  opacity: .92;
+  pointer-events: none;
+}
+
+.wgs-landing-hero > * { position: relative; z-index: 1; }
+
+.wgs-landing-hero .wgs-page-title {
+  margin: 0 !important;
+  max-width: 780px;
+  color: var(--wgs-title-strong) !important;
+  text-shadow: 0 1px 0 rgba(255,255,255,.22);
+}
+
+.wgs-landing-hero p {
+  margin: 0 !important;
+  color: var(--wgs-muted) !important;
+  font-size: clamp(16px, 1.55vw, 22px) !important;
+  font-family: var(--wgs-font-h3) !important;
+}
+
+body.wgs-theme-dark .wgs-landing-hero p { color: var(--wgs-muted) !important; }
+
+.home-quick-links {
+  width: min(100%, 720px) !important;
+  grid-template-columns: repeat(4, minmax(130px, 1fr)) !important;
+  gap: 14px !important;
+}
+
+.home-quick-link-blue { --wgs-home-link-bg: color-mix(in srgb, var(--wgs-action-blue) 82%, var(--wgs-page-bg)); }
+.home-quick-link-green { --wgs-home-link-bg: color-mix(in srgb, var(--wgs-action-green) 82%, var(--wgs-page-bg)); }
+.home-quick-link-yellow { --wgs-home-link-bg: color-mix(in srgb, var(--wgs-action-yellow) 82%, var(--wgs-page-bg)); }
+.home-quick-link-purple { --wgs-home-link-bg: color-mix(in srgb, var(--wgs-action-purple) 82%, var(--wgs-page-bg)); }
+
+.home-quick-links a,
+.home-quick-links button {
+  background: var(--wgs-home-link-bg, var(--wgs-primary)) !important;
+  border: 1px solid color-mix(in srgb, var(--wgs-home-link-bg, var(--wgs-primary)) 72%, var(--wgs-card)) !important;
+  color: var(--wgs-solid-white) !important;
+  min-height: 48px !important;
+  border-radius: 15px !important;
+  display: inline-flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  font-family: var(--wgs-font-h3) !important;
+  font-size: 15px !important;
+}
+
+.home-login-card {
+  width: min(100%, 760px) !important;
+  margin: 0 auto !important;
+  padding: clamp(24px, 4vw, 38px) !important;
+}
+
+.home-login-card h2 { color: var(--wgs-title) !important; font-family: var(--wgs-font-h2) !important; }
+
+.home-login-card button[type='submit'] {
+  min-height: 52px !important;
+  border-radius: 14px !important;
+  box-shadow: 0 16px 28px rgba(37, 99, 235, .20) !important;
+}
+
+.home-calendar-card {
+  padding: clamp(18px, 2.2vw, 28px) !important;
+  background: var(--wgs-panel) !important;
+}
+
+.home-calendar-card h3 { color: var(--wgs-title) !important; font-family: var(--wgs-font-h2) !important; }
+
+.home-calendar-card > div:last-child > div > div:last-child > div {
+  min-height: clamp(82px, 8.5vw, 128px) !important;
+  border-radius: 12px !important;
+  background: var(--wgs-surface) !important;
+  border: 1px solid var(--wgs-border) !important;
+  color: var(--wgs-text) !important;
+}
+
+body.wgs-theme-dark .home-calendar-card > div:last-child > div > div:last-child > div { background: #020817 !important; }

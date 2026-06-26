@@ -15,7 +15,8 @@ export const normalizeScheduleToCalendarEvent = (schedule) => {
     const clean = (value) => String(value ?? '').trim().replace(/"/g, '');
     const pickColor = (value, fallback) => {
         const text = clean(value);
-        return /^#[0-9A-Fa-f]{6}$/.test(text) || text === 'transparent'? text : fallback;
+        const isRgb = /^rgb\(\s*(25[0-5]|2[0-4]\d|1?\d?\d)\s*,\s*(25[0-5]|2[0-4]\d|1?\d?\d)\s*,\s*(25[0-5]|2[0-4]\d|1?\d?\d)\s*\)$/i.test(text);
+        return /^#[0-9A-Fa-f]{6}$/.test(text) || text === 'transparent' || isRgb ? text : fallback;
     };
 
     const scheduleType = clean(schedule?.schedule_type ?? schedule?.scheduleType ?? schedule?.event_type ?? schedule?.eventType ?? 'class') || 'class';

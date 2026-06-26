@@ -1,5 +1,5 @@
 // Home page feature module for HomeQrModal.
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 
 export default function HomeQrModal({
     open,
@@ -18,7 +18,19 @@ export default function HomeQrModal({
     mobileQrChangeLabel,
     mobileQrPlaceholder,
 }) {
+    const qrImageUrls = useMemo(() => (Array.isArray(qrUrl) ? qrUrl : [qrUrl]).filter(Boolean), [qrUrl]);
+    const [qrImageIndex, setQrImageIndex] = useState(0);
+
+    useEffect(() => {
+        setQrImageIndex(0);
+    }, [qrImageUrls]);
+
     if (!open) return null;
+
+    const qrImageSrc = qrImageUrls[Math.min(qrImageIndex, Math.max(qrImageUrls.length - 1, 0))] || '';
+    const handleQrImageError = () => {
+        setQrImageIndex((prev) => (prev + 1 < qrImageUrls.length ? prev + 1 : prev));
+    };
 
     return (
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.7)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999 }}>
@@ -28,7 +40,7 @@ export default function HomeQrModal({
                 <p style={{ fontSize: '14px', color: 'var(--wgs-subtle)', marginBottom: '20px' }}>{mobileQrDesc}</p>
 
                 <div style={{ background: 'white', padding: '15px', borderRadius: '10px', display: 'inline-block', marginBottom: '15px' }}>
-                    <img src={qrUrl} alt="Mobile QR Code" style={{ display: 'block' }} />
+                    <img src={qrImageSrc} alt="Mobile QR Code" onError={handleQrImageError} style={{ display: 'block' }} />
                 </div>
 
                 <div style={{ fontSize: '14px', color: 'var(--wgs-muted)', marginBottom: '10px' }}>

@@ -1,0 +1,146 @@
+/* 실시간 접속자 & 채팅 */
+.home-realtime-panel {
+  background: var(--wgs-realtime-panel-bg) !important;
+  border: 1px solid var(--wgs-realtime-panel-border) !important;
+  border-radius: 24px !important;
+  box-shadow: var(--wgs-shadow) !important;
+}
+
+.home-realtime-title {
+  color: var(--wgs-realtime-title) !important;
+  font-family: var(--wgs-font-h2) !important;
+  font-size: var(--wgs-type-h3) !important;
+}
+
+.home-realtime-desc,
+.wgs-online-meta,
+.wgs-chat-meta {
+  color: var(--wgs-realtime-muted) !important;
+  font-weight: 500 !important;
+}
+
+.home-realtime-count {
+  color: var(--wgs-realtime-count-text) !important;
+  background: var(--wgs-realtime-count-bg) !important;
+  border-color: var(--wgs-realtime-count-border) !important;
+}
+
+.home-realtime-grid {
+  display: grid !important;
+  grid-template-columns: minmax(280px, .82fr) minmax(440px, 1.18fr) !important;
+  gap: 18px !important;
+}
+
+.wgs-online-panel,
+.wgs-chat-panel {
+  background: var(--wgs-realtime-card-bg) !important;
+  border: 1px solid var(--wgs-realtime-card-border) !important;
+  border-radius: 18px !important;
+}
+
+.wgs-online-title,
+.wgs-chat-title {
+  color: var(--wgs-realtime-heading) !important;
+  font-family: var(--wgs-font-h3) !important;
+  font-weight: 700 !important;
+}
+
+.wgs-online-user-list {
+  background: var(--wgs-online-list-bg) !important;
+  border: 1px solid var(--wgs-chat-border) !important;
+  border-radius: 14px !important;
+  overflow: auto !important;
+}
+
+.wgs-online-user-row {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  align-items: center !important;
+  gap: 10px !important;
+  min-height: 46px !important;
+  padding: 10px 12px !important;
+  border-bottom: 1px solid var(--wgs-online-row-border) !important;
+  background: transparent !important;
+}
+
+.wgs-online-user-row:last-child { border-bottom: 0 !important; }
+.wgs-online-user-row.is-me { background: var(--wgs-online-row-me-bg) !important; }
+.wgs-online-user-main { display: flex !important; align-items: center !important; gap: 7px !important; min-width: 0 !important; }
+.wgs-online-user-name { color: var(--wgs-online-name) !important; font-family: var(--wgs-font-h3) !important; font-size: 14px !important; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wgs-online-user-me { color: var(--wgs-action-green) !important; font-size: 12px !important; font-weight: 800 !important; white-space: nowrap; }
+.wgs-online-user-time { color: var(--wgs-online-time) !important; font-size: 12px !important; white-space: nowrap; }
+
+.wgs-chat-message-list {
+  background: var(--wgs-chat-list-bg) !important;
+  border: 1px solid var(--wgs-chat-border) !important;
+  color: var(--wgs-chat-text) !important;
+}
+
+.wgs-chat-message-row { color: var(--wgs-chat-text) !important; }
+
+.wgs-chat-admin-badge {
+  color: var(--wgs-chat-admin-badge-text) !important;
+  background: var(--wgs-chat-admin-badge-bg) !important;
+  border: 1px solid var(--wgs-chat-message-admin-border) !important;
+  border-radius: 999px !important;
+  padding: 2px 7px !important;
+  font-size: 11px !important;
+  font-weight: 900 !important;
+  line-height: 1.2 !important;
+  white-space: nowrap !important;
+}
+
+.wgs-chat-input { color: var(--wgs-chat-input-text) !important; }
+
+.wgs-chat-tool-btn,
+.wgs-chat-input,
+.wgs-chat-send-btn { height: 52px !important; box-sizing: border-box !important; }
+
+.wgs-chat-tool-btn,
+.wgs-chat-send-btn { display: inline-flex !important; align-items: center !important; justify-content: center !important; }
+
+.wgs-chat-input::placeholder { color: var(--wgs-chat-muted) !important; }
+
+/* 채팅 GIF풍 애니메이션 */
+@keyframes wgsChatWave { 0%,100% { transform: rotate(0deg); } 20% { transform: rotate(18deg); } 40% { transform: rotate(-12deg); } 60% { transform: rotate(16deg); } 80% { transform: rotate(-8deg); } }
+@keyframes wgsChatClap { 0%,100% { transform: scale(1) rotate(0deg); } 50% { transform: scale(1.16) rotate(-8deg); } }
+@keyframes wgsChatPulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.14); } }
+@keyframes wgsChatFire { 0%,100% { transform: translateY(0) scale(1); filter: saturate(1); } 50% { transform: translateY(-4px) scale(1.08); filter: saturate(1.45); } }
+@keyframes wgsChatTyping { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-2px); } 75% { transform: translateX(2px); } }
+@keyframes wgsChatFloat { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+@keyframes wgsChatCrawl { 0%,100% { transform: translateX(0) rotate(0deg); } 50% { transform: translateX(5px) rotate(8deg); } }
+@keyframes wgsChatSpin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+@keyframes wgsChatConfetti { 0%,100% { transform: translateY(0) rotate(0deg) scale(1); } 50% { transform: translateY(-5px) rotate(12deg) scale(1.1); } }
+@keyframes wgsChatGlowIcon { 0%,100% { transform: scale(1); filter: drop-shadow(0 0 0 rgba(250,204,21,0)); } 50% { transform: scale(1.12); filter: drop-shadow(0 0 8px rgba(250,204,21,.85)); } }
+
+.wgs-chat-gif-icon { display: inline-block; transform-origin: 70% 70%; }
+
+.wgs-chat-motion-wave .wgs-chat-gif-icon,
+.wgs-chat-gif-icon.wgs-chat-motion-wave { animation: wgsChatWave 1.05s ease-in-out infinite !important; }
+
+.wgs-chat-motion-clap .wgs-chat-gif-icon,
+.wgs-chat-gif-icon.wgs-chat-motion-clap { animation: wgsChatClap .68s ease-in-out infinite !important; }
+
+.wgs-chat-motion-pulse .wgs-chat-gif-icon,
+.wgs-chat-gif-icon.wgs-chat-motion-pulse { animation: wgsChatPulse .92s ease-in-out infinite !important; }
+
+.wgs-chat-motion-fire .wgs-chat-gif-icon,
+.wgs-chat-gif-icon.wgs-chat-motion-fire { animation: wgsChatFire .84s ease-in-out infinite !important; }
+
+.wgs-chat-motion-typing .wgs-chat-gif-icon,
+.wgs-chat-gif-icon.wgs-chat-motion-typing { animation: wgsChatTyping .34s linear infinite !important; }
+
+.wgs-chat-motion-float .wgs-chat-gif-icon,
+.wgs-chat-gif-icon.wgs-chat-motion-float { animation: wgsChatFloat 1.15s ease-in-out infinite !important; }
+
+.wgs-chat-motion-crawl .wgs-chat-gif-icon,
+.wgs-chat-gif-icon.wgs-chat-motion-crawl { animation: wgsChatCrawl 1.1s ease-in-out infinite !important; }
+
+.wgs-chat-motion-spin .wgs-chat-gif-icon,
+.wgs-chat-gif-icon.wgs-chat-motion-spin { animation: wgsChatSpin 1.05s linear infinite !important; }
+
+.wgs-chat-motion-confetti .wgs-chat-gif-icon,
+.wgs-chat-gif-icon.wgs-chat-motion-confetti { animation: wgsChatConfetti .92s ease-in-out infinite !important; }
+
+.wgs-chat-motion-glow .wgs-chat-gif-icon,
+.wgs-chat-gif-icon.wgs-chat-motion-glow { animation: wgsChatGlowIcon 1.05s ease-in-out infinite !important; }
