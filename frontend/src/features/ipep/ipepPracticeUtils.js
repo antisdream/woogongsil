@@ -28,6 +28,14 @@ export function escapeHtml(value) {
         .replaceAll('\n', '<br />');
 }
 
+export function replaceSettingTokens(text, values = {}) {
+    let result = String(text || '');
+    Object.entries(values).forEach(([key, value]) => {
+        result = result.replaceAll(`{${key}}`, String(value ?? ''));
+    });
+    return result;
+}
+
 export function getQuestionNo(question, index) {
     return Number(question?.questionNo || question?.subjectNo || index + 1);
 }
@@ -314,8 +322,12 @@ function resolveIpepImagePath(raw, question) {
     const fileName = value.split(/[\\/]/).pop();
     if (!fileName) return '';
 
-    // 기출문제는 past, 문제은행은 random 정적 경로를 사용합니다.
-    const imageType = question?.source === 'ipep_past' || question?.examYear || question?.exam_year ? 'past' : 'random';
+    // 기출문제는 past, 3주 공략은 three-week, 문제은행은 random 정적 경로를 사용합니다.
+    const imageType = question?.source === 'ipep_past' || question?.examYear || question?.exam_year
+        ? 'past'
+        : question?.source === 'ipep_three_week' || question?.sectionNo || question?.section_no
+            ? 'three-week'
+            : 'random';
     return `/ipep-img/${imageType}/${encodeURIComponent(fileName)}`;
 }
 

@@ -26,6 +26,11 @@ export const panelStyle = {
     color: 'var(--wgs-text)'
 };
 
+export const compactPanelStyle = {
+    ...panelStyle,
+    padding: '16px'
+};
+
 export const baseButtonStyle = {
     border: 'none',
     borderRadius: '9px',
@@ -34,6 +39,103 @@ export const baseButtonStyle = {
     cursor: 'pointer',
     padding: '12px 18px',
     fontSize: '15px'
+};
+
+export const studyHeaderStyle = {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: '12px',
+    flexWrap: 'wrap',
+    marginBottom: '14px'
+};
+
+export const studyTitleStyle = {
+    color: '#fcd34d',
+    fontSize: '22px',
+    lineHeight: 1.35,
+    margin: '0 0 6px 0'
+};
+
+export const mutedTextStyle = {
+    color: 'var(--wgs-muted)',
+    lineHeight: 1.6,
+    margin: 0
+};
+
+export const filterBarStyle = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    flexWrap: 'wrap',
+    padding: '10px',
+    marginBottom: '14px',
+    border: '1px solid var(--wgs-border)',
+    borderRadius: '12px',
+    background: 'var(--wgs-exam-card)'
+};
+
+export const horizontalFilterBarStyle = {
+    ...filterBarStyle,
+    flexWrap: 'nowrap',
+    overflowX: 'auto',
+    WebkitOverflowScrolling: 'touch'
+};
+
+export const questionCardStyle = {
+    ...panelStyle,
+    background: 'var(--wgs-exam-card)',
+    padding: '18px'
+};
+
+export const badgeStyle = {
+    border: '1px solid #3b82f6',
+    color: 'var(--wgs-blue-soft)',
+    borderRadius: '999px',
+    padding: '5px 10px',
+    fontSize: '12px',
+    fontWeight: 900,
+    lineHeight: 1.2,
+    whiteSpace: 'nowrap'
+};
+
+export const questionTitleRowStyle = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+    marginBottom: '16px'
+};
+
+export const questionTitleStyle = {
+    color: 'var(--wgs-text)',
+    fontSize: '19px',
+    lineHeight: 1.65,
+    margin: 0
+};
+
+export const answerTextareaStyle = {
+    width: '100%',
+    minHeight: '120px',
+    boxSizing: 'border-box',
+    background: 'var(--wgs-input-bg)',
+    color: 'var(--wgs-text)',
+    border: '1px solid var(--wgs-button-muted)',
+    borderRadius: '10px',
+    padding: '14px',
+    lineHeight: 1.6,
+    resize: 'vertical'
+};
+
+export const compactSelectStyle = {
+    width: '100%',
+    minHeight: '42px',
+    boxSizing: 'border-box',
+    background: 'var(--wgs-input-bg)',
+    color: 'var(--wgs-text)',
+    border: '1px solid var(--wgs-border)',
+    borderRadius: '9px',
+    padding: '8px 10px',
+    fontWeight: 800
 };
 
 // 실기 로비 전용 UI 스타일

@@ -3,12 +3,13 @@ import React from 'react';
 import WgsIpepSettingLines from './IpepSettingLines.jsx';
 import {
     baseButtonStyle,
+    compactPanelStyle,
     ipepLobbyButtonStyle,
     ipepLobbyCardStyle,
     ipepLobbyNoticeStyle,
     ipepLobbyTextStyle,
     ipepLobbyTitleStyle,
-    panelStyle,
+    mutedTextStyle,
 } from './ipepPracticeStyles.js';
 
 export function IpepGuide({
@@ -18,12 +19,14 @@ export function IpepGuide({
         const guideItems = String(guideText || '').split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
 
         return (
-            <section style={{ ...panelStyle, marginBottom: '18px' }}>
-                <h3 style={{ color: '#38bdf8', fontSize: '22px', margin: '0 0 14px 0' }}>{guideTitle}</h3>
-                <ul style={{ color: 'var(--wgs-muted)', lineHeight: 1.9, margin: 0, paddingLeft: '20px' }}>
+            <details className="ipep-guide-details" style={{ ...compactPanelStyle, marginBottom: '14px' }}>
+                <summary style={{ color: '#38bdf8', fontSize: '18px', fontWeight: 900, cursor: 'pointer', lineHeight: 1.4 }}>
+                    {guideTitle}
+                </summary>
+                <ul style={{ ...mutedTextStyle, lineHeight: 1.8, margin: '12px 0 0 0', paddingLeft: '20px' }}>
                     {guideItems.map((line, index) => <li key={`${line}-${index}`}>{line}</li>)}
                 </ul>
-            </section>
+            </details>
         );
     
 }
@@ -36,6 +39,9 @@ export function IpepLobby({
     ipepPastCardTitle,
     ipepPastCardDesc,
     ipepPastButtonLabel,
+    ipepThreeWeekCardTitle = '3주 공략',
+    ipepThreeWeekCardDesc = '3주 커리큘럼에 맞춰 Section별 실기 문제를 섹션순 또는 랜덤 정렬로 풀 수 있습니다.',
+    ipepThreeWeekButtonLabel = '3주 공략 입장하기',
     ipepGuideText,
 }) {
         return (
@@ -74,6 +80,21 @@ export function IpepLobby({
                             {ipepPastButtonLabel}
                         </button>
                     </article>
+
+                    <article style={ipepLobbyCardStyle}>
+                        <div>
+                            <h3 style={ipepLobbyTitleStyle}>{ipepThreeWeekCardTitle}</h3>
+                            <p style={ipepLobbyTextStyle}>
+                                <WgsIpepSettingLines text={ipepThreeWeekCardDesc} />
+                            </p>
+                        </div>
+                        <button
+                            onClick={() => goIpepMode('threeWeek')}
+                            style={{ ...ipepLobbyButtonStyle, background: '#f59e0b' }}
+                        >
+                            {ipepThreeWeekButtonLabel}
+                        </button>
+                    </article>
                 </div>
 
                 {/* 안내 박스도 필기 로비의 가독성 기준과 맞춰 모드 전환 시 색/줄간격이 흔들리지 않도록 고정합니다. */}
@@ -91,26 +112,39 @@ export function IpepModeButtons({
     lobbyButtonLabel = '실기 로비',
     randomButtonLabel = '실기 문제은행',
     pastButtonLabel = '실기 기출문제',
+    threeWeekButtonLabel = '3주 공략',
 }) {
         return (
-            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '18px' }}>
+            <div
+                className="ipep-mode-switcher" style={{ display: 'flex', gap: '8px', flexWrap: 'nowrap', overflowX: 'auto', marginBottom: '14px', paddingBottom: '2px' }}
+            >
                 <button
+                    type="button"
                     onClick={() => goIpepMode('lobby')}
-                    style={{ ...baseButtonStyle, background: 'var(--wgs-button-muted)' }}
+                    style={{ ...baseButtonStyle, flex: '0 0 auto', minHeight: '40px', padding: '10px 14px', background: 'var(--wgs-button-muted)' }}
                 >
                     {lobbyButtonLabel}
                 </button>
                 <button
+                    type="button"
                     onClick={() => goIpepMode('random')}
-                    style={{ ...baseButtonStyle, background: mode === 'random'? '#3b82f6' : 'var(--wgs-button-muted)' }}
+                    style={{ ...baseButtonStyle, flex: '0 0 auto', minHeight: '40px', padding: '10px 14px', background: mode === 'random'? '#3b82f6' : 'var(--wgs-button-muted)' }}
                 >
                      {randomButtonLabel}
                 </button>
                 <button
+                    type="button"
                     onClick={() => goIpepMode('past')}
-                    style={{ ...baseButtonStyle, background: mode === 'past'? '#3b82f6' : 'var(--wgs-button-muted)' }}
+                    style={{ ...baseButtonStyle, flex: '0 0 auto', minHeight: '40px', padding: '10px 14px', background: mode === 'past'? '#3b82f6' : 'var(--wgs-button-muted)' }}
                 >
                      {pastButtonLabel}
+                </button>
+                <button
+                    type="button"
+                    onClick={() => goIpepMode('threeWeek')}
+                    style={{ ...baseButtonStyle, flex: '0 0 auto', minHeight: '40px', padding: '10px 14px', background: mode === 'threeWeek'? '#3b82f6' : 'var(--wgs-button-muted)' }}
+                >
+                     {threeWeekButtonLabel}
                 </button>
             </div>
         );

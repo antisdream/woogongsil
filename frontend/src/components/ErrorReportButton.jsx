@@ -80,6 +80,12 @@ const buildQuestionInfoText = (questionInfo = {}) => {
   const subjectName = questionInfo.subjectName || questionInfo.subject_name || questionInfo.subject;
   const sourceLabel = questionInfo.reportSourceLabel || questionInfo.sourceLabel || questionInfo.examTitle || questionInfo.typeLabel || questionInfo.category;
 
+  if (!yearValue && !sessionValue && sourceLabel) {
+    const number = numberValue ? ` / 문항: ${numberValue}` : "";
+    const subject = subjectName ? ` / 과목: ${subjectNo ? `${subjectNo}과목 ` : ""}${subjectName}` : (subjectNo ? ` / 과목: ${subjectNo}과목` : "");
+    return `${sourceLabel}${number}${subject}`;
+  }
+
   const year = yearValue ? `${yearValue}년` : "연도미상";
   const round = sessionValue ? `${sessionValue}회차` : "회차미상";
   const number = numberValue ? `${numberValue}번` : "문항번호미상";
