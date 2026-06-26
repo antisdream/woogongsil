@@ -3,6 +3,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
+import UserCalendarManager from '../features/calendar/UserCalendarManager.jsx';
 import useScreenSettings from '../useScreenSettings';
 
 const YEARS = Array.from({ length: 2026 - 2024 + 1 }, (_, i) => 2026 - i);
@@ -33,6 +34,7 @@ const MyPage = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [errorMessage, setErrorMessage] = useState(null);
     const [ipepWrongNotes, setIpepWrongNotes] = useState([]);
+    const [activeMyPageTab, setActiveMyPageTab] = useState('profile');
 
     useEffect(() => {
         if (!userId) {
@@ -157,6 +159,7 @@ const MyPage = () => {
     const pastWrongCount = safeWrongNotes.filter((q) => q.source === 'past').length;
     const ipepRandomWrongCount = ipepWrongNotes.filter((q) => q.source === 'ipep_random').length;
     const ipepPastWrongCount = ipepWrongNotes.filter((q) => q.source === 'ipep_past').length;
+    const ipepThreeWeekWrongCount = ipepWrongNotes.filter((q) => q.source === 'ipep_three_week').length;
 
     const wrongNoteCards = [
         {
@@ -190,12 +193,20 @@ const MyPage = () => {
             to: '/wrong?tab=ipep_past',
             color: '#fbbf24',
             background: '#8b5cf6'
+        },
+        {
+            key: 'ipep_three_week',
+            title: t('wrong_notes.ipep_three_week_title', '실기 3주 공략 오답'),
+            count: ipepThreeWeekWrongCount,
+            to: '/wrong?tab=ipep_three_week',
+            color: '#fbbf24',
+            background: '#14b8a6'
         }
     ];
 
     return (
         <div
-            className="mypage wrong-note-page wgs-typography-scope" style={{ width: '100%', maxWidth: '600px', margin: '40px auto', background: 'var(--wgs-button-muted)', padding: '30px', borderRadius: '12px', color: 'var(--wgs-wrong-text)', position: 'relative', boxSizing: 'border-box' }}
+            className="mypage wrong-note-page wgs-typography-scope" style={{ width: '100%', maxWidth: activeMyPageTab === 'calendar' ? '1200px' : '600px', margin: '40px auto', background: 'var(--wgs-button-muted)', padding: '30px', borderRadius: '12px', color: 'var(--wgs-wrong-text)', position: 'relative', boxSizing: 'border-box' }}
         >
             <h2 className="wgs-page-title" style={{ color: 'var(--wgs-title)', borderBottom: '2px solid var(--wgs-border)', paddingBottom: '10px' }}>{t('page.title', '마이페이지')}</h2>
             <div className="mypage-header-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '20px 0', gap: '12px' }}>
@@ -205,6 +216,25 @@ const MyPage = () => {
                 </button>
             </div>
 
+            <div className="mypage-tab-row" style={{ display: 'flex', gap: '8px', marginBottom: '20px', flexWrap: 'wrap' }}>
+                <button
+                    type="button"
+                    onClick={() => setActiveMyPageTab('profile')}
+                    style={{ padding: '10px 16px', borderRadius: '999px', border: activeMyPageTab === 'profile' ? '1px solid #3b82f6' : '1px solid #d8e5f7', background: activeMyPageTab === 'profile' ? '#3b82f6' : '#ffffff', color: activeMyPageTab === 'profile' ? '#ffffff' : '#111827', cursor: 'pointer', fontWeight: 800 }}
+                >
+                    내 정보
+                </button>
+                <button
+                    type="button"
+                    onClick={() => setActiveMyPageTab('calendar')}
+                    style={{ padding: '10px 16px', borderRadius: '999px', border: activeMyPageTab === 'calendar' ? '1px solid #3b82f6' : '1px solid #d8e5f7', background: activeMyPageTab === 'calendar' ? '#3b82f6' : '#ffffff', color: activeMyPageTab === 'calendar' ? '#ffffff' : '#111827', cursor: 'pointer', fontWeight: 800 }}
+                >
+                    달력 일정 관리
+                </button>
+            </div>
+
+            {activeMyPageTab === 'profile' && (
+                <>
             <div style={{ background: 'var(--wgs-practice-toggle-bg)', padding: '20px', borderRadius: '8px', marginBottom: '20px' }}>
                 <h3 style={{ color: '#fcd34d', marginTop: 0 }}>{t('dday.title', '목표 시험일 설정')}</h3>
                 <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#ef4444', marginBottom: '15px' }}>{dDayText}</div>
@@ -282,6 +312,12 @@ const MyPage = () => {
             <div style={{ textAlign: 'right' }}>
                 <button type="button" onClick={handleDeleteAccount} style={{ background: 'transparent', color: '#ff4d4d', border: '1px solid #ff4d4d', padding: '8px 15px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>{t('delete.button', '회원 탈퇴')}</button>
             </div>
+                </>
+            )}
+
+            {activeMyPageTab === 'calendar' && (
+                <UserCalendarManager getSessionAuth={getSessionAuth} />
+            )}
         </div>
     );
 };

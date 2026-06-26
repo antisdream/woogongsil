@@ -1,9 +1,11 @@
 // 관리자 기능 모듈입니다: AdminCalendarTab
-import React from 'react';
+import React, { useState } from 'react';
 import {
     CLASS_SCHEDULE_HIGHLIGHT_OPTIONS,
     CLASS_SCHEDULE_TYPE_OPTIONS,
     formatDateTime,
+    getUserIdText,
+    getUserNameText,
 } from '../adminUtils.js';
 
 export default function AdminCalendarTab({
@@ -22,10 +24,49 @@ export default function AdminCalendarTab({
     classScheduleFilters,
     handleClassScheduleFilterSubmit,
     handleClassScheduleFilterChange,
+    updateClassScheduleFilterUserIds,
     startEditClassSchedule,
     handleToggleClassSchedule,
     handleDeleteClassSchedule,
+    users = [],
 }) {
+    const [isFilterUserPickerOpen, setIsFilterUserPickerOpen] = useState(false);
+    const selectedTargetUserIds = Array.isArray(classScheduleForm.target_user_ids)
+        ? classScheduleForm.target_user_ids.map((id) => String(id || '').trim()).filter(Boolean)
+        : [];
+    const selectedFilterUserIds = Array.isArray(classScheduleFilters.userIds)
+        ? classScheduleFilters.userIds.map((id) => String(id || '').trim()).filter(Boolean)
+        : [];
+    const filterUsers = users
+        .map((user) => ({
+            id: getUserIdText(user),
+            name: getUserNameText(user),
+        }))
+        .filter((user) => user.id);
+    const targetUsers = filterUsers;
+    const isUserScheduleList = selectedFilterUserIds.length > 0;
+    const canSelectUsers = !editingClassScheduleId;
+    const toggleTargetUser = (userId) => {
+        const textId = String(userId || '').trim();
+        if (!textId) return;
+        const nextIds = selectedTargetUserIds.includes(textId)
+            ? selectedTargetUserIds.filter((id) => id !== textId)
+            : [...selectedTargetUserIds, textId];
+        handleClassScheduleFormChange('target_user_ids', nextIds);
+    };
+    const clearTargetUsers = () => handleClassScheduleFormChange('target_user_ids', []);
+    const selectAllTargetUsers = () => handleClassScheduleFormChange('target_user_ids', targetUsers.map((user) => user.id));
+    const toggleFilterUser = (userId) => {
+        const textId = String(userId || '').trim();
+        if (!textId) return;
+        const nextIds = selectedFilterUserIds.includes(textId)
+            ? selectedFilterUserIds.filter((id) => id !== textId)
+            : [...selectedFilterUserIds, textId];
+        updateClassScheduleFilterUserIds(nextIds);
+    };
+    const selectAllFilterUsers = () => updateClassScheduleFilterUserIds(filterUsers.map((user) => user.id));
+    const clearFilterUsers = () => updateClassScheduleFilterUserIds([]);
+
     return (
         <section className="admin-panel admin-calendar-section">
             <div className="admin-panel-head">
@@ -102,6 +143,31 @@ export default function AdminCalendarTab({
                                 onChange={(event) => handleClassScheduleFormChange('event_category', event.target.value)}
                                 placeholder="예: 공휴일, 시험일, 수업"
                             />
+                        </label>
+                        <label className="admin-calendar-user-selector">
+                            사용자 선택
+                            <div className="admin-calendar-user-picker">
+                                <div className="admin-calendar-user-picker-actions">
+                                    <button type="button" onClick={selectAllTargetUsers} disabled={!canSelectUsers || targetUsers.length === 0}>전체선택</button>
+                                    <button type="button" onClick={clearTargetUsers} disabled={!canSelectUsers || selectedTargetUserIds.length === 0}>선택취소</button>
+                                </div>
+                                <div className="admin-calendar-user-options">
+                                    {targetUsers.length === 0 ? (
+                                        <p>사용자 목록을 불러오는 중입니다.</p>
+                                    ) : targetUsers.map((user) => (
+                                        <label key={`calendar-target-${user.id}`}>
+                                            <input
+                                                type="checkbox"
+                                                checked={selectedTargetUserIds.includes(user.id)}
+                                                disabled={!canSelectUsers}
+                                                onChange={() => toggleTargetUser(user.id)}
+                                            />
+                                            <span>{user.name || user.id}</span>
+                                            <small>{user.id}</small>
+                                        </label>
+                                    ))}
+                                </div>
+                            </div>
                         </label>
                         <label>
                             수업 일차
@@ -243,6 +309,39 @@ export default function AdminCalendarTab({
                     <option value="1">활성만</option>
                     <option value="0">비활성만</option>
                 </select>
+                <div className="admin-calendar-filter-user-select">
+                    <button
+                        type="button"
+                        className="admin-calendar-filter-user-button"
+                        onClick={() => setIsFilterUserPickerOpen((open) => !open)}
+                    >
+                        <span>{selectedFilterUserIds.length > 0 ? `${selectedFilterUserIds.length}명 선택` : '사용자 선택'}</span>
+                        <b aria-hidden="true">⌄</b>
+                    </button>
+                    {isFilterUserPickerOpen && (
+                        <div className="admin-calendar-filter-user-menu">
+                            <div className="admin-calendar-filter-user-menu-actions">
+                                <button type="button" onClick={selectAllFilterUsers}>전체선택</button>
+                                <button type="button" onClick={clearFilterUsers}>선택취소</button>
+                            </div>
+                            <div className="admin-calendar-filter-user-menu-list">
+                                {filterUsers.length === 0 ? (
+                                    <p>사용자 목록을 불러오는 중입니다.</p>
+                                ) : filterUsers.map((user) => (
+                                    <label key={`calendar-filter-user-${user.id}`}>
+                                        <input
+                                            type="checkbox"
+                                            checked={selectedFilterUserIds.includes(user.id)}
+                                            onChange={() => toggleFilterUser(user.id)}
+                                        />
+                                        <span>{user.name || user.id}</span>
+                                        <small>{user.id}</small>
+                                    </label>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </div>
                 <select
                     value={classScheduleFilters.type}
                     onChange={(event) => handleClassScheduleFilterChange('type', event.target.value)}
@@ -257,7 +356,7 @@ export default function AdminCalendarTab({
 
             <div className="admin-question-list-card admin-calendar-list-card">
                 <div className="admin-card-title-row">
-                    <h3>달력 일정 목록</h3>
+                    <h3>{isUserScheduleList ? '사용자 개인 일정 목록' : '달력 일정 목록'}</h3>
                     <span className="admin-small-status">{loadingClassSchedules ? '불러오는 중...' : `총 ${classSchedules.length}개 표시`}</span>
                 </div>
 
@@ -265,6 +364,7 @@ export default function AdminCalendarTab({
                     <table className="admin-user-table admin-calendar-table">
                         <thead>
                             <tr>
+                                {isUserScheduleList && <th>사용자</th>}
                                 <th>날짜</th>
                                 <th>종류</th>
                                 <th>일차</th>
@@ -279,9 +379,15 @@ export default function AdminCalendarTab({
                         </thead>
                         <tbody>
                             {classSchedules.length === 0 ? (
-                                <tr><td colSpan="10" className="admin-empty-cell">등록된 달력 일정이 없습니다.</td></tr>
+                                <tr><td colSpan={isUserScheduleList ? 11 : 10} className="admin-empty-cell">등록된 달력 일정이 없습니다.</td></tr>
                             ) : classSchedules.map((schedule) => (
-                                <tr key={schedule.id} className={Number(schedule.is_active) ? '' : 'admin-row-muted'}>
+                                <tr key={`${schedule.source_scope || schedule.sourceScope || 'class'}-${schedule.id}`} className={Number(schedule.is_active) ? '' : 'admin-row-muted'}>
+                                    {isUserScheduleList && (
+                                        <td>
+                                            <strong>{schedule.user_name || schedule.userName || schedule.user_id || schedule.userId || '-'}</strong>
+                                            <small>{schedule.user_id || schedule.userId || ''}</small>
+                                        </td>
+                                    )}
                                     <td><strong>{schedule.schedule_date || schedule.date}</strong><small>{schedule.weekday_label || schedule.weekday || ''}</small></td>
                                     <td><span className="admin-badge">{schedule.event_category || schedule.eventCategory || schedule.schedule_type || schedule.scheduleType || '수업'}</span></td>
                                     <td>{schedule.day_no ?? schedule.day ?? '-'}</td>
@@ -300,8 +406,8 @@ export default function AdminCalendarTab({
                                     <td>
                                         <div className="admin-chip-row admin-calendar-actions">
                                             <button type="button" onClick={() => startEditClassSchedule(schedule)}>수정</button>
-                                            <button type="button" onClick={() => handleToggleClassSchedule(schedule.id)}>{Number(schedule.is_active) ? '끄기' : '켜기'}</button>
-                                            <button type="button" className="danger" onClick={() => handleDeleteClassSchedule(schedule.id)}>삭제</button>
+                                            <button type="button" onClick={() => handleToggleClassSchedule(schedule)}>{Number(schedule.is_active) ? '끄기' : '켜기'}</button>
+                                            <button type="button" className="danger" onClick={() => handleDeleteClassSchedule(schedule)}>삭제</button>
                                         </div>
                                     </td>
                                 </tr>

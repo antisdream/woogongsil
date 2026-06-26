@@ -1,0 +1,68 @@
+/* ??? ?? ??? ??/??? ?? ?? ??????. */
+
+body.wgs-theme-light .admin-page .admin-calendar-section .admin-calendar-filter-user-button {
+  background: #ffffff !important;
+  color: #111827 !important;
+  border-color: #64748b !important;
+}
+
+body.wgs-theme-light .admin-page .admin-calendar-section .admin-calendar-filter-user-button b,
+body.wgs-theme-light .admin-page .admin-calendar-section .admin-calendar-filter-user-button span {
+  color: #111827 !important;
+}
+
+body.wgs-theme-light .admin-page .admin-calendar-section .admin-calendar-filter-user-menu {
+  background: #ffffff !important;
+  border-color: #94a3b8 !important;
+}
+
+body.wgs-theme-light .admin-page .admin-calendar-section .admin-calendar-filter-user-menu-actions button {
+  background: #e5eefb !important;
+  color: #111827 !important;
+}
+
+body.wgs-theme-light .admin-page .admin-calendar-section .admin-calendar-filter-user-menu-list > label {
+  background: #f8fafc !important;
+}
+
+body.wgs-theme-light .admin-page .admin-calendar-section .admin-calendar-filter-user-menu-list span,
+body.wgs-theme-light .admin-page .admin-calendar-section .admin-calendar-filter-user-menu-list small,
+body.wgs-theme-light .admin-page .admin-calendar-section .admin-calendar-filter-user-menu-list p {
+  color: #111827 !important;
+}
+
+body.wgs-theme-light .admin-page .admin-calendar-section .admin-calendar-user-picker {
+  background: #ffffff !important;
+  border-color: #94a3b8 !important;
+}
+
+body.wgs-theme-light .admin-page .admin-calendar-section .admin-calendar-user-picker-actions button {
+  background: #e5eefb !important;
+  color: #111827 !important;
+  border-color: #bfdbfe !important;
+}
+
+body.wgs-theme-light .admin-page .admin-calendar-section .admin-calendar-user-options > label {
+  background: #f8fafc !important;
+}
+
+body.wgs-theme-light .admin-page .admin-calendar-section .admin-calendar-user-options span,
+body.wgs-theme-light .admin-page .admin-calendar-section .admin-calendar-user-options small,
+body.wgs-theme-light .admin-page .admin-calendar-section .admin-calendar-user-options p {
+  color: #111827 !important;
+}
+
+body.wgs-theme-dark .admin-page .admin-calendar-section .admin-calendar-user-picker {
+  background: #0f172a !important;
+  border-color: rgba(96, 165, 250, 0.42) !important;
+}
+
+body.wgs-theme-dark .admin-page .admin-calendar-section .admin-calendar-user-picker-actions button {
+  background: rgba(37, 99, 235, 0.18) !important;
+  color: #f8fafc !important;
+  border-color: rgba(96, 165, 250, 0.36) !important;
+}
+
+body.wgs-theme-dark .admin-page .admin-calendar-section .admin-calendar-user-options > label {
+  background: rgba(2, 6, 23, 0.46) !important;
+}

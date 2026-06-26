@@ -111,6 +111,7 @@ export function getAdminTabFromPath(pathname = '') {
 // schedule_type은 DB의 wgs_class_schedules.schedule_type 값과 1:1로 맞춥니다.
 export const CLASS_SCHEDULE_TYPE_OPTIONS = [
   { value: 'class', label: '수업' },
+  { value: 'personal', label: '개인일정' },
   { value: 'holiday', label: '공휴일' },
   { value: 'application', label: '원서접수' },
   { value: 'exam', label: '시험일' },
@@ -127,6 +128,7 @@ export const CLASS_SCHEDULE_HIGHLIGHT_OPTIONS = [
 
 export const CLASS_SCHEDULE_DEFAULT_STYLE = {
   class: { background_color: '#1e40af', text_color: '#ffffff', border_color: '#1e40af', event_category: '수업' },
+  personal: { background_color: '#1e40af', text_color: '#ffffff', border_color: '#1e40af', event_category: '개인일정' },
   holiday: { background_color: '#020617', text_color: '#ef4444', border_color: '#020617', event_category: '공휴일' },
   application: { background_color: '#10b981', text_color: '#ffffff', border_color: '#10b981', event_category: '원서접수' },
   exam: { background_color: '#7c3aed', text_color: '#ffffff', border_color: '#7c3aed', event_category: '시험일' },
@@ -152,7 +154,8 @@ export const EMPTY_CLASS_SCHEDULE_FORM = {
   memo: '',
   admin_note: '',
   sort_order: 0,
-  is_active: 1
+  is_active: 1,
+  target_user_ids: []
 };
 
 // 기존 관리자 탭 구조는 유지하고, display 탭에서만 사용하는 상수다.
@@ -282,6 +285,27 @@ export function getStoredServerInstanceId(user) {
 // 프로젝트에 따라 user 객체 안 또는 별도 sessionToken 키에 저장될 수 있어 둘 다 확인합니다.
 export function getStoredSessionToken(user) {
   return user?.sessionToken || user?.session_token || sessionStorage.getItem('sessionToken') || '';
+}
+
+export function makeAdminHeadersFromStorage() {
+  const user = getStoredUser();
+
+  return {
+    'Content-Type': 'application/json',
+    'x-user-id': getStoredUserId(user),
+    'x-session-token': getStoredSessionToken(user),
+  };
+}
+
+export function makeAdminAuthBodyFromStorage() {
+  const user = getStoredUser();
+
+  return {
+    id: getStoredUserId(user),
+    name: getStoredUserName(user),
+    sessionToken: getStoredSessionToken(user),
+    serverInstanceId: getStoredServerInstanceId(user),
+  };
 }
 
 // 결재 상태 한글 표기와 정렬 기준을 한 곳에서 관리합니다.
@@ -601,7 +625,7 @@ export function getQuestionLocation(item) {
 }
 
 // 이미지 경로는 필기/실기 저장 방식이 다르다.
-// 필기는 public/question_image, 실기는 Express 정적 경로 /ipep-img/random 또는 /ipep-img/past를 사용합니다.
+// 필기는 백엔드 정적 경로 /question_image, 실기는 /ipep-img/random 또는 /ipep-img/past를 사용합니다.
 export function buildImagePreviewSrc(type, rawValue) {
   const raw = String(rawValue || '').trim();
   if (!raw) return '';

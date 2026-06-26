@@ -1,5 +1,6 @@
 // 회식맵 라우트 페이지 컴포넌트입니다.
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { toast } from 'react-toastify';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   MealMapActivityModal,
@@ -39,7 +40,12 @@ function MealMap() {
     geocodeEnabled: false,
   });
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState('');
+  const notifyMealMap = useCallback((type, text) => {
+    if (!text) return;
+    const notify = toast[type] || toast.info;
+    notify(text, { autoClose: type === 'error' ? 2800 : 2200 });
+  }, []);
+  const setMessage = useCallback((text) => notifyMealMap('info', text), [notifyMealMap]);
   const [pageTexts, setPageTexts] = useState(DEFAULT_MEALMAP_TEXTS);
   
   const [, setPageLayoutsV253] = useState(MEALMAP_LAYOUT_DEFAULTS_V253);
@@ -65,7 +71,7 @@ function MealMap() {
     };
   }, []);
   const mt = useCallback((key) => pageTexts?.[key] || DEFAULT_MEALMAP_TEXTS[key] || '', [pageTexts]);
-  const [error, setError] = useState('');
+  const setError = useCallback((text) => notifyMealMap('error', text), [notifyMealMap]);
   const [zoomLevel, setZoomLevel] = useState(11);
   const [selectedPlace, setSelectedPlace] = useState(null);
 
@@ -216,7 +222,7 @@ function MealMap() {
     } finally {
       setLoading(false);
     }
-  }, [appliedFilters, categoriesForQuery, keyword, mt]);
+  }, [appliedFilters, categoriesForQuery, keyword, mt, setError]);
 
   const fetchComments = useCallback(async (placeId) => {
     if (!placeId) return;
@@ -340,7 +346,7 @@ function MealMap() {
       }));
       setMessage(mt('geocodeEditSuccessMessage'));
     } catch (err) {
-      setMessage(err.message || mt('geocodeFailMessage'));
+      setError(err.message || mt('geocodeFailMessage'));
     } finally {
       setEditGeocoding(false);
     }
@@ -381,7 +387,7 @@ function MealMap() {
       }
     } catch (err) {
       console.error(err);
-      setMessage(mt('keywordErrorMessage'));
+      setError(mt('keywordErrorMessage'));
     } finally {
       state.setSearching(false);
     }
@@ -607,11 +613,11 @@ function MealMap() {
         e.preventDefault();
         if (!editPlace) return;
         if (!editForm.name.trim() || !editForm.address.trim()) {
-            setMessage(mt('editRequiredFieldsMessage'));
+            setError(mt('editRequiredFieldsMessage'));
             return;
         }
         if (Number(editForm.maxPrice) < Number(editForm.minPrice)) {
-            setMessage(mt('editPriceRangeMessage'));
+            setError(mt('editPriceRangeMessage'));
             return;
         }
 
@@ -645,7 +651,7 @@ function MealMap() {
             setEditOpen(false);
             closeMealMapModal();
         } catch (err) {
-            setMessage(err.message || mt('editSubmitFailMessage'));
+            setError(err.message || mt('editSubmitFailMessage'));
         } finally {
             setEditLoading(false);
         }
@@ -706,7 +712,7 @@ function MealMap() {
     setFilterOpen(false);
     setActivityOpen(false);
     setEditOpen(false);
-  }, [editOpen, fetchActivityHistory, isLoggedIn, mealMapRouteMode, mt, openEditRequest, selectedPlace, setActivityOpen]);
+  }, [editOpen, fetchActivityHistory, isLoggedIn, mealMapRouteMode, mt, openEditRequest, selectedPlace, setActivityOpen, setError]);
 
   const clusterGroups = useMemo(() => {
     const count = places.length;
@@ -732,12 +738,6 @@ function MealMap() {
           <button type="button" className="mealmap-hero-history-btn" onClick={openActivityHistory}>{mt('activityHistoryButton')}</button>
         </div>
       </section>
-
-      {(message || error) && (
-        <div className={`mealmap-alert ${error ? 'mealmap-alert-error' : 'mealmap-alert-success'}`}>
-          {error || message}
-        </div>
-      )}
 
       <section className="mealmap-toolbar">
         <div className="mealmap-search-inline">

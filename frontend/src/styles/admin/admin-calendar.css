@@ -1,4 +1,4 @@
-/* 관리자 달력 관리 화면 스타일입니다. */
+﻿/* 관리자 달력 관리 화면 스타일입니다. */
 
 .admin-calendar-section .admin-panel-head {
   align-items: flex-start;
@@ -48,7 +48,122 @@
 }
 
 .admin-calendar-filter-row {
+  display: grid !important;
+  grid-template-columns: minmax(190px, 1fr) 150px minmax(220px, 280px) 160px 140px !important;
+  align-items: stretch !important;
+  gap: 10px !important;
   margin-top: 18px;
+}
+
+.admin-calendar-filter-row > input,
+.admin-calendar-filter-row > select,
+.admin-calendar-filter-row > button,
+.admin-calendar-filter-user-button {
+  min-width: 0;
+  min-height: 44px !important;
+}
+
+.admin-calendar-filter-user-select {
+  position: relative;
+  min-width: 0;
+}
+
+.admin-calendar-filter-user-button {
+  display: flex !important;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border: 1px solid rgba(96, 165, 250, 0.38) !important;
+  border-radius: 10px !important;
+  background: rgba(15, 23, 42, 0.78) !important;
+  color: #f8fafc !important;
+  padding: 0 12px !important;
+  cursor: pointer;
+  font-weight: 900;
+}
+
+.admin-calendar-filter-user-button span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-calendar-filter-user-button b {
+  flex: 0 0 auto;
+  color: inherit !important;
+  font-size: 16px;
+}
+
+.admin-calendar-filter-user-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 30;
+  display: grid;
+  gap: 8px;
+  width: min(320px, 86vw);
+  max-height: 360px;
+  overflow: hidden;
+  border: 1px solid rgba(96, 165, 250, 0.42);
+  border-radius: 12px;
+  background: #0f172a;
+  box-shadow: 0 20px 45px rgba(15, 23, 42, 0.28);
+  padding: 10px;
+}
+
+.admin-calendar-filter-user-menu-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.admin-calendar-filter-user-menu-actions button {
+  min-height: 34px !important;
+  border: 1px solid rgba(96, 165, 250, 0.36) !important;
+  border-radius: 8px !important;
+  background: rgba(37, 99, 235, 0.18) !important;
+  color: #f8fafc !important;
+  cursor: pointer;
+  font-weight: 900;
+}
+
+.admin-calendar-filter-user-menu-list {
+  display: grid;
+  gap: 6px;
+  max-height: 270px;
+  overflow: auto;
+}
+
+.admin-calendar-filter-user-menu-list > label {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  border-radius: 8px;
+  background: rgba(2, 6, 23, 0.46);
+  padding: 8px 9px;
+  cursor: pointer;
+}
+
+.admin-calendar-filter-user-menu-list input[type='checkbox'] {
+  width: 16px !important;
+  height: 16px !important;
+}
+
+.admin-calendar-filter-user-menu-list span,
+.admin-calendar-filter-user-menu-list small,
+.admin-calendar-filter-user-menu-list p {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #f8fafc !important;
+}
+
+.admin-calendar-filter-user-menu-list small {
+  color: #cbd5e1 !important;
+  font-size: 0.76rem;
 }
 
 .admin-calendar-table th,
@@ -69,9 +184,112 @@
 
 .admin-calendar-actions {
   flex-wrap: nowrap;
+  min-width: 220px;
 }
 
 .admin-calendar-actions button {
+  white-space: nowrap;
+}
+
+.admin-calendar-table th:last-child,
+.admin-calendar-table td:last-child {
+  min-width: 230px;
+}
+
+.admin-calendar-user-selector {
+  grid-column: span 2;
+}
+
+.admin-calendar-user-picker {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 10px;
+  border: 1px solid rgba(96, 165, 250, 0.42);
+  border-radius: 12px;
+  background: #0f172a;
+  box-shadow: 0 20px 45px rgba(15, 23, 42, 0.14);
+}
+
+.admin-calendar-user-picker-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.admin-calendar-user-picker-actions button {
+  min-height: 44px !important;
+  border: 1px solid rgba(96, 165, 250, 0.36) !important;
+  border-radius: 8px !important;
+  background: rgba(37, 99, 235, 0.18) !important;
+  color: #f8fafc !important;
+  cursor: pointer;
+  font-weight: 900;
+}
+
+.admin-calendar-user-picker-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.admin-calendar-user-picker-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.32);
+}
+
+.admin-calendar-user-picker-head button {
+  border: 1px solid rgba(96, 165, 250, 0.45);
+  border-radius: 8px;
+  background: rgba(37, 99, 235, 0.16);
+  color: inherit;
+  cursor: pointer;
+  font-weight: 800;
+  padding: 6px 10px;
+}
+
+.admin-calendar-user-picker-head button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.admin-calendar-user-options {
+  display: grid;
+  gap: 6px;
+  max-height: 270px;
+  overflow: auto;
+  padding: 0;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+}
+
+.admin-calendar-user-options > label {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 9px;
+  border-radius: 8px;
+  background: rgba(2, 6, 23, 0.46);
+  cursor: pointer;
+}
+
+.admin-calendar-user-options input[type='checkbox'] {
+  width: 16px !important;
+  height: 16px !important;
+}
+
+.admin-calendar-user-options span,
+.admin-calendar-user-options small {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
@@ -85,749 +303,17 @@
 }
 
 @media (max-width: 760px) {
+  .admin-calendar-filter-row {
+    grid-template-columns: 1fr !important;
+  }
+
+  .admin-calendar-filter-user-menu {
+    position: static;
+    width: 100%;
+    margin-top: 8px;
+  }
+
   .admin-calendar-actions {
     flex-wrap: wrap;
   }
-}
-
-/* ==============================
-   KST today highlight
-   홈 달력 KST 기준 오늘 날짜 셀 강조
-   ============================== */
-.wgs-kst-today-cell {
-  outline: 3px solid #22c55e !important;
-  box-shadow:
-    0 0 0 4px rgba(34, 197, 94, 0.18),
-    0 0 22px rgba(34, 197, 94, 0.35) !important;
-  border-radius: 14px !important;
-  position: relative !important;
-}
-
-.wgs-kst-today-cell::after {
-  content: "오늘";
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  padding: 4px 8px;
-  border-radius: 999px;
-  background: rgba(34, 197, 94, 0.95);
-  color: #ffffff;
-  font-size: 11px;
-  font-weight: 800;
-  line-height: 1;
-  z-index: 10;
-}
-
-/* =========================================================
-   Theme contrast and multiplayer practice readability adjustments
-   - DB/관리자 연동 데이터 구조는 변경하지 않고 CSS 변수와 컴포넌트 상태만 보정합니다.
-   - 다크/라이트 모드에서 배경과 같은 색으로 묻히던 글자만 고대비 색상으로 정리합니다.
-   ========================================================= */
-body.wgs-theme-dark {
-  --wgs-readable-text: #f8fafc;
-  --wgs-readable-subtext: #cbd5e1;
-  --wgs-readable-muted: #94a3b8;
-  --wgs-readable-field-bg: rgba(2, 6, 23, 0.88);
-  --wgs-readable-field-text: #f8fafc;
-  --wgs-readable-field-border: rgba(148, 163, 184, 0.38);
-  --wgs-drawing-panel-bg: rgba(15, 23, 42, 0.72);
-  --wgs-drawing-border: rgba(148, 163, 184, 0.34);
-  --wgs-drawing-text: #f8fafc;
-  --wgs-drawing-muted: #cbd5e1;
-  --wgs-drawing-control-bg: rgba(2, 6, 23, 0.92);
-  --wgs-drawing-control-text: #f8fafc;
-  --wgs-drawing-control-border: rgba(148, 163, 184, 0.42);
-}
-
-body.wgs-theme-light {
-  --wgs-readable-text: #111827;
-  --wgs-readable-subtext: #334155;
-  --wgs-readable-muted: #64748b;
-  --wgs-readable-field-bg: #ffffff;
-  --wgs-readable-field-text: #111827;
-  --wgs-readable-field-border: #d8e5f7;
-  --wgs-drawing-panel-bg: #ffffff;
-  --wgs-drawing-border: #d8e5f7;
-  --wgs-drawing-text: #111827;
-  --wgs-drawing-muted: #475569;
-  --wgs-drawing-control-bg: #ffffff;
-  --wgs-drawing-control-text: #111827;
-  --wgs-drawing-control-border: #d8e5f7;
-}
-
-/* 필기/실기 단독 시험 화면: 모드별 기본 글자색을 명확히 고정 */
-body.wgs-theme-dark .past-exam-page,
-body.wgs-theme-dark .written-exam-page,
-body.wgs-theme-dark .ipep-page,
-body.wgs-theme-dark .random-practice-page {
-  color: var(--wgs-readable-text) !important;
-}
-
-body.wgs-theme-dark .past-exam-page h1,
-body.wgs-theme-dark .past-exam-page h2,
-body.wgs-theme-dark .past-exam-page h3,
-body.wgs-theme-dark .past-exam-page h4,
-body.wgs-theme-dark .past-exam-page p,
-body.wgs-theme-dark .past-exam-page label,
-body.wgs-theme-dark .past-exam-page span:not(.wgs-status-badge),
-body.wgs-theme-dark .written-exam-page h1,
-body.wgs-theme-dark .written-exam-page h2,
-body.wgs-theme-dark .written-exam-page h3,
-body.wgs-theme-dark .written-exam-page h4,
-body.wgs-theme-dark .written-exam-page p,
-body.wgs-theme-dark .written-exam-page label,
-body.wgs-theme-dark .written-exam-page span:not(.wgs-status-badge),
-body.wgs-theme-dark .ipep-page h1,
-body.wgs-theme-dark .ipep-page h2,
-body.wgs-theme-dark .ipep-page h3,
-body.wgs-theme-dark .ipep-page h4,
-body.wgs-theme-dark .ipep-page p,
-body.wgs-theme-dark .ipep-page label,
-body.wgs-theme-dark .ipep-page span:not(.wgs-status-badge) {
-  color: var(--wgs-readable-text) !important;
-}
-
-body.wgs-theme-light .past-exam-page,
-body.wgs-theme-light .written-exam-page,
-body.wgs-theme-light .ipep-page,
-body.wgs-theme-light .random-practice-page {
-  color: var(--wgs-readable-text) !important;
-}
-
-body.wgs-theme-light .past-exam-question-panel,
-body.wgs-theme-light .past-exam-omr-panel,
-body.wgs-theme-light .ipep-page > div,
-body.wgs-theme-light .random-practice-page > div {
-  color: var(--wgs-readable-text) !important;
-}
-
-body.wgs-theme-light .past-exam-page h1,
-body.wgs-theme-light .past-exam-page h2,
-body.wgs-theme-light .past-exam-page h3,
-body.wgs-theme-light .past-exam-page h4,
-body.wgs-theme-light .past-exam-page p,
-body.wgs-theme-light .past-exam-page label,
-body.wgs-theme-light .past-exam-page span:not(.wgs-status-badge),
-body.wgs-theme-light .written-exam-page h1,
-body.wgs-theme-light .written-exam-page h2,
-body.wgs-theme-light .written-exam-page h3,
-body.wgs-theme-light .written-exam-page h4,
-body.wgs-theme-light .written-exam-page p,
-body.wgs-theme-light .written-exam-page label,
-body.wgs-theme-light .written-exam-page span:not(.wgs-status-badge),
-body.wgs-theme-light .ipep-page h1,
-body.wgs-theme-light .ipep-page h2,
-body.wgs-theme-light .ipep-page h3,
-body.wgs-theme-light .ipep-page h4,
-body.wgs-theme-light .ipep-page p,
-body.wgs-theme-light .ipep-page label,
-body.wgs-theme-light .ipep-page span:not(.wgs-status-badge) {
-  color: var(--wgs-readable-text) !important;
-}
-
-body.wgs-theme-dark .past-exam-page input,
-body.wgs-theme-dark .past-exam-page textarea,
-body.wgs-theme-dark .past-exam-page select,
-body.wgs-theme-dark .written-exam-page input,
-body.wgs-theme-dark .written-exam-page textarea,
-body.wgs-theme-dark .written-exam-page select,
-body.wgs-theme-dark .ipep-page input,
-body.wgs-theme-dark .ipep-page textarea,
-body.wgs-theme-dark .ipep-page select,
-body.wgs-theme-dark .random-practice-page input,
-body.wgs-theme-dark .random-practice-page textarea,
-body.wgs-theme-dark .random-practice-page select {
-  background: var(--wgs-readable-field-bg) !important;
-  color: var(--wgs-readable-field-text) !important;
-  border-color: var(--wgs-readable-field-border) !important;
-}
-
-body.wgs-theme-light .past-exam-page input,
-body.wgs-theme-light .past-exam-page textarea,
-body.wgs-theme-light .past-exam-page select,
-body.wgs-theme-light .written-exam-page input,
-body.wgs-theme-light .written-exam-page textarea,
-body.wgs-theme-light .written-exam-page select,
-body.wgs-theme-light .ipep-page input,
-body.wgs-theme-light .ipep-page textarea,
-body.wgs-theme-light .ipep-page select,
-body.wgs-theme-light .random-practice-page input,
-body.wgs-theme-light .random-practice-page textarea,
-body.wgs-theme-light .random-practice-page select {
-  background: var(--wgs-readable-field-bg) !important;
-  color: var(--wgs-readable-field-text) !important;
-  border-color: var(--wgs-readable-field-border) !important;
-}
-
-body.wgs-theme-dark .past-exam-page input::placeholder,
-body.wgs-theme-dark .past-exam-page textarea::placeholder,
-body.wgs-theme-dark .ipep-page input::placeholder,
-body.wgs-theme-dark .ipep-page textarea::placeholder,
-body.wgs-theme-dark .random-practice-page textarea::placeholder {
-  color: #94a3b8 !important;
-}
-body.wgs-theme-light .past-exam-page input::placeholder,
-body.wgs-theme-light .past-exam-page textarea::placeholder,
-body.wgs-theme-light .ipep-page input::placeholder,
-body.wgs-theme-light .ipep-page textarea::placeholder,
-body.wgs-theme-light .random-practice-page textarea::placeholder {
-  color: #64748b !important;
-}
-
-/* 문제 풀이 연습장: 버튼/셀렉트/숫자 입력 글자색이 테마와 충돌하지 않게 정리 */
-.wgs-drawing-board,
-.wgs-drawing-board *:not(canvas) {
-  color: var(--wgs-drawing-text) !important;
-}
-.wgs-drawing-board select,
-.wgs-drawing-board input[type="number"],
-.wgs-drawing-board input[type="color"] {
-  background: var(--wgs-drawing-control-bg) !important;
-  color: var(--wgs-drawing-control-text) !important;
-  border-color: var(--wgs-drawing-control-border) !important;
-}
-.wgs-drawing-board button {
-  color: var(--wgs-drawing-control-text) !important;
-}
-.wgs-drawing-board .wgs-tool-active,
-.wgs-drawing-board button[style*="background: #3b82f6"],
-.wgs-drawing-board button[style*="background:#3b82f6"] {
-  color: #ffffff !important;
-}
-
-/* 멀티플레이 가이드: 다크모드에서 동의 완료 행의 설명 글씨가 배경에 묻히지 않게 고정 */
-#wgs-multiplayer-page .mp-agree-row--checked b {
-  color: #064e3b !important;
-}
-#wgs-multiplayer-page .mp-agree-row--checked span:last-child {
-  color: #047857 !important;
-}
-body.wgs-theme-dark #wgs-multiplayer-page .mp-agree-row:not(.mp-agree-row--checked) b,
-body.wgs-theme-dark #wgs-multiplayer-page .mp-agree-row:not(.mp-agree-row--checked) span:last-child {
-  color: #f8fafc !important;
-}
-
-/* 관리자 페이지: 라이트 테마에서도 내부 다크 카드/테이블의 텍스트가 묻히지 않게 보정 */
-.admin-page,
-.admin-page .admin-section,
-.admin-page .admin-card,
-.admin-page .admin-panel,
-.admin-page .admin-tab-panel,
-.admin-page .admin-table-wrap,
-.admin-page .admin-form,
-.admin-page .admin-preview,
-.admin-page .admin-calendar-panel,
-.admin-page .admin-question-panel,
-.admin-page .admin-screen-panel,
-.admin-page .admin-user-panel {
-  color: #f8fafc !important;
-}
-
-.admin-page h1,
-.admin-page h2,
-.admin-page h3,
-.admin-page h4,
-.admin-page p,
-.admin-page label,
-.admin-page small,
-.admin-page strong,
-.admin-page b,
-.admin-page .admin-muted,
-.admin-page .admin-summary,
-.admin-page .admin-help,
-.admin-page .admin-card-title,
-.admin-page .admin-stat-label,
-.admin-page .admin-stat-value,
-.admin-page .admin-section-title {
-  color: #f8fafc !important;
-}
-
-.admin-page table,
-.admin-page tbody,
-.admin-page tr,
-.admin-page td {
-  color: #e5e7eb !important;
-}
-.admin-page thead,
-.admin-page th {
-  color: #111827 !important;
-}
-
-.admin-page input,
-.admin-page select,
-.admin-page textarea {
-  background: #ffffff !important;
-  color: #111827 !important;
-  border-color: #cbd5e1 !important;
-}
-.admin-page input::placeholder,
-.admin-page textarea::placeholder {
-  color: #64748b !important;
-}
-.admin-page button,
-.admin-page button * {
-  color: inherit;
-}
-.admin-page button[style*="background: #3b82f6"],
-.admin-page button[style*="background:#3b82f6"],
-.admin-page button[style*="background: #10b981"],
-.admin-page button[style*="background:#10b981"],
-.admin-page button[style*="background: #ef4444"],
-.admin-page button[style*="background:#ef4444"] {
-  color: #ffffff !important;
-}
-
-
-/* =========================================================
-   Exam, admin, and calendar UI adjustments
-   - 테마별 가독성만 보정하고 DB/채점/관리자 CRUD 로직은 변경하지 않습니다.
-   ========================================================= */
-body.wgs-theme-light .past-exam-page,
-body.wgs-theme-light .past-exam-page *:not(button):not(button *):not(svg):not(path),
-body.wgs-theme-light .random-practice-page,
-body.wgs-theme-light .random-practice-page *:not(button):not(button *):not(svg):not(path) {
-  color: #111827 !important;
-}
-
-body.wgs-theme-light .past-exam-page .question-card,
-body.wgs-theme-light .past-exam-page .question-box,
-body.wgs-theme-light .past-exam-page .option-card,
-body.wgs-theme-light .past-exam-page .choice-card,
-body.wgs-theme-light .random-practice-page .question-card,
-body.wgs-theme-light .random-practice-page .question-box,
-body.wgs-theme-light .random-practice-page .option-card,
-body.wgs-theme-light .random-practice-page .choice-card {
-  background: #ffffff !important;
-  color: #111827 !important;
-  border-color: #d8e5f7 !important;
-}
-
-body.wgs-theme-dark .ipep-page,
-body.wgs-theme-dark .ipep-page .written-exam-page,
-body.wgs-theme-dark .ipep-page [class*="card"],
-body.wgs-theme-dark .ipep-page [class*="panel"],
-body.wgs-theme-dark .ipep-page [class*="box"] {
-  color: #f8fafc !important;
-}
-
-body.wgs-theme-light .ipep-page,
-body.wgs-theme-light .ipep-page .written-exam-page,
-body.wgs-theme-light .ipep-page [class*="card"],
-body.wgs-theme-light .ipep-page [class*="panel"],
-body.wgs-theme-light .ipep-page [class*="box"] {
-  color: #111827 !important;
-}
-
-body.wgs-theme-dark .ipep-page textarea,
-body.wgs-theme-dark .ipep-page input,
-body.wgs-theme-dark .ipep-page select,
-body.wgs-theme-dark #wgs-multiplayer-page textarea,
-body.wgs-theme-dark #wgs-multiplayer-page input,
-body.wgs-theme-dark #wgs-multiplayer-page select {
-  background: rgba(2, 6, 23, 0.92) !important;
-  color: #f8fafc !important;
-  border-color: rgba(148, 163, 184, 0.42) !important;
-}
-
-body.wgs-theme-light .ipep-page textarea,
-body.wgs-theme-light .ipep-page input,
-body.wgs-theme-light .ipep-page select,
-body.wgs-theme-light #wgs-multiplayer-page textarea,
-body.wgs-theme-light #wgs-multiplayer-page input,
-body.wgs-theme-light #wgs-multiplayer-page select {
-  background: #ffffff !important;
-  color: #111827 !important;
-  border-color: #d8e5f7 !important;
-}
-
-body.wgs-theme-dark #wgs-multiplayer-page .mp-exam-grid,
-body.wgs-theme-dark #wgs-multiplayer-page .mp-exam-card,
-body.wgs-theme-dark #wgs-multiplayer-page .mp-omr-card,
-body.wgs-theme-dark #wgs-multiplayer-page .mp-wrong-practice-card {
-  color: #f8fafc !important;
-}
-
-body.wgs-theme-light #wgs-multiplayer-page .mp-exam-grid,
-body.wgs-theme-light #wgs-multiplayer-page .mp-exam-card,
-body.wgs-theme-light #wgs-multiplayer-page .mp-omr-card,
-body.wgs-theme-light #wgs-multiplayer-page .mp-wrong-practice-card {
-  color: #111827 !important;
-}
-
-/* 실기 멀티플레이 문제/답안 영역이 다크모드에서 겹쳐 보이지 않도록 안전 여백과 대비를 보정 */
-#wgs-multiplayer-page .mp-written-answer-wrap,
-#wgs-multiplayer-page .mp-written-answer-box,
-#wgs-multiplayer-page .mp-written-question-box {
-  position: relative;
-  z-index: 1;
-}
-#wgs-multiplayer-page .mp-written-answer-box textarea,
-#wgs-multiplayer-page textarea[placeholder*="정답을 직접"] {
-  min-height: 120px;
-  line-height: 1.55;
-}
-
-/* 오류신고 제목은 자동 생성/잠금 상태임을 시각적으로 표시 */
-.error-report-modal input[readonly] {
-  background: #f1f5f9 !important;
-  color: #334155 !important;
-}
-body.wgs-theme-dark .error-report-modal input[readonly] {
-  background: rgba(15, 23, 42, 0.88) !important;
-  color: #e5e7eb !important;
-}
-
-/* 홈 달력은 DB에서 받은 텍스트가 테마에 묻히지 않도록 보정 */
-body.wgs-theme-dark .home-calendar,
-body.wgs-theme-dark .home-calendar * {
-  color: #f8fafc;
-}
-body.wgs-theme-light .home-calendar,
-body.wgs-theme-light .home-calendar * {
-  color: #111827;
-}
-
-
-/* =========================================================
-   Home calendar date-number color rules
-   - 이벤트 색상은 DB에서 그대로 사용합니다
-   - 날짜 숫자는 일요일/공휴일만 빨강, 토요일은 파랑, 평일은 테마 기본색
-   ========================================================= */
-.home-calendar .home-calendar-date-number {
-  font-weight: 900;
-  font-size: 12px;
-  color: var(--wgs-calendar-day-color, #111827) !important;
-}
-.home-calendar .home-calendar-date-number.is-red-day {
-  color: #ef4444 !important;
-}
-.home-calendar .home-calendar-date-number.is-saturday {
-  color: #2563eb !important;
-}
-body.wgs-theme-dark .home-calendar .home-calendar-date-number {
-  color: #e5e7eb !important;
-}
-body.wgs-theme-dark .home-calendar .home-calendar-date-number.is-red-day {
-  color: #f87171 !important;
-}
-body.wgs-theme-dark .home-calendar .home-calendar-date-number.is-saturday {
-  color: #60a5fa !important;
-}
-
-/* =========================================================
-   Admin calendar readability adjustments
-   - CRUD 로직은 그대로 두고 calendar 탭의 카드/입력창/테이블 경계와 글자색만 보정
-   - 기존 전역 admin-page 강제 색상 규칙보다 뒤에 두어 라이트/다크 모두 읽기 쉽게 만듦
-   ========================================================= */
-.admin-page .admin-calendar-section {
-  border: 1px solid rgba(59, 130, 246, 0.28) !important;
-  border-radius: 24px !important;
-}
-.admin-page .admin-calendar-section .admin-panel-head,
-.admin-page .admin-calendar-section .admin-card-title-row,
-.admin-page .admin-calendar-section .admin-screen-form-card,
-.admin-page .admin-calendar-section .admin-screen-preview-card,
-.admin-page .admin-calendar-section .admin-question-summary-grid article,
-.admin-page .admin-calendar-section .admin-question-list-card {
-  box-shadow: 0 18px 50px rgba(15, 23, 42, 0.10) !important;
-}
-.admin-page .admin-calendar-section .admin-screen-form-card,
-.admin-page .admin-calendar-section .admin-screen-preview-card,
-.admin-page .admin-calendar-section .admin-question-list-card {
-  border: 1px solid rgba(148, 163, 184, 0.42) !important;
-}
-.admin-page .admin-calendar-section .admin-screen-form-grid label,
-.admin-page .admin-calendar-section .admin-screen-full-label,
-.admin-page .admin-calendar-section .admin-card-title-row p,
-.admin-page .admin-calendar-section .admin-screen-preview-card p,
-.admin-page .admin-calendar-section .admin-calendar-table td,
-.admin-page .admin-calendar-section .admin-calendar-table td strong,
-.admin-page .admin-calendar-section .admin-calendar-table td small {
-  opacity: 1 !important;
-}
-.admin-page .admin-calendar-section input,
-.admin-page .admin-calendar-section select,
-.admin-page .admin-calendar-section textarea {
-  min-height: 44px !important;
-  border-width: 1.5px !important;
-  box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.12) !important;
-}
-.admin-page .admin-calendar-section input[type='color'] {
-  min-height: 44px !important;
-  padding: 4px !important;
-  cursor: pointer;
-}
-.admin-page .admin-calendar-section .admin-calendar-active-check {
-  border: 1px dashed rgba(148, 163, 184, 0.60) !important;
-  border-radius: 12px !important;
-  padding: 10px 12px !important;
-}
-.admin-page .admin-calendar-section .admin-calendar-preview-box {
-  border-width: 1.5px !important;
-}
-.admin-page .admin-calendar-section .admin-table-scroll {
-  border: 1px solid rgba(148, 163, 184, 0.35) !important;
-  border-radius: 16px !important;
-  overflow: auto !important;
-}
-.admin-page .admin-calendar-section .admin-calendar-table {
-  border-collapse: separate !important;
-  border-spacing: 0 !important;
-}
-.admin-page .admin-calendar-section .admin-calendar-table th {
-  position: sticky;
-  top: 0;
-  z-index: 1;
-  font-weight: 900 !important;
-}
-.admin-page .admin-calendar-section .admin-calendar-table td {
-  border-bottom: 1px solid rgba(148, 163, 184, 0.22) !important;
-}
-.admin-page .admin-calendar-section .admin-badge {
-  border: 1px solid rgba(148, 163, 184, 0.36) !important;
-}
-
-body.wgs-theme-light .admin-page .admin-calendar-section {
-  background: rgba(255, 255, 255, 0.88) !important;
-  color: #111827 !important;
-}
-body.wgs-theme-light .admin-page .admin-calendar-section h2,
-body.wgs-theme-light .admin-page .admin-calendar-section h3,
-body.wgs-theme-light .admin-page .admin-calendar-section h4,
-body.wgs-theme-light .admin-page .admin-calendar-section p,
-body.wgs-theme-light .admin-page .admin-calendar-section label,
-body.wgs-theme-light .admin-page .admin-calendar-section small,
-body.wgs-theme-light .admin-page .admin-calendar-section strong,
-body.wgs-theme-light .admin-page .admin-calendar-section b,
-body.wgs-theme-light .admin-page .admin-calendar-section span:not(.admin-badge):not(.admin-small-status) {
-  color: #111827 !important;
-}
-body.wgs-theme-light .admin-page .admin-calendar-section .admin-screen-form-card,
-body.wgs-theme-light .admin-page .admin-calendar-section .admin-screen-preview-card,
-body.wgs-theme-light .admin-page .admin-calendar-section .admin-question-list-card,
-body.wgs-theme-light .admin-page .admin-calendar-section .admin-question-summary-grid article {
-  background: #ffffff !important;
-  border-color: #cbd5e1 !important;
-}
-body.wgs-theme-light .admin-page .admin-calendar-section input,
-body.wgs-theme-light .admin-page .admin-calendar-section select,
-body.wgs-theme-light .admin-page .admin-calendar-section textarea {
-  background: #ffffff !important;
-  color: #111827 !important;
-  border-color: #94a3b8 !important;
-}
-body.wgs-theme-light .admin-page .admin-calendar-section input::placeholder,
-body.wgs-theme-light .admin-page .admin-calendar-section textarea::placeholder {
-  color: #64748b !important;
-}
-body.wgs-theme-light .admin-page .admin-calendar-section .admin-calendar-table th {
-  background: #e5eefb !important;
-  color: #111827 !important;
-}
-body.wgs-theme-light .admin-page .admin-calendar-section .admin-calendar-table td {
-  background: #ffffff !important;
-  color: #1f2937 !important;
-}
-body.wgs-theme-light .admin-page .admin-calendar-section .admin-calendar-preview-box,
-body.wgs-theme-light .admin-page .admin-calendar-section .admin-screen-help-box {
-  background: #f8fafc !important;
-  color: #111827 !important;
-}
-
-body.wgs-theme-dark .admin-page .admin-calendar-section {
-  background: rgba(7, 20, 38, 0.96) !important;
-  color: #f8fafc !important;
-}
-body.wgs-theme-dark .admin-page .admin-calendar-section h2,
-body.wgs-theme-dark .admin-page .admin-calendar-section h3,
-body.wgs-theme-dark .admin-page .admin-calendar-section h4,
-body.wgs-theme-dark .admin-page .admin-calendar-section p,
-body.wgs-theme-dark .admin-page .admin-calendar-section label,
-body.wgs-theme-dark .admin-page .admin-calendar-section small,
-body.wgs-theme-dark .admin-page .admin-calendar-section strong,
-body.wgs-theme-dark .admin-page .admin-calendar-section b,
-body.wgs-theme-dark .admin-page .admin-calendar-section span:not(.admin-badge):not(.admin-small-status) {
-  color: #f8fafc !important;
-}
-body.wgs-theme-dark .admin-page .admin-calendar-section .admin-screen-form-card,
-body.wgs-theme-dark .admin-page .admin-calendar-section .admin-screen-preview-card,
-body.wgs-theme-dark .admin-page .admin-calendar-section .admin-question-list-card,
-body.wgs-theme-dark .admin-page .admin-calendar-section .admin-question-summary-grid article {
-  background: rgba(15, 23, 42, 0.94) !important;
-  border-color: rgba(96, 165, 250, 0.32) !important;
-}
-body.wgs-theme-dark .admin-page .admin-calendar-section input,
-body.wgs-theme-dark .admin-page .admin-calendar-section select,
-body.wgs-theme-dark .admin-page .admin-calendar-section textarea {
-  background: #020617 !important;
-  color: #f8fafc !important;
-  border-color: #475569 !important;
-}
-body.wgs-theme-dark .admin-page .admin-calendar-section input::placeholder,
-body.wgs-theme-dark .admin-page .admin-calendar-section textarea::placeholder {
-  color: #94a3b8 !important;
-}
-body.wgs-theme-dark .admin-page .admin-calendar-section .admin-calendar-table th {
-  background: #0f172a !important;
-  color: #f8fafc !important;
-}
-body.wgs-theme-dark .admin-page .admin-calendar-section .admin-calendar-table td {
-  background: #111827 !important;
-  color: #e5e7eb !important;
-}
-body.wgs-theme-dark .admin-page .admin-calendar-section .admin-calendar-preview-box,
-body.wgs-theme-dark .admin-page .admin-calendar-section .admin-screen-help-box {
-  background: #020617 !important;
-  color: #f8fafc !important;
-}
-
-/* =========================================================
-   Home calendar date-number color hardening
-   - DB 공휴일 또는 토/일 주말만 빨간색
-   - 그 외 평일은 라이트=검정 계열, 다크=밝은 계열로 강제
-   - 기존 전역 color !important 규칙보다 구체도를 높여 달력 숫자 오염을 방지
-   ========================================================= */
-body.wgs-theme-light .home-calendar {
-  --wgs-calendar-date-default: #111827;
-}
-body.wgs-theme-dark .home-calendar {
-  --wgs-calendar-date-default: #e5e7eb;
-}
-body.wgs-theme-light .home-calendar .home-calendar-date-number,
-body.wgs-theme-dark .home-calendar .home-calendar-date-number {
-  color: var(--wgs-date-number-color, var(--wgs-calendar-date-default)) !important;
-  font-weight: 800 !important;
-}
-body.wgs-theme-light .home-calendar .home-calendar-date-number.is-red-day,
-body.wgs-theme-dark .home-calendar .home-calendar-date-number.is-red-day {
-  color: var(--wgs-date-number-color, #ef4444) !important;
-}
-
-/* =========================================================
-   Admin calendar text contrast hardening
-   - 기능/CRUD 로직은 변경하지 않고 테마별 가독성만 보강
-   - 라이트: 어두운 글자, 다크: 밝은 글자
-   ========================================================= */
-body.wgs-theme-light .admin-page .admin-calendar-section :is(h2, h3, h4, p, label, small, td, th, div, span, strong, b):not(.admin-calendar-preview-box strong) {
-  color: #111827 !important;
-}
-body.wgs-theme-light .admin-page .admin-calendar-section .admin-panel-head p,
-body.wgs-theme-light .admin-page .admin-calendar-section .admin-card-title-row p,
-body.wgs-theme-light .admin-page .admin-calendar-section .admin-screen-preview-card p,
-body.wgs-theme-light .admin-page .admin-calendar-section .admin-calendar-table td small {
-  color: #334155 !important;
-}
-body.wgs-theme-light .admin-page .admin-calendar-section input,
-body.wgs-theme-light .admin-page .admin-calendar-section select,
-body.wgs-theme-light .admin-page .admin-calendar-section textarea {
-  background: #ffffff !important;
-  color: #111827 !important;
-  border-color: #64748b !important;
-}
-body.wgs-theme-light .admin-page .admin-calendar-section .admin-question-list-card,
-body.wgs-theme-light .admin-page .admin-calendar-section .admin-table-scroll,
-body.wgs-theme-light .admin-page .admin-calendar-section .admin-calendar-table {
-  background: #ffffff !important;
-}
-
-body.wgs-theme-dark .admin-page .admin-calendar-section :is(h2, h3, h4, p, label, small, td, th, div, span, strong, b):not(.admin-calendar-preview-box strong) {
-  color: #f8fafc !important;
-}
-body.wgs-theme-dark .admin-page .admin-calendar-section .admin-panel-head p,
-body.wgs-theme-dark .admin-page .admin-calendar-section .admin-card-title-row p,
-body.wgs-theme-dark .admin-page .admin-calendar-section .admin-screen-preview-card p,
-body.wgs-theme-dark .admin-page .admin-calendar-section .admin-calendar-table td small {
-  color: #cbd5e1 !important;
-}
-body.wgs-theme-dark .admin-page .admin-calendar-section input,
-body.wgs-theme-dark .admin-page .admin-calendar-section select,
-body.wgs-theme-dark .admin-page .admin-calendar-section textarea {
-  background: #020617 !important;
-  color: #f8fafc !important;
-  border-color: #64748b !important;
-}
-body.wgs-theme-dark .admin-page .admin-calendar-section .admin-question-list-card,
-body.wgs-theme-dark .admin-page .admin-calendar-section .admin-table-scroll,
-body.wgs-theme-dark .admin-page .admin-calendar-section .admin-calendar-table {
-  background: #0f172a !important;
-}
-
-/* =========================================================
-   Home calendar date-number regression guard
-   - 월 이동/캐시/DOM 재사용으로 이전 달 class가 남아도 data-calendar-red-day와 CSS 변수 기준으로 최종 색상 고정
-   - 주말(토/일) 또는 DB 공휴일만 빨강, 그 외 평일은 테마별 기본 글자색
-   ========================================================= */
-body.wgs-theme-light .home-calendar-card {
-  --wgs-calendar-date-default: #111827;
-}
-body.wgs-theme-dark .home-calendar-card {
-  --wgs-calendar-date-default: #f8fafc;
-}
-body.wgs-theme-light .home-calendar-card .home-calendar-date-number,
-body.wgs-theme-dark .home-calendar-card .home-calendar-date-number {
-  color: var(--wgs-date-number-color, var(--wgs-calendar-date-default)) !important;
-  font-weight: 800 !important;
-}
-body.wgs-theme-light .home-calendar-card .home-calendar-date-number[data-calendar-red-day="false"],
-body.wgs-theme-dark .home-calendar-card .home-calendar-date-number[data-calendar-red-day="false"] {
-  color: var(--wgs-calendar-date-default) !important;
-}
-body.wgs-theme-light .home-calendar-card .home-calendar-date-number[data-calendar-red-day="true"],
-body.wgs-theme-dark .home-calendar-card .home-calendar-date-number[data-calendar-red-day="true"] {
-  color: #ef4444 !important;
-}
-
-/* =========================================================
-   Admin calendar button and text contrast guard
-   - 라이트: 본문은 어두운 글자, 검정/진한 버튼은 흰 글자
-   - 다크: 본문·테이블·버튼 글자를 밝은 계열로 고정
-   - CRUD/저장/수정/삭제 로직은 변경하지 않고 CSS만 보정
-   ========================================================= */
-body.wgs-theme-light .admin-page .admin-calendar-section,
-body.wgs-theme-light .admin-page .admin-calendar-section :is(h1, h2, h3, h4, h5, p, label, small, td, th, div, span, strong, b) {
-  color: #111827 !important;
-}
-body.wgs-theme-light .admin-page .admin-calendar-section :is(button, .admin-btn, .admin-action-btn) {
-  color: #ffffff !important;
-  text-shadow: none !important;
-}
-body.wgs-theme-light .admin-page .admin-calendar-section .admin-calendar-table :is(button, .admin-btn, .admin-action-btn),
-body.wgs-theme-light .admin-page .admin-calendar-section .admin-table-scroll :is(button, .admin-btn, .admin-action-btn) {
-  color: #ffffff !important;
-}
-body.wgs-theme-light .admin-page .admin-calendar-section input,
-body.wgs-theme-light .admin-page .admin-calendar-section select,
-body.wgs-theme-light .admin-page .admin-calendar-section textarea {
-  color: #111827 !important;
-  background: #ffffff !important;
-}
-body.wgs-theme-light .admin-page .admin-calendar-section input::placeholder,
-body.wgs-theme-light .admin-page .admin-calendar-section textarea::placeholder {
-  color: #64748b !important;
-}
-
-body.wgs-theme-dark .admin-page .admin-calendar-section,
-body.wgs-theme-dark .admin-page .admin-calendar-section :is(h1, h2, h3, h4, h5, p, label, small, td, th, div, span, strong, b) {
-  color: #f8fafc !important;
-}
-body.wgs-theme-dark .admin-page .admin-calendar-section .admin-panel-head p,
-body.wgs-theme-dark .admin-page .admin-calendar-section .admin-card-title-row p,
-body.wgs-theme-dark .admin-page .admin-calendar-section .admin-screen-preview-card p,
-body.wgs-theme-dark .admin-page .admin-calendar-section .admin-calendar-table td small {
-  color: #e5e7eb !important;
-}
-body.wgs-theme-dark .admin-page .admin-calendar-section :is(button, .admin-btn, .admin-action-btn) {
-  color: #ffffff !important;
-  text-shadow: none !important;
-}
-body.wgs-theme-dark .admin-page .admin-calendar-section input,
-body.wgs-theme-dark .admin-page .admin-calendar-section select,
-body.wgs-theme-dark .admin-page .admin-calendar-section textarea {
-  color: #f8fafc !important;
-  background: #020617 !important;
-  border-color: #94a3b8 !important;
-}
-body.wgs-theme-dark .admin-page .admin-calendar-section input::placeholder,
-body.wgs-theme-dark .admin-page .admin-calendar-section textarea::placeholder {
-  color: #cbd5e1 !important;
 }

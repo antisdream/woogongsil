@@ -1,19 +1,15 @@
 /* 결재 상세 모달의 인라인 스타일 우선 적용 보정입니다. */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
 import {
   API_BASE,
   DEFAULT_ADMIN_ERROR,
   RECENT_LOG_PAGE_SIZE,
   USER_PAGE_SIZE,
   ADMIN_TABS,
-  ADMIN_TAB_ROUTE_MAP,
-  getAdminTabFromPath,
   getStoredUser,
   getStoredUserId,
-  getStoredUserName,
-  getStoredServerInstanceId,
-  getStoredSessionToken,
+  makeAdminHeadersFromStorage,
+  makeAdminAuthBodyFromStorage,
   normalizeApprovalStatus,
   getUserIdText,
   isPrimaryAdminRow,
@@ -22,6 +18,7 @@ import {
   sortUsersByAdminRole,
   verifyAdminAccessWithServer,
 } from '../features/admin/adminUtils.js';
+import useAdminTabNavigation from '../features/admin/useAdminTabNavigation.js';
 import useAdminMealMap from '../features/admin/useAdminMealMap.js';
 import useAdminScreenSettings from '../features/admin/useAdminScreenSettings.js';
 import useAdminClassSchedules from '../features/admin/useAdminClassSchedules.js';
@@ -41,16 +38,12 @@ import AdminApprovalDetailModal from '../features/admin/components/AdminApproval
 import AdminQuestionsTab from '../features/admin/components/AdminQuestionsTab.jsx';
 import AdminCalendarTab from '../features/admin/components/AdminCalendarTab.jsx';
 import AdminDisplayTab from '../features/admin/components/AdminDisplayTab.jsx';
-import AdminMealMapPlacesSection from '../features/admin/components/AdminMealMapPlacesSection.jsx';
-import AdminMealMapEditRequestsSection from '../features/admin/components/AdminMealMapEditRequestsSection.jsx';
-import AdminMealMapSettingsSection from '../features/admin/components/AdminMealMapSettingsSection.jsx';
+import AdminMealMapTabSections from '../features/admin/components/AdminMealMapTabSections.jsx';
 
 // 관리자 회식맵 설정 API 호출 기본 경로입니다.
 // 같은 도메인의 Express 서버 API를 사용하므로 빈 문자열을 기본값으로 둡니다.
 function Admin() {
-  const location = useLocation();
-  const navigate = useNavigate();
-  const adminTabFromPath = getAdminTabFromPath(location.pathname);
+  const { activeAdminTab, openAdminTab } = useAdminTabNavigation();
 
   // 관리자 접근 가능 여부를 먼저 판단해 비관리자에게 화면이 순간적으로 보이는 현상을 막는다.
   const [canOpenAdmin, setCanOpenAdmin] = useState(false);
@@ -83,25 +76,6 @@ function Admin() {
   const currentUser = useMemo(() => getStoredUser(), []);
   // 초기 데이터 로딩은 검색어 입력이나 페이지 이동 때문에 useCallback 참조가 바뀌어도 한 번만 실행합니다.
   const didInitialAdminLoadRef = useRef(false);
-
-  // 관리자 기능 영역을 탭으로 나누기 위한 현재 선택 탭 상태입니다.
-  // 기존 기능을 삭제하거나 재작성하지 않고, 같은 컴포넌트 안에서 보이는 영역만 전환합니다.
-  const [activeAdminTab, setActiveAdminTab] = useState(adminTabFromPath);
-
-  const openAdminTab = useCallback((tabId, options = {}) => {
-    const nextTab = ADMIN_TABS.some((tab) => tab.id === tabId) ? tabId : 'dashboard';
-    setActiveAdminTab(nextTab);
-    const nextPath = ADMIN_TAB_ROUTE_MAP[nextTab] || '/admin/dashboard';
-    if (location.pathname !== nextPath) {
-      navigate(nextPath, { replace: Boolean(options.replace) });
-    }
-  }, [location.pathname, navigate]);
-
-  useEffect(() => {
-    if (adminTabFromPath !== activeAdminTab) {
-      setActiveAdminTab(adminTabFromPath);
-    }
-  }, [adminTabFromPath, activeAdminTab]);
 
   // 검색/정렬 기준이 바뀌면 빈 페이지에 남지 않도록 첫 페이지로 되돌린다.
   useEffect(() => {
@@ -136,16 +110,7 @@ return () => {
   }, []);
 
   // 관리자 전용 API에 공통으로 들어갈 인증 헤더를 생성합니다.
-  const makeAdminHeaders = useCallback(() => {
-    const user = getStoredUser();
-    const token = getStoredSessionToken(user);
-
-    return {
-      'Content-Type': 'application/json',
-      'x-user-id': getStoredUserId(user),
-      'x-session-token': token,
-    };
-  }, []);
+  const makeAdminHeaders = useCallback(() => makeAdminHeadersFromStorage(), []);
 
   const {
     mealMapPlaces,
@@ -186,16 +151,7 @@ return () => {
     makeAdminHeaders,
   });
 
-  const makeAdminAuthBody = useCallback(() => {
-    const user = getStoredUser();
-
-    return {
-      id: getStoredUserId(user),
-      name: getStoredUserName(user),
-      sessionToken: getStoredSessionToken(user),
-      serverInstanceId: getStoredServerInstanceId(user),
-    };
-  }, []);
+  const makeAdminAuthBody = useCallback(() => makeAdminAuthBodyFromStorage(), []);
 
   const {
     onlineUsers,
@@ -391,6 +347,7 @@ return () => {
     handleToggleClassSchedule,
     handleDeleteClassSchedule,
     handleClassScheduleFilterChange,
+    updateClassScheduleFilterUserIds,
     handleClassScheduleFilterSubmit,
   } = useAdminClassSchedules({
     activeAdminTab,
@@ -751,7 +708,9 @@ return () => {
         />
       )}
 
-      {/* 사용자·접속 관리 탭 */}
+
+
+      {/* ?????? ?? ? */}
       {activeAdminTab === 'users' && (
         <AdminUsersTab
           onlineFetchedAt={onlineFetchedAt}
@@ -871,7 +830,9 @@ return () => {
         />
       )}
 
-      {/* 문제 관리 탭 */}
+
+
+      {/* ?? ?? ? */}
       {activeAdminTab === 'questions' && (
         <AdminQuestionsTab
           questionError={questionError}
@@ -920,9 +881,11 @@ return () => {
           classScheduleFilters={classScheduleFilters}
           handleClassScheduleFilterSubmit={handleClassScheduleFilterSubmit}
           handleClassScheduleFilterChange={handleClassScheduleFilterChange}
+          updateClassScheduleFilterUserIds={updateClassScheduleFilterUserIds}
           startEditClassSchedule={startEditClassSchedule}
           handleToggleClassSchedule={handleToggleClassSchedule}
           handleDeleteClassSchedule={handleDeleteClassSchedule}
+          users={users}
         />
       )}
 
@@ -952,21 +915,11 @@ return () => {
       )}
 
 
-      {/* 회식맵 관리자 승인/반려 관리 탭 */}
       {activeAdminTab === 'mealmap' && (
-        <AdminMealMapPlacesSection
-          fetchMealMapAdminPlaces={fetchMealMapAdminPlaces}
-          mealMapLoading={mealMapLoading}
-          mealMapStats={mealMapStats}
-          mealMapStatusFilter={mealMapStatusFilter}
-          setMealMapStatusFilter={setMealMapStatusFilter}
-          mealMapKeyword={mealMapKeyword}
-          setMealMapKeyword={setMealMapKeyword}
-          mealMapError={mealMapError}
-          mealMapSuccess={mealMapSuccess}
-          mealMapPlaces={mealMapPlaces}
-          mealMapSavingId={mealMapSavingId}
-          runMealMapAdminAction={runMealMapAdminAction}
+        <AdminMealMapTabSections
+          places={{ fetchMealMapAdminPlaces, mealMapLoading, mealMapStats, mealMapStatusFilter, setMealMapStatusFilter, mealMapKeyword, setMealMapKeyword, mealMapError, mealMapSuccess, mealMapPlaces, mealMapSavingId, runMealMapAdminAction }}
+          edits={{ fetchMealMapEditRequests, mealMapEditLoading, mealMapEditStats, mealMapEditStatusFilter, setMealMapEditStatusFilter, mealMapEditKeyword, setMealMapEditKeyword, mealMapEditError, mealMapEditRequests, runMealMapEditAction }}
+          settings={{ loadMealMapLayoutsV253, saveMealMapLayoutSettingsV253, mealMapLayoutsV253, setMealMapLayoutsV253, loadMealMapTextSettings, saveMealMapTextSettings, mealMapTextLoading, mealMapTextSaving, mealMapTextSettings, updateMealMapTextSetting }}
         />
       )}
 
@@ -983,37 +936,7 @@ return () => {
         setApprovalDetailItem={setApprovalDetailItem}
       />
 
-      {activeAdminTab === 'mealmap' && (
-        <AdminMealMapEditRequestsSection
-          fetchMealMapEditRequests={fetchMealMapEditRequests}
-          mealMapEditLoading={mealMapEditLoading}
-          mealMapEditStats={mealMapEditStats}
-          mealMapEditStatusFilter={mealMapEditStatusFilter}
-          setMealMapEditStatusFilter={setMealMapEditStatusFilter}
-          mealMapEditKeyword={mealMapEditKeyword}
-          setMealMapEditKeyword={setMealMapEditKeyword}
-          mealMapEditError={mealMapEditError}
-          mealMapEditRequests={mealMapEditRequests}
-          runMealMapEditAction={runMealMapEditAction}
-        />
-      )}
 
-
-
-      {activeAdminTab === 'mealmap' && (
-        <AdminMealMapSettingsSection
-          loadMealMapLayoutsV253={loadMealMapLayoutsV253}
-          saveMealMapLayoutSettingsV253={saveMealMapLayoutSettingsV253}
-          mealMapLayoutsV253={mealMapLayoutsV253}
-          setMealMapLayoutsV253={setMealMapLayoutsV253}
-          loadMealMapTextSettings={loadMealMapTextSettings}
-          saveMealMapTextSettings={saveMealMapTextSettings}
-          mealMapTextLoading={mealMapTextLoading}
-          mealMapTextSaving={mealMapTextSaving}
-          mealMapTextSettings={mealMapTextSettings}
-          updateMealMapTextSetting={updateMealMapTextSetting}
-        />
-      )}
 
     </div>
   );

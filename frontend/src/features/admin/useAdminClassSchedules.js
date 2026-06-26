@@ -5,25 +5,41 @@ import {
   EMPTY_CLASS_SCHEDULE_FORM,
 } from './adminUtils.js';
 
+const EMPTY_CLASS_SCHEDULE_SUMMARY = {
+  total: 0,
+  active_count: 0,
+  inactive_count: 0,
+  first_date: '',
+  last_date: '',
+};
+
+function normalizeFilterUserIds(value) {
+  if (Array.isArray(value) === false) return [];
+  return [...new Set(value.map((id) => String(id || '').trim()).filter(Boolean))];
+}
+
+function isUserCalendarSchedule(schedule) {
+  if (!schedule || typeof schedule !== 'object') return false;
+  return schedule.source_scope === 'user_calendar'
+    || schedule.sourceScope === 'user_calendar'
+    || Boolean(schedule.user_id || schedule.userId);
+}
+
 export default function useAdminClassSchedules({
   activeAdminTab,
   makeAdminHeaders,
 }) {
   const [classSchedules, setClassSchedules] = useState([]);
-  const [classScheduleSummary, setClassScheduleSummary] = useState({
-    total: 0,
-    active_count: 0,
-    inactive_count: 0,
-    first_date: '',
-    last_date: '',
-  });
+  const [classScheduleSummary, setClassScheduleSummary] = useState(EMPTY_CLASS_SCHEDULE_SUMMARY);
   const [classScheduleFilters, setClassScheduleFilters] = useState({
     keyword: '',
     active: '',
     type: '',
+    userIds: [],
   });
   const [classScheduleForm, setClassScheduleForm] = useState(EMPTY_CLASS_SCHEDULE_FORM);
   const [editingClassScheduleId, setEditingClassScheduleId] = useState(null);
+  const [editingClassScheduleSource, setEditingClassScheduleSource] = useState('class');
   const [loadingClassSchedules, setLoadingClassSchedules] = useState(false);
   const [savingClassSchedule, setSavingClassSchedule] = useState(false);
   const [classScheduleError, setClassScheduleError] = useState('');
@@ -31,17 +47,23 @@ export default function useAdminClassSchedules({
 
   const fetchClassSchedules = useCallback(async (overrides = {}) => {
     const nextFilters = { ...classScheduleFilters, ...overrides };
+    const selectedUserIds = normalizeFilterUserIds(nextFilters.userIds);
     const query = new URLSearchParams();
 
     if (nextFilters.keyword) query.set('keyword', nextFilters.keyword);
     if (nextFilters.active === '1' || nextFilters.active === '0') query.set('active', nextFilters.active);
     if (nextFilters.type) query.set('type', nextFilters.type);
+    if (selectedUserIds.length > 0) query.set('userIds', selectedUserIds.join(','));
+
+    const endpoint = selectedUserIds.length > 0
+      ? '/api/admin/user-calendar-events'
+      : '/api/admin/class-schedules';
 
     setLoadingClassSchedules(true);
     setClassScheduleError('');
 
     try {
-      const response = await fetch(`/api/admin/class-schedules?${query.toString()}`, {
+      const response = await fetch(`${endpoint}?${query.toString()}`, {
         headers: makeAdminHeaders(),
       });
 
@@ -52,13 +74,7 @@ export default function useAdminClassSchedules({
       }
 
       setClassSchedules(Array.isArray(data.schedules) ? data.schedules : []);
-      setClassScheduleSummary(data.summary || {
-        total: 0,
-        active_count: 0,
-        inactive_count: 0,
-        first_date: '',
-        last_date: '',
-      });
+      setClassScheduleSummary(data.summary || EMPTY_CLASS_SCHEDULE_SUMMARY);
     } catch (error) {
       console.error('[admin] class schedules fetch failed:', error);
       setClassScheduleError(error.message || '달력 일정 목록을 불러오지 못했습니다.');
@@ -70,6 +86,7 @@ export default function useAdminClassSchedules({
   const resetClassScheduleForm = useCallback(() => {
     setClassScheduleForm(EMPTY_CLASS_SCHEDULE_FORM);
     setEditingClassScheduleId(null);
+    setEditingClassScheduleSource('class');
     setClassScheduleError('');
     setClassScheduleSuccess('');
   }, []);
@@ -152,21 +169,28 @@ export default function useAdminClassSchedules({
       admin_note: String(classScheduleForm.admin_note || classScheduleForm.memo || '').trim(),
       sort_order: Number(classScheduleForm.sort_order || 0),
       is_active: Number(classScheduleForm.is_active) ? 1 : 0,
+      target_user_ids: normalizeFilterUserIds(classScheduleForm.target_user_ids),
     };
 
     try {
       const isEditing = Boolean(editingClassScheduleId);
-      const response = await fetch(
-        isEditing ? `/api/admin/class-schedules/${editingClassScheduleId}` : '/api/admin/class-schedules',
-        {
-          method: isEditing ? 'PUT' : 'POST',
-          headers: {
-            ...makeAdminHeaders(),
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(payload),
-        }
-      );
+      const isEditingUserSchedule = isEditing && editingClassScheduleSource === 'user_calendar';
+      const hasTargetUsers = !isEditing && payload.target_user_ids.length > 0;
+      const endpoint = isEditingUserSchedule
+        ? `/api/admin/user-calendar-events/${editingClassScheduleId}`
+        : hasTargetUsers
+          ? '/api/admin/user-calendar-events'
+          : isEditing
+            ? `/api/admin/class-schedules/${editingClassScheduleId}`
+            : '/api/admin/class-schedules';
+      const response = await fetch(endpoint, {
+        method: isEditing ? 'PUT' : 'POST',
+        headers: {
+          ...makeAdminHeaders(),
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
 
       const data = await response.json();
 
@@ -177,6 +201,7 @@ export default function useAdminClassSchedules({
       setClassScheduleSuccess(data.message || '달력 일정이 저장되었습니다.');
       setClassScheduleForm(EMPTY_CLASS_SCHEDULE_FORM);
       setEditingClassScheduleId(null);
+      setEditingClassScheduleSource('class');
       fetchClassSchedules();
     } catch (error) {
       console.error('[admin] class schedule save failed:', error);
@@ -184,10 +209,11 @@ export default function useAdminClassSchedules({
     } finally {
       setSavingClassSchedule(false);
     }
-  }, [classScheduleForm, editingClassScheduleId, fetchClassSchedules, makeAdminHeaders, validateClassScheduleForm]);
+  }, [classScheduleForm, editingClassScheduleId, editingClassScheduleSource, fetchClassSchedules, makeAdminHeaders, validateClassScheduleForm]);
 
   const startEditClassSchedule = useCallback((schedule) => {
     setEditingClassScheduleId(schedule.id);
+    setEditingClassScheduleSource(isUserCalendarSchedule(schedule) ? 'user_calendar' : 'class');
     const scheduleType = schedule.schedule_type || schedule.scheduleType || 'class';
     const defaults = CLASS_SCHEDULE_DEFAULT_STYLE[scheduleType] || CLASS_SCHEDULE_DEFAULT_STYLE.class;
     setClassScheduleForm({
@@ -207,21 +233,29 @@ export default function useAdminClassSchedules({
       admin_note: schedule.admin_note || schedule.adminNote || schedule.memo || '',
       sort_order: schedule.sort_order ?? 0,
       is_active: Number(schedule.is_active) ? 1 : 0,
+      target_user_ids: [],
     });
     setClassScheduleError('');
     setClassScheduleSuccess('');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
 
-  const handleToggleClassSchedule = useCallback(async (scheduleId) => {
+  const handleToggleClassSchedule = useCallback(async (scheduleOrId) => {
+    const scheduleId = typeof scheduleOrId === 'object' ? scheduleOrId.id : scheduleOrId;
+    const isUserSchedule = isUserCalendarSchedule(scheduleOrId);
     setClassScheduleError('');
     setClassScheduleSuccess('');
 
     try {
-      const response = await fetch(`/api/admin/class-schedules/${scheduleId}/toggle`, {
-        method: 'PATCH',
-        headers: makeAdminHeaders(),
-      });
+      const response = await fetch(
+        isUserSchedule
+          ? `/api/admin/user-calendar-events/${scheduleId}/toggle`
+          : `/api/admin/class-schedules/${scheduleId}/toggle`,
+        {
+          method: 'PATCH',
+          headers: makeAdminHeaders(),
+        }
+      );
 
       const data = await response.json();
 
@@ -237,7 +271,9 @@ export default function useAdminClassSchedules({
     }
   }, [fetchClassSchedules, makeAdminHeaders]);
 
-  const handleDeleteClassSchedule = useCallback(async (scheduleId) => {
+  const handleDeleteClassSchedule = useCallback(async (scheduleOrId) => {
+    const scheduleId = typeof scheduleOrId === 'object' ? scheduleOrId.id : scheduleOrId;
+    const isUserSchedule = isUserCalendarSchedule(scheduleOrId);
     const confirmed = window.confirm('선택한 달력 일정을 삭제하시겠습니까? 삭제 후에는 복구할 수 없습니다.');
     if (confirmed === false) return;
 
@@ -245,10 +281,15 @@ export default function useAdminClassSchedules({
     setClassScheduleSuccess('');
 
     try {
-      const response = await fetch(`/api/admin/class-schedules/${scheduleId}`, {
-        method: 'DELETE',
-        headers: makeAdminHeaders(),
-      });
+      const response = await fetch(
+        isUserSchedule
+          ? `/api/admin/user-calendar-events/${scheduleId}`
+          : `/api/admin/class-schedules/${scheduleId}`,
+        {
+          method: 'DELETE',
+          headers: makeAdminHeaders(),
+        }
+      );
 
       const data = await response.json();
 
@@ -259,6 +300,7 @@ export default function useAdminClassSchedules({
       if (Number(editingClassScheduleId) === Number(scheduleId)) {
         setClassScheduleForm(EMPTY_CLASS_SCHEDULE_FORM);
         setEditingClassScheduleId(null);
+        setEditingClassScheduleSource('class');
       }
 
       setClassScheduleSuccess(data.message || '달력 일정이 삭제되었습니다.');
@@ -269,11 +311,21 @@ export default function useAdminClassSchedules({
     }
   }, [editingClassScheduleId, fetchClassSchedules, makeAdminHeaders]);
 
-  const handleClassScheduleFilterChange = useCallback((field, value) => {
-    const nextFilters = { ...classScheduleFilters, [field]: value };
+  const handleClassScheduleFilterChange = useCallback((field, value, options = {}) => {
+    const nextValue = field === 'userIds' ? normalizeFilterUserIds(value) : value;
+    const nextFilters = { ...classScheduleFilters, [field]: nextValue };
     setClassScheduleFilters(nextFilters);
-    fetchClassSchedules(nextFilters);
+    if (options.defer !== true) {
+      fetchClassSchedules(nextFilters);
+    }
   }, [classScheduleFilters, fetchClassSchedules]);
+
+  const updateClassScheduleFilterUserIds = useCallback((userIds) => {
+    setClassScheduleFilters((prev) => ({
+      ...prev,
+      userIds: normalizeFilterUserIds(userIds),
+    }));
+  }, []);
 
   const handleClassScheduleFilterSubmit = useCallback((event) => {
     event.preventDefault();
@@ -298,6 +350,7 @@ export default function useAdminClassSchedules({
     handleToggleClassSchedule,
     handleDeleteClassSchedule,
     handleClassScheduleFilterChange,
+    updateClassScheduleFilterUserIds,
     handleClassScheduleFilterSubmit,
   };
 }
