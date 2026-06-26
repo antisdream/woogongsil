@@ -8,12 +8,13 @@ function registerRealtimeRoutes(options = {}) {
     const getActiveUserList = options.getActiveUserList;
     const getValidChatSince = options.getValidChatSince;
     const getRealtimeChatMessagesAfter = options.getRealtimeChatMessagesAfter;
+    const isRealtimeAdminUser = options.isRealtimeAdminUser;
     const sanitizeChatText = options.sanitizeChatText;
     const realtimeChatMessages = options.realtimeChatMessages;
     const REALTIME_CHAT_MAX_MESSAGES = options.realtimeChatMaxMessages;
     const SERVER_INSTANCE_ID = options.serverInstanceId;
 
-    const required = { app, validateRealtimeSession, touchActiveUser, getActiveUserList, getValidChatSince, getRealtimeChatMessagesAfter, sanitizeChatText, realtimeChatMessages, REALTIME_CHAT_MAX_MESSAGES, SERVER_INSTANCE_ID };
+    const required = { app, validateRealtimeSession, touchActiveUser, getActiveUserList, getValidChatSince, getRealtimeChatMessagesAfter, isRealtimeAdminUser, sanitizeChatText, realtimeChatMessages, REALTIME_CHAT_MAX_MESSAGES, SERVER_INSTANCE_ID };
     const missing = Object.entries(required).filter(([, value]) => value === undefined || value === null).map(([key]) => key);
     if (missing.length >0) {
         throw new Error(`registerRealtimeRoutes missing dependencies: ${missing.join(', ')}`);
@@ -111,10 +112,13 @@ function registerRealtimeRoutes(options = {}) {
             }
 
             const now = Date.now();
+            const isAdminMessage = isRealtimeAdminUser(session.user);
             const message = {
                 id: `${now}_${Math.random().toString(36).slice(2, 10)}`,
                 userId: session.user.id,
                 userName: session.user.name || session.user.id,
+                role: isAdminMessage ? 'admin' : 'user',
+                isAdmin: isAdminMessage,
                 text,
                 createdAtMs: now
             };
@@ -136,6 +140,8 @@ function registerRealtimeRoutes(options = {}) {
                     id: message.id,
                     userId: message.userId,
                     userName: message.userName,
+                    role: message.role,
+                    isAdmin: message.isAdmin,
                     text: message.text,
                     createdAt: new Date(message.createdAtMs).toISOString()
                 },

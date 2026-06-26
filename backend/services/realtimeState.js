@@ -4,9 +4,42 @@ function createRealtimeState(options = {}) {
     const activeUserTtlMs = Number(options.activeUserTtlMs || 45 * 1000);
     const realtimeChatMaxMessages = Number(options.realtimeChatMaxMessages || 300);
     const adminUserId = String(options.adminUserId || '').trim().toLowerCase();
+    const adminUserIds = new Set([adminUserId, 'skn29'].filter(Boolean));
 
     const activeUsers = new Map();
     const realtimeChatMessages = [];
+
+    function normalizeUserId(value) {
+        return String(value || '').trim().toLowerCase();
+    }
+
+    function hasTruthyAdminValue(value) {
+        return value === true ||
+            value === 1 ||
+            value === '1' ||
+            ['true', 'yes', 'on', 'admin', 'operator'].includes(String(value || '').trim().toLowerCase());
+    }
+
+    function isRealtimeAdminUser(user = {}) {
+        const normalizedUserId = normalizeUserId(user.id || user.userId);
+        const userRole = String(user.role || user.user_role || '').trim().toLowerCase();
+
+        return (
+            adminUserIds.has(normalizedUserId) ||
+            userRole === 'admin' ||
+            userRole === 'operator' ||
+            [
+                user.isAdmin,
+                user.is_admin,
+                user.isPrimaryAdmin,
+                user.is_primary_admin,
+                user.isOperator,
+                user.is_operator,
+                user.admin,
+                user.operator,
+            ].some(hasTruthyAdminValue)
+        );
+    }
 
     function getRequestIp(req) {
         const forwarded = req.headers['x-forwarded-for'];
@@ -31,18 +64,7 @@ function createRealtimeState(options = {}) {
 
         const oldInfo = activeUsers.get(String(user.id)) || {};
         const now = Date.now();
-        const userRole = String(user.role || user.user_role || '').trim().toLowerCase();
-        const hasTruthyAdminFlag = [
-            user.isPrimaryAdmin,
-            user.is_primary_admin,
-            user.isOperator,
-            user.is_operator,
-        ].some((value) => value === true || value === 1 || value === '1' || String(value || '').toLowerCase() === 'true');
-        const hasAdminFlag = (
-            userRole === 'admin' ||
-            userRole === 'operator' ||
-            hasTruthyAdminFlag
-        );
+        const hasAdminFlag = isRealtimeAdminUser(user);
 
         activeUsers.set(String(user.id), {
             id: user.id,
@@ -71,18 +93,18 @@ function createRealtimeState(options = {}) {
         pruneActiveUsers();
 
         return Array.from(activeUsers.values())
+            .filter((user) => !isRealtimeAdminUser(user))
             .sort((a, b) => Number(b.lastSeenAt || 0) - Number(a.lastSeenAt || 0))
             .map((user) => {
                 const connectedDate = user.loginAt ? new Date(user.loginAt).toISOString() : null;
                 const lastSeenDate = user.lastSeenAt ? new Date(user.lastSeenAt).toISOString() : null;
-                const normalizedUserId = String(user.id || '').trim().toLowerCase();
 
                 return {
                     id: user.id,
                     userId: user.id,
                     name: user.name,
                     userName: user.name,
-                    role: normalizedUserId === adminUserId ? 'admin' : 'user',
+                    role: user.role || 'user',
                     ip: user.ip,
                     loginAt: connectedDate,
                     connectedAt: connectedDate,
@@ -110,13 +132,19 @@ function createRealtimeState(options = {}) {
 
         return realtimeChatMessages
             .filter((message) => Number(message.createdAtMs || 0) >= safeSinceMs)
-            .map((message) => ({
-                id: message.id,
-                userId: message.userId,
-                userName: message.userName,
-                text: message.text,
-                createdAt: new Date(message.createdAtMs).toISOString(),
-            }));
+            .map((message) => {
+                const isAdminMessage = message.role === 'admin' || message.isAdmin === true;
+
+                return {
+                    id: message.id,
+                    userId: message.userId,
+                    userName: message.userName,
+                    role: isAdminMessage ? 'admin' : 'user',
+                    isAdmin: isAdminMessage,
+                    text: message.text,
+                    createdAt: new Date(message.createdAtMs).toISOString(),
+                };
+            });
     }
 
     return {
@@ -128,6 +156,7 @@ function createRealtimeState(options = {}) {
         touchActiveUser,
         removeActiveUser,
         getActiveUserList,
+        isRealtimeAdminUser,
         sanitizeChatText,
         getValidChatSince,
         getRealtimeChatMessagesAfter,

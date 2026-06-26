@@ -1,6 +1,15 @@
 // 계정, 오답노트, 마이페이지 API를 제공합니다.
 'use strict';
 
+const {
+    buildInsert,
+    buildUpdate,
+    ensureUserCalendarEventsSchema,
+    normalizeDateOnly,
+    normalizeUserCalendarEventRow,
+    normalizeUserCalendarPayload,
+} = require('../userCalendarEvents');
+
 function registerUserRoutes(options = {}) {
     const app = options.app;
     const pool = options.pool;
@@ -46,6 +55,250 @@ function registerUserRoutes(options = {}) {
     }
 
     // 8. 마이페이지 / 회원탈퇴 / 오답노트
+    async function readUserCalendarEventById(eventId, userId) {
+        await ensureUserCalendarEventsSchema(pool);
+        const [rows] = await pool.query(
+            `SELECT id, user_id, source_type, assigned_group_id, created_by_admin_id,
+                    DATE_FORMAT(schedule_date, '%Y-%m-%d') AS schedule_date,
+                    weekday_label, day_no, schedule_type, event_category, course_title,
+                    topic_title, event_title, event_subtitle, memo, background_color,
+                    text_color, border_color, highlight_type, sort_order, is_active,
+                    DATE_FORMAT(created_at, '%Y-%m-%d %H:%i:%s') AS created_at,
+                    DATE_FORMAT(updated_at, '%Y-%m-%d %H:%i:%s') AS updated_at
+               FROM wgs_user_calendar_events
+              WHERE id = ? AND user_id = ?
+              LIMIT 1`,
+            [eventId, userId]
+        );
+
+        return rows[0] || null;
+    }
+
+    app.get('/api/user/calendar-events', async (req, res) => {
+        try {
+            const auth = await requireSessionUser(req, res, req.query.id || '');
+            if (!auth) return;
+
+            const userId = authUserId(auth);
+            await ensureUserCalendarEventsSchema(pool);
+
+            const active = String(req.query.active || '').trim();
+            const keyword = String(req.query.keyword || req.query.q || '').trim();
+            const type = String(req.query.type || req.query.schedule_type || '').trim();
+            const where = ['user_id = ?'];
+            const params = [userId];
+
+            if (active === '1' || active === '0') {
+                where.push('is_active = ?');
+                params.push(Number(active));
+            }
+
+            if (type) {
+                where.push('schedule_type = ?');
+                params.push(type);
+            }
+
+            if (keyword) {
+                where.push('(course_title LIKE ? OR topic_title LIKE ? OR event_title LIKE ? OR event_subtitle LIKE ? OR memo LIKE ?)');
+                const like = `%${keyword}%`;
+                params.push(like, like, like, like, like);
+            }
+
+            const [rows] = await pool.query(
+                `SELECT id, user_id, source_type, assigned_group_id, created_by_admin_id,
+                        DATE_FORMAT(schedule_date, '%Y-%m-%d') AS schedule_date,
+                        weekday_label, day_no, schedule_type, event_category, course_title,
+                        topic_title, event_title, event_subtitle, memo, background_color,
+                        text_color, border_color, highlight_type, sort_order, is_active,
+                        DATE_FORMAT(created_at, '%Y-%m-%d %H:%i:%s') AS created_at,
+                        DATE_FORMAT(updated_at, '%Y-%m-%d %H:%i:%s') AS updated_at
+                   FROM wgs_user_calendar_events
+                  WHERE ${where.join(' AND ')}
+                  ORDER BY schedule_date ASC, sort_order ASC, id ASC`,
+                params
+            );
+
+            const [[summary]] = await pool.query(
+                `SELECT COUNT(*) AS total,
+                        SUM(CASE WHEN is_active = 1 THEN 1 ELSE 0 END) AS active_count,
+                        SUM(CASE WHEN is_active = 0 THEN 1 ELSE 0 END) AS inactive_count,
+                        MIN(schedule_date) AS first_date,
+                        MAX(schedule_date) AS last_date
+                   FROM wgs_user_calendar_events
+                  WHERE user_id = ?`,
+                [userId]
+            );
+
+            return res.json({
+                success: true,
+                schedules: rows.map(normalizeUserCalendarEventRow),
+                summary: {
+                    total: Number(summary?.total || 0),
+                    active_count: Number(summary?.active_count || 0),
+                    inactive_count: Number(summary?.inactive_count || 0),
+                    first_date: normalizeDateOnly(summary?.first_date),
+                    last_date: normalizeDateOnly(summary?.last_date),
+                },
+            });
+        } catch (error) {
+            console.error('[user calendar] list failed:', error);
+            return res.status(error.statusCode || 500).json({
+                success: false,
+                msg: error.message || '일정 목록을 불러오지 못했습니다.',
+            });
+        }
+    });
+
+    app.post('/api/user/calendar-events', async (req, res) => {
+        try {
+            const auth = await requireSessionUser(req, res, req.body.id || '');
+            if (!auth) return;
+
+            const userId = authUserId(auth);
+            await ensureUserCalendarEventsSchema(pool);
+
+            const payload = normalizeUserCalendarPayload(req.body || {}, {
+                userId,
+                sourceType: 'user_created',
+            });
+            const built = buildInsert(payload);
+            const placeholders = built.columns.map(() => '?').join(', ');
+            const [result] = await pool.query(
+                `INSERT INTO wgs_user_calendar_events (${built.columns.join(', ')}) VALUES (${placeholders})`,
+                built.values
+            );
+            const row = await readUserCalendarEventById(result.insertId, userId);
+
+            return res.json({
+                success: true,
+                message: '일정이 추가되었습니다.',
+                schedule: normalizeUserCalendarEventRow(row),
+            });
+        } catch (error) {
+            console.error('[user calendar] create failed:', error);
+            return res.status(error.statusCode || 500).json({
+                success: false,
+                msg: error.message || '일정 추가에 실패했습니다.',
+            });
+        }
+    });
+
+    app.put('/api/user/calendar-events/:eventId', async (req, res) => {
+        try {
+            const auth = await requireSessionUser(req, res, req.body.id || '');
+            if (!auth) return;
+
+            const userId = authUserId(auth);
+            const eventId = Number(req.params.eventId);
+            if (!Number.isFinite(eventId) || eventId <= 0) {
+                return res.status(400).json({ success: false, msg: '수정할 일정 ID가 올바르지 않습니다.' });
+            }
+
+            await ensureUserCalendarEventsSchema(pool);
+            const payload = normalizeUserCalendarPayload(req.body || {}, { userId });
+            const built = buildUpdate(payload);
+            const setSql = built.columns.map((column) => `${column} = ?`).join(', ');
+
+            const [result] = await pool.query(
+                `UPDATE wgs_user_calendar_events
+                    SET ${setSql}, updated_at = CURRENT_TIMESTAMP
+                  WHERE id = ? AND user_id = ?`,
+                [...built.values, eventId, userId]
+            );
+
+            if (result.affectedRows === 0) {
+                return res.status(404).json({ success: false, msg: '수정할 일정을 찾지 못했습니다.' });
+            }
+
+            const row = await readUserCalendarEventById(eventId, userId);
+            return res.json({
+                success: true,
+                message: '일정이 수정되었습니다.',
+                schedule: normalizeUserCalendarEventRow(row),
+            });
+        } catch (error) {
+            console.error('[user calendar] update failed:', error);
+            return res.status(error.statusCode || 500).json({
+                success: false,
+                msg: error.message || '일정 수정에 실패했습니다.',
+            });
+        }
+    });
+
+    app.patch('/api/user/calendar-events/:eventId/toggle', async (req, res) => {
+        try {
+            const auth = await requireSessionUser(req, res, req.body.id || '');
+            if (!auth) return;
+
+            const userId = authUserId(auth);
+            const eventId = Number(req.params.eventId);
+            if (!Number.isFinite(eventId) || eventId <= 0) {
+                return res.status(400).json({ success: false, msg: '상태를 바꿀 일정 ID가 올바르지 않습니다.' });
+            }
+
+            await ensureUserCalendarEventsSchema(pool);
+            const [result] = await pool.query(
+                `UPDATE wgs_user_calendar_events
+                    SET is_active = CASE WHEN is_active = 1 THEN 0 ELSE 1 END,
+                        updated_at = CURRENT_TIMESTAMP
+                  WHERE id = ? AND user_id = ?`,
+                [eventId, userId]
+            );
+
+            if (result.affectedRows === 0) {
+                return res.status(404).json({ success: false, msg: '상태를 바꿀 일정을 찾지 못했습니다.' });
+            }
+
+            const row = await readUserCalendarEventById(eventId, userId);
+            return res.json({
+                success: true,
+                message: Number(row?.is_active) ? '일정이 켜졌습니다.' : '일정이 꺼졌습니다.',
+                schedule: normalizeUserCalendarEventRow(row),
+            });
+        } catch (error) {
+            console.error('[user calendar] toggle failed:', error);
+            return res.status(error.statusCode || 500).json({
+                success: false,
+                msg: error.message || '일정 상태 변경에 실패했습니다.',
+            });
+        }
+    });
+
+    app.delete('/api/user/calendar-events/:eventId', async (req, res) => {
+        try {
+            const auth = await requireSessionUser(req, res, req.body.id || req.query.id || '');
+            if (!auth) return;
+
+            const userId = authUserId(auth);
+            const eventId = Number(req.params.eventId);
+            if (!Number.isFinite(eventId) || eventId <= 0) {
+                return res.status(400).json({ success: false, msg: '삭제할 일정 ID가 올바르지 않습니다.' });
+            }
+
+            await ensureUserCalendarEventsSchema(pool);
+            const [result] = await pool.query(
+                'DELETE FROM wgs_user_calendar_events WHERE id = ? AND user_id = ?',
+                [eventId, userId]
+            );
+
+            if (result.affectedRows === 0) {
+                return res.status(404).json({ success: false, msg: '삭제할 일정을 찾지 못했습니다.' });
+            }
+
+            return res.json({
+                success: true,
+                message: '일정이 삭제되었습니다.',
+                id: eventId,
+            });
+        } catch (error) {
+            console.error('[user calendar] delete failed:', error);
+            return res.status(error.statusCode || 500).json({
+                success: false,
+                msg: error.message || '일정 삭제에 실패했습니다.',
+            });
+        }
+    });
+
     app.get('/api/user/:id', async (req, res) => {
         const id = String(req.params.id || '').trim();
 
@@ -168,6 +421,8 @@ function registerUserRoutes(options = {}) {
             await connection.query('DELETE FROM wgs_post_likes WHERE userId = ?', [id]);
             await connection.query('DELETE FROM wgs_login_history WHERE userId = ?', [id]);
             await connection.query('DELETE FROM wgs_fortune_history WHERE userId = ?', [id]);
+            await ensureUserCalendarEventsSchema(pool);
+            await connection.query('DELETE FROM wgs_user_calendar_events WHERE user_id = ?', [id]);
             await connection.query('DELETE FROM wgs_users WHERE id = ?', [id]);
 
             await connection.commit();

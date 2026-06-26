@@ -1,9 +1,13 @@
 // 게시글과 댓글 API를 제공합니다.
 'use strict';
 
+const { normalizeBoardContentJson } = require('../services/boardContentService');
+const { createBoardUploadHandler } = require('../services/boardUploadService');
+
 function registerBoardRoutes(options = {}) {
     const app = options.app;
     const pool = options.pool;
+    const backendDir = options.backendDir;
     const getPostWithChildren = options.getPostWithChildren;
     const refreshPostLikeCount = options.refreshPostLikeCount;
     const getBoardDateString = options.getBoardDateString;
@@ -71,6 +75,9 @@ function registerBoardRoutes(options = {}) {
 
         return auth;
     }
+
+app.post('/api/posts/upload-file', createBoardUploadHandler({ backendDir, requireSessionUser }));
+
 // 12. 게시판 API
 app.get('/api/posts', async (req, res) => {
     try {
@@ -103,6 +110,14 @@ app.get('/api/posts', async (req, res) => {
 app.post('/api/posts', async (req, res) => {
     const title = String(req.body.title || '').trim();
     const content = String(req.body.content || '').trim();
+    let contentJson = null;
+
+    try {
+        contentJson = normalizeBoardContentJson(req.body.contentJson);
+    } catch (error) {
+        return res.status(400).json({ success: false, msg: '게시글 에디터 데이터 형식이 올바르지 않습니다.' });
+    }
+
     const auth = await requireSessionUser(req, res, req.body.authorId || req.body.userId || req.body.id);
     if (!auth) return;
 
@@ -124,9 +139,9 @@ app.post('/api/posts', async (req, res) => {
         // - wgs_posts.isNotice는 기존 공지 고정/순서 기능에서 쓰는 값이므로 여기서 억지로 바꾸지 않습니다.
         // - 공지게시판과 자유게시판 소속 구분은 content 숨김 마커와 프론트 필터를 기준으로 유지합니다.
         await pool.query(
-            `INSERT INTO wgs_posts (id, title, content, authorId, authorName, date, views, likes, isNotice)
-             VALUES (?, ?, ?, ?, ?, ?, 0, 0, 0)`,
-            [id, title, content, authorId, authorName || authorId, getBoardDateString()]
+            `INSERT INTO wgs_posts (id, title, content, contentJson, authorId, authorName, date, views, likes, isNotice)
+             VALUES (?, ?, ?, ?, ?, ?, ?, 0, 0, 0)`,
+            [id, title, content, contentJson, authorId, authorName || authorId, getBoardDateString()]
         );
 
         // 최고관리자가 공지게시판에 새 글을 작성한 경우에만 전체 회원에게 공지 메일을 예약합니다.
@@ -237,6 +252,16 @@ app.put('/api/posts/:postId', async (req, res) => {
     const userId = authUserId(auth);
     const title = String(req.body.title || '').trim();
     const content = String(req.body.content || '').trim();
+    const hasContentJson = Object.prototype.hasOwnProperty.call(req.body || {}, 'contentJson');
+    let contentJson = null;
+
+    if (hasContentJson) {
+        try {
+            contentJson = normalizeBoardContentJson(req.body.contentJson);
+        } catch (error) {
+            return res.status(400).json({ success: false, msg: '게시글 에디터 데이터 형식이 올바르지 않습니다.' });
+        }
+    }
 
     try {
         const [rows] = await pool.query('SELECT * FROM wgs_posts WHERE id = ?', [postId]);
@@ -248,7 +273,11 @@ app.put('/api/posts/:postId', async (req, res) => {
             return res.status(403).json({ success: false, msg: '수정 권한이 없습니다.' });
         }
 
-        await pool.query('UPDATE wgs_posts SET title = ?, content = ? WHERE id = ?', [title, content, postId]);
+        if (hasContentJson) {
+            await pool.query('UPDATE wgs_posts SET title = ?, content = ?, contentJson = ? WHERE id = ?', [title, content, contentJson, postId]);
+        } else {
+            await pool.query('UPDATE wgs_posts SET title = ?, content = ? WHERE id = ?', [title, content, postId]);
+        }
 
         const updatedPost = await getPostWithChildren(postId);
         return res.json({ success: true, post: updatedPost });
@@ -515,10 +544,10 @@ app.post('/api/posts/notify-email', async (req, res) => {
 
         if (type === 'like') {
             subject = `[알림] ${actionUserName}님이 게시글에 좋아요를 눌렀습니다.`;
-            text = `[ SKN29th_우공실]\n${actionUserName}님이 ${targetUserName}님의 게시글에 좋아요를 누르셨습니다.\n홈페이지 바로가기 : www.ugongsil.kro.kr`;
+            text = `[ SKN_우공실]\n${actionUserName}님이 ${targetUserName}님의 게시글에 좋아요를 누르셨습니다.\n홈페이지 바로가기 : www.ugongsil.kro.kr`;
         } else if (type === 'comment') {
             subject = `[알림] ${actionUserName}님이 게시글에 댓글을 남겼습니다.`;
-            text = `[ SKN29th_우공실]\n${actionUserName}님이 ${targetUserName}님의 게시글에 댓글을 남기셨습니다.\n홈페이지 바로가기 : www.ugongsil.kro.kr`;
+            text = `[ SKN_우공실]\n${actionUserName}님이 ${targetUserName}님의 게시글에 댓글을 남기셨습니다.\n홈페이지 바로가기 : www.ugongsil.kro.kr`;
         } else {
             return res.status(400).json({ success: false, msg: '알 수 없는 알림 유형입니다.' });
         }

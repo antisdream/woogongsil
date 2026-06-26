@@ -1,4 +1,4 @@
-// ipepRoutes.js
+﻿// ipepRoutes.js
 // 역할:
 // 1. 정보처리기사 실기 문제 API만 따로 모아둔 라우터 파일입니다.
 // 2. 기존 필기 API, 게시판 API, 로그인 API와 분리해 관리합니다.
@@ -20,272 +20,29 @@
 
 // Express 라우터를 만들기 위해 express를 불러온다.
 const express = require('express');
+const {
+    cleanText,
+    parseRandomIdCsv,
+    normalizeFlexible,
+    normalizeExactOutput,
+    normalizeSql,
+    safeJsonParse,
+    stripLeadingOrderLabel,
+    uniqueNonEmpty,
+    buildComparableVariants,
+    buildRuntimeAnswerSlots,
+    mergeAnswerSlots,
+    calculateMultiTermScore,
+} = require('./services/ipepAnswerGrading');
 
+const IPEP_QUESTION_TABLES = {
+    ipep_random: 'ipep_random_questions',
+    ipep_past: 'ipep_past_questions',
+    ipep_three_week: 'ipep_three_week_questions',
+};
 
-// 1. 공통 문자열 정리 함수
-
-
-function cleanText(value) {
-    // 값이 없으면 빈 문자열로 처리합니다.
-    if (value === null || value === undefined) {
-        return '';
-    }
-
-    // 문자열로 바꾼 뒤 앞뒤 공백을 제거합니다.
-    return String(value).trim();
-}
-
-function parseRandomCsv(value, maxItems = 80) {
-    const raw = Array.isArray(value) ? value.join(',') : String(value || '');
-    const seen = new Set();
-    return raw
-        .split(',')
-        .map((item) => item.trim())
-        .filter(Boolean)
-        .filter((item) => {
-            if (seen.has(item)) return false;
-            seen.add(item);
-            return true;
-        })
-        .slice(0, maxItems);
-}
-
-function parseRandomIdCsv(value, maxItems = 80) {
-    return parseRandomCsv(value, maxItems)
-        .map((item) => Number(item))
-        .filter((item) => Number.isInteger(item) && item >0);
-}
-
-
-// 2. 채점용 정규화 함수
-// 실기 문제는 용어형, SQL형, 코드 출력형이 섞여 있습니다.
-// 그래서 정답 비교 함수를 여러 개로 나눈다.
-
-
-function normalizeFlexible(value) {
-    // 일반 용어형 정답 채점에 사용합니다.
-    // 예: Agile, agile, AGILE을 같은 답으로 보기 위한 처리입니다.
-    // 현재 규칙:
-    // 기존에는 쉼표(,) 같은 구분자를 너무 엄격하게 봐서
-    // "Authentication, authorization Accounting"처럼 쉼표 하나가 빠진 답안이
-    // 실제 용어가 포함되어도 낮은 점수를 받는 문제를 보완합니다.
-    // 그래서 용어형 채점에서는 공백/쉼표/하이픈/대부분의 문장부호를 완화합니다.
-    // 단, SQL_TEXT와 EXACT_OUTPUT은 별도 함수로 채점하므로 이 완화 규칙의 영향을 받지 않습니다.
-    let text = cleanText(value);
-
-    // CSV에 문자 그대로 들어간 \n을 실제 줄바꿈처럼 통일합니다.
-    text = text.replace(/\\n/g, '\n');
-
-    // 줄바꿈 형식을 통일합니다.
-    text = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-
-    // 유니코드 표현 차이를 줄입니다.
-    text = text.normalize('NFKC');
-
-    // 영어 대소문자를 무시하기 위해 소문자로 변환합니다.
-    text = text.toLowerCase();
-
-    // 따옴표류는 용어형 채점에서 큰 의미가 없으므로 제거합니다.
-    text = text.replace(/[“”‘’\"']/g, '');
-
-    // 용어형에서는 대부분의 문장부호를 제거합니다.
-    // 예: Cause-Effect Graph, Cause Effect Graph, Cause.effect graph를 같은 답으로 보기 위한 처리입니다.
-    // 주의: 이 함수는 SQL이나 코드 출력 채점에는 사용하지 않습니다.
-    text = text.replace(/[.,。·!?:;，、_\-—–\/\\()[\]{}<>|]/g, '');
-
-    // 공백과 줄바꿈을 제거합니다.
-    text = text.replace(/\s+/g, '');
-
-    return text.trim();
-}
-
-
-
-function normalizeExactOutput(value) {
-    // 코드 출력 문제에 사용합니다.
-    // 출력 문제는 대소문자, 공백, 줄바꿈이 중요하므로 최대한 보존합니다.
-    let text = cleanText(value);
-
-    // 문자 그대로의 \n을 실제 줄바꿈으로 변환합니다.
-    text = text.replace(/\\n/g, '\n');
-
-    // 줄바꿈 형식만 통일합니다.
-    text = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-
-    // 앞뒤 공백만 제거합니다.
-    return text.trim();
-}
-
-
-function normalizeSql(value) {
-    // SQL 문제에 사용합니다.
-    // SQL은 대소문자와 여러 칸 공백은 크게 중요하지 않게 보되,
-    // SELECT, WHERE, 괄호, 비교연산자 같은 문법 기호는 보존합니다.
-    let text = cleanText(value);
-
-    // 줄바꿈을 공백으로 변환합니다.
-    text = text.replace(/\\n/g, ' ');
-    text = text.replace(/\r\n/g, ' ').replace(/\r/g, ' ').replace(/\n/g, ' ');
-
-    // 유니코드 표현 차이를 줄입니다.
-    text = text.normalize('NFKC');
-
-    // 영어 대소문자를 무시합니다.
-    text = text.toLowerCase();
-
-    // SQL 마지막 세미콜론은 써도 되고 안 써도 되게 처리합니다.
-    text = text.replace(/;$/g, '');
-
-    // 쉼표와 괄호 주변 공백 차이를 줄입니다.
-    text = text.replace(/\s*,\s*/g, ',');
-    text = text.replace(/\s*\(\s*/g, '(');
-    text = text.replace(/\s*\)\s*/g, ')');
-
-    // 여러 공백을 하나로 줄입니다.
-    text = text.replace(/\s+/g, ' ');
-
-    return text.trim();
-}
-
-
-// 3. JSON 안전 파싱 함수
-
-
-function safeJsonParse(value, fallback) {
-    try {
-        if (Array.isArray(value) || typeof value === 'object') {
-            return value || fallback;
-        }
-
-        if (!value) {
-            return fallback;
-        }
-
-        return JSON.parse(value);
-    } catch (error) {
-        return fallback;
-    }
-}
-
-
-// 4. 정답 슬롯 분리 함수
-// MULTI_TERM 문제에서 사용자 답안을 쉼표 또는 줄바꿈 기준으로 나눈다.
-// 예: "원자성, 독립성" 또는 "원자성\n독립성"
-function splitUserSlots(userAnswer) {
-    // 사용자가 쉼표나 줄바꿈으로 답을 나누어 입력한 경우를 위한 보조 함수입니다.
-    // 다만 현재 동작 기준으로는 쉼표가 빠진 답안도 최대한 인정하기 위해
-    // calculateMultiTermScore에서 "전체 답안에 용어가 포함되어 있는지"도 함께 확인합니다.
-    const raw = cleanText(userAnswer);
-
-    if (!raw) {
-        return [];
-    }
-
-    return raw
-        .replace(/\\n/g, '\n')
-        .split(/,|\n|\/|;|\|/)
-        .map(item => normalizeFlexible(item))
-        .filter(item => item !== '');
-}
-
-
-function isAliasMatchedByUser(alias, userSlots, normalizedWholeUserAnswer) {
-    // 정답 별칭 하나가 사용자의 답안에 들어있는지 확인합니다.
-    const normalizedAlias = normalizeFlexible(alias);
-
-    if (!normalizedAlias) {
-        return false;
-    }
-
-    // 1글자짜리 별칭은 전체 문자열 포함으로 보면 오탐 가능성이 높습니다.
-    // 예: C, O 같은 답은 반드시 분리된 슬롯과 정확히 일치할 때만 인정합니다.
-    if (normalizedAlias.length <= 1) {
-        return userSlots.includes(normalizedAlias);
-    }
-
-    // 1순위: 쉼표/줄바꿈 등으로 나뉜 슬롯 중 정확히 일치하는지 확인합니다.
-    if (userSlots.includes(normalizedAlias)) {
-        return true;
-    }
-
-    // 2순위: 사용자가 쉼표를 빼먹었더라도 전체 답안 안에 해당 용어가 들어있으면 인정합니다.
-    // 예: "Authentication, authorization Accounting" 안에는
-    // authentication / authorization / accounting이 모두 들어있으므로 3개 모두 인정합니다.
-    return normalizedWholeUserAnswer.includes(normalizedAlias);
-}
-
-
-// 5. 부분점수 계산 함수
-// 정보처리기사 실기 부분점수 기준을 초기 운영 기준에 맞춰 보수적으로 적용합니다.
-// - 코드 출력형(EXACT_OUTPUT): 부분점수를 적용하지 않습니다.
-// - SQL형(SQL_TEXT): 부분점수를 적용하지 않습니다.
-// - 일반 용어형(FLEX_TERM): 부분점수를 적용하지 않습니다.
-// - 여러 용어 답안형(MULTI_TERM):
-//  2개 답안: 0 / 3 / 5
-//  3개 답안: 0 / 1 / 3 / 5
-//  그 외: 맞힌 비율 기반 단순 환산
-// 현재 규칙:
-// MULTI_TERM은 쉼표가 없어도 정답 용어가 답안 전체에 들어있으면 인정합니다.
-// 그래서 "A, B C"처럼 구분자가 하나 빠진 경우에도 A/B/C를 각각 찾아낼 수 있습니다.
-
-
-function calculateMultiTermScore(answerSlots, userAnswer) {
-    const userSlots = splitUserSlots(userAnswer);
-    const normalizedWholeUserAnswer = normalizeFlexible(userAnswer);
-
-    if (!Array.isArray(answerSlots) || answerSlots.length === 0) {
-        return {
-            isCorrect: false,
-            score: 0,
-            correctSlotCount: 0,
-            totalSlotCount: 0,
-            matchedSlots: []
-        };
-    }
-
-    let correctSlotCount = 0;
-    const matchedSlots = [];
-
-    // 각 정답 슬롯마다 사용자의 답 중 하나라도 일치하거나,
-    // 사용자의 전체 답안 안에 해당 용어가 포함되어 있으면 맞힌 것으로 본다.
-    for (const slotAliases of answerSlots) {
-        const aliases = Array.isArray(slotAliases) ? slotAliases : [slotAliases];
-
-        const matchedAlias = aliases.find(alias => (
-            isAliasMatchedByUser(alias, userSlots, normalizedWholeUserAnswer)
-        ));
-
-        if (matchedAlias) {
-            correctSlotCount += 1;
-            matchedSlots.push(cleanText(matchedAlias));
-        }
-    }
-
-    const totalSlotCount = answerSlots.length;
-    let score = 0;
-
-    if (correctSlotCount === totalSlotCount) {
-        score = 5;
-    } else if (totalSlotCount === 2) {
-        // 2개 중 1개 맞으면 3점
-        score = correctSlotCount === 1 ? 3 : 0;
-    } else if (totalSlotCount === 3) {
-        // 3개 중 1개 맞으면 1점, 2개 맞으면 3점
-        if (correctSlotCount === 1) score = 1;
-        else if (correctSlotCount === 2) score = 3;
-        else score = 0;
-    } else {
-        // 그 외 개수는 비율 기반으로 보수적으로 계산합니다.
-        score = Math.floor((correctSlotCount / totalSlotCount) * 5);
-    }
-
-    return {
-        isCorrect: score === 5,
-        score,
-        correctSlotCount,
-        totalSlotCount,
-        matchedSlots
-    };
+function getIpepQuestionTable(source) {
+    return IPEP_QUESTION_TABLES[source] || null;
 }
 
 
@@ -304,7 +61,12 @@ function toPublicQuestion(row, source) {
         examYear: row.exam_year || null,
         examSession: row.exam_session || null,
         questionNo: row.question_no || null,
+        weekNo: row.week_no || null,
+        sectionNo: row.section_no || null,
+        sectionQuestionKey: row.section_question_key || null,
+        questionOrder: row.question_order || null,
         questionText: row.question_text,
+        choiceText: row.choice_text || '',
         gradingPolicy: row.grading_policy,
         score: row.score || 5,
         choiceImgPath: row.choice_img_path || null,
@@ -551,6 +313,90 @@ function createIpepRouter(pool) {
 
 
     // ------------------------------------------------------
+    // GET /api/ipep/three-week/overview
+    // ------------------------------------------------------
+    // 3주 공략 주차/Section별 문제 수를 조회합니다.
+    // ------------------------------------------------------
+    router.get('/three-week/overview', asyncHandler(async (req, res) => {
+        const [sectionRows] = await pool.query(`SELECT
+                s.week_no AS weekNo,
+                s.section_no AS sectionNo,
+                s.display_order AS displayOrder,
+                COUNT(q.question_id) AS questionCount
+            FROM ipep_three_week_sections s
+            LEFT JOIN ipep_three_week_questions q
+                ON q.section_no = s.section_no
+                AND q.is_active = 1
+            WHERE s.is_active = 1
+            GROUP BY s.week_no, s.section_no, s.display_order
+            ORDER BY s.display_order ASC
+        `);
+
+        const weekRows = [1, 2, 3].map((weekNo) => {
+            const sections = sectionRows.filter(row => Number(row.weekNo) === weekNo);
+            return {
+                weekNo,
+                sectionCount: sections.length,
+                questionCount: sections.reduce((sum, row) => sum + Number(row.questionCount || 0), 0),
+                isOpen: sections.some(row => Number(row.questionCount || 0) > 0) ? 1 : 0,
+            };
+        });
+
+        res.json({
+            success: true,
+            data: {
+                weeks: weekRows,
+                sections: sectionRows,
+            }
+        });
+    }));
+
+
+    // ------------------------------------------------------
+    // GET /api/ipep/three-week/questions?weekNo=1&sectionNo=ALL&order=section
+    // ------------------------------------------------------
+    // order=section 이면 Section/문제번호 오름차순, order=random 이면 섞어서 내려줍니다.
+    // ------------------------------------------------------
+    router.get('/three-week/questions', asyncHandler(async (req, res) => {
+        const weekNo = Math.min(3, Math.max(1, Number(req.query.weekNo || 1)));
+        const sectionNo = cleanText(req.query.sectionNo || 'ALL').toUpperCase();
+        const order = cleanText(req.query.order || 'section').toLowerCase() === 'random' ? 'random' : 'section';
+
+        const clauses = ['q.is_active = 1', 's.is_active = 1', 's.week_no = ?'];
+        const params = [weekNo];
+
+        if (sectionNo !== 'ALL') {
+            clauses.push('q.section_no = ?');
+            params.push(sectionNo.padStart(3, '0'));
+        }
+
+        const orderSql = order === 'random'
+            ? 'RAND()'
+            : 's.display_order ASC, q.question_no ASC, q.question_order ASC';
+
+        const [rows] = await pool.query(`SELECT
+                q.*,
+                s.week_no,
+                s.display_order AS section_display_order
+            FROM ipep_three_week_questions q
+            INNER JOIN ipep_three_week_sections s
+                ON s.section_no = q.section_no
+            WHERE ${clauses.join(' AND ')}
+            ORDER BY ${orderSql}
+        `, params);
+
+        res.json({
+            success: true,
+            weekNo,
+            sectionNo,
+            order,
+            totalCount: rows.length,
+            data: rows.map(row => toPublicQuestion(row, 'ipep_three_week'))
+        });
+    }));
+
+
+    // ------------------------------------------------------
     // POST /api/ipep/check-answer
     // ------------------------------------------------------
     // 사용자가 입력한 주관식 답안을 채점합니다.
@@ -576,8 +422,17 @@ function createIpepRouter(pool) {
             });
         }
 
-        const tableName = source === 'ipep_past'? 'ipep_past_questions'
-            : 'ipep_random_questions';
+        const tableName = getIpepQuestionTable(source);
+        if (!tableName) {
+            return res.status(400).json({
+                success: false,
+                msg: '지원하지 않는 실기 문제 출처입니다.'
+            });
+        }
+
+        const explanationSelect = source === 'ipep_three_week'
+            ? 'explanation_text'
+            : 'NULL AS explanation_text';
 
         const [rows] = await pool.query(`SELECT
                 question_id,
@@ -587,7 +442,8 @@ function createIpepRouter(pool) {
                 answer_aliases_json,
                 answer_slots_json,
                 grading_policy,
-                score
+                score,
+                ${explanationSelect}
             FROM ${tableName}
             WHERE question_id = ?
               AND is_active = 1
@@ -606,6 +462,10 @@ function createIpepRouter(pool) {
         const answerRaw = cleanText(question.answer_raw);
         const answerAliases = safeJsonParse(question.answer_aliases_json, []);
         const answerSlots = safeJsonParse(question.answer_slots_json, []);
+        const runtimeAnswerSlots = buildRuntimeAnswerSlots(answerRaw);
+        const effectiveAnswerSlots = source === 'ipep_three_week'
+            ? mergeAnswerSlots(runtimeAnswerSlots, answerSlots)
+            : answerSlots;
 
         let isCorrect = false;
         let score = 0;
@@ -623,6 +483,7 @@ function createIpepRouter(pool) {
                 score: null,
                 maxScore: question.score || 5,
                 correctAnswer: answerRaw,
+                explanationText: question.explanation_text || '',
                 msg: '이 문제는 서술형 성격이 강해 정답 예시와 비교하는 자기채점 방식으로 확인해 주세요.'
             });
         }
@@ -646,13 +507,13 @@ function createIpepRouter(pool) {
                 compareMode: 'SQL 대소문자와 공백 차이는 완화, SQL 문법 기호는 보존'
             };
         } else if (gradingPolicy === 'MULTI_TERM') {
-            const result = calculateMultiTermScore(answerSlots, userAnswer);
+            const result = calculateMultiTermScore(effectiveAnswerSlots, userAnswer);
 
             isCorrect = result.isCorrect;
             score = result.score;
 
             detail = {
-                compareMode: '여러 용어 답안: 쉼표/줄바꿈이 빠져도 정답 용어 포함 여부까지 확인',
+                compareMode: '여러 용어 답안: 쉼표/줄바꿈 누락, 순번 라벨 생략, 일부 기호형 답안까지 완화',
                 correctSlotCount: result.correctSlotCount,
                 totalSlotCount: result.totalSlotCount,
                 matchedSlots: result.matchedSlots || []
@@ -661,15 +522,19 @@ function createIpepRouter(pool) {
             // FLEX_TERM 기본 처리합니다
             normalizedUserAnswer = normalizeFlexible(userAnswer);
 
-            const normalizedAliases = Array.isArray(answerAliases) && answerAliases.length >0
-                ? answerAliases.map(alias => normalizeFlexible(alias))
-                : [normalizeFlexible(answerRaw)];
+            const normalizedAliases = uniqueNonEmpty([
+                ...buildComparableVariants(answerRaw),
+                ...buildComparableVariants(stripLeadingOrderLabel(answerRaw)),
+                ...(Array.isArray(answerAliases) ? answerAliases.flatMap(alias => buildComparableVariants(alias)) : []),
+            ]);
+            const userAnswerVariants = buildComparableVariants(userAnswer);
 
-            isCorrect = normalizedAliases.includes(normalizedUserAnswer);
+            normalizedCorrectAnswer = normalizedAliases[0] || '';
+            isCorrect = normalizedAliases.length >0 && userAnswerVariants.some(variant => normalizedAliases.includes(variant));
             score = isCorrect ? 5 : 0;
 
             detail = {
-                compareMode: '일반 용어형: 대소문자, 공백, 쉼표, 하이픈 등 문장부호 완화'
+                compareMode: '일반 용어형: 대소문자, 공백, 쉼표, 하이픈 등 문장부호 완화, 기호형 답안은 별도 보존 비교'
             };
         }
 
@@ -681,6 +546,7 @@ function createIpepRouter(pool) {
             score,
             maxScore: question.score || 5,
             correctAnswer: answerRaw,
+            explanationText: question.explanation_text || '',
             normalizedUserAnswer,
             normalizedCorrectAnswer,
             detail

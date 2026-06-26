@@ -156,18 +156,25 @@ app.post('/api/ipep-ranking', async (req, res) => {
 // 7-2. 실기 오답노트 - SQL 저장/조회 방식
 // 기존 JSON 저장 방식은 실기 보기 이미지(choice_img_path)를 안정적으로 복원하기 어려웠습니다.
 // 그래서 wgs_wrong_notes에는 사용자ID + 문제ID + 출처만 저장하고,
-// 조회할 때 ipep_random_questions / ipep_past_questions 원본 테이블과 JOIN해서 이미지까지 가져옵니다.
+// 조회할 때 ipep_random_questions / ipep_past_questions / ipep_three_week_questions 원본 테이블과 JOIN해서 이미지까지 가져옵니다.
 function normalizeIpepWrongSource(value) {
     const raw = String(value || '').toLowerCase();
+    if (raw.includes('three_week') || raw.includes('three-week') || raw.includes('3주') || raw.includes('week')) return 'ipep_three_week';
     if (raw.includes('past') || raw.includes('기출')) return 'ipep_past';
     return 'ipep_random';
+}
+
+function getIpepImageFolder(source) {
+    if (source === 'ipep_past') return 'past';
+    if (source === 'ipep_three_week') return 'three-week';
+    return 'random';
 }
 
 function buildIpepImageUrl(row, kind, source) {
     // kind: choice 또는 explanation
     const pathValue = row?.[`${kind}_img_path`];
     const fileValue = row?.[`${kind}_img_file`];
-    const folder = source === 'ipep_past'? 'past' : 'random';
+    const folder = getIpepImageFolder(source);
 
     if (pathValue && typeof pathValue === 'string') {
         const normalizedPath = pathValue.replace(/\\/g, '/').trim();
@@ -185,10 +192,42 @@ function buildIpepImageUrl(row, kind, source) {
     return '';
 }
 
+function buildIpepWrongSourceLabel(row, source) {
+    if (source === 'ipep_past') {
+        const year = row.exam_year ?? row.year ?? '연도미상';
+        const session = row.exam_session ?? row.session ?? '회차미상';
+        const questionNo = row.question_no ?? row.subject_no ?? row.question_id;
+        return `실기 기출 ${year}년 ${session}회차 ${questionNo}번문제`;
+    }
+
+    if (source === 'ipep_three_week') {
+        const weekNo = row.week_no ? `${row.week_no}주차 ` : '';
+        const sectionNo = row.section_no ? `Section ${row.section_no} ` : '';
+        const questionKey = row.section_question_key || (row.question_no ? `${row.section_no || ''}-${row.question_no}` : '');
+        return `실기 3주 공략 ${weekNo}${sectionNo}${questionKey}`.trim();
+    }
+
+    const subjectCode = row.subject_code ? String(row.subject_code).padStart(2, '0') : '';
+    const subjectName = row.subject_name || row.subject || '';
+    const subjectLabel = subjectCode && subjectName
+        ? `${subjectCode}. ${subjectName}`
+        : (subjectName || (subjectCode ? `${subjectCode}. 실기 과목` : '실기 과목 정보 없음'));
+    const questionNo = row.subject_no ?? row.question_no ?? row.question_id;
+    return `실기 문제은행 ${subjectLabel} ${questionNo}번문제`;
+}
+
+function buildIpepWrongSourceTitle(source) {
+    if (source === 'ipep_past') return '실기 기출문제 오답';
+    if (source === 'ipep_three_week') return '실기 3주 공략 오답';
+    return '실기 문제은행 오답';
+}
+
 function normalizeIpepWrongRow(row, source) {
     const choiceImgUrl = buildIpepImageUrl(row, 'choice', source);
     const explanationImgUrl = buildIpepImageUrl(row, 'explanation', source);
     const correctAnswer = row.answer_normalized || row.answer_raw || '';
+    const sourceLabel = buildIpepWrongSourceLabel(row, source);
+    const sourceTitle = buildIpepWrongSourceTitle(source);
 
     return {
         // 삭제용 오답노트 ID
@@ -203,6 +242,12 @@ function normalizeIpepWrongRow(row, source) {
         source,
         type: source,
         category: source,
+        sourceLabel,
+        source_label: sourceLabel,
+        sourceDetail: sourceLabel,
+        source_detail: sourceLabel,
+        sourceTitle,
+        source_title: sourceTitle,
 
         // 실기 문제 메타 정보
         year: row.exam_year ?? row.year ?? null,
@@ -212,6 +257,16 @@ function normalizeIpepWrongRow(row, source) {
         question_no: row.question_no ?? null,
         subject_code: row.subject_code ?? null,
         subject_no: row.subject_no ?? null,
+        subject_name: row.subject_name ?? null,
+        subjectName: row.subject_name ?? null,
+        week_no: row.week_no ?? null,
+        weekNo: row.week_no ?? null,
+        section_no: row.section_no ?? null,
+        sectionNo: row.section_no ?? null,
+        section_question_key: row.section_question_key ?? null,
+        sectionQuestionKey: row.section_question_key ?? null,
+        question_order: row.question_order ?? null,
+        questionOrder: row.question_order ?? null,
         score: row.score ?? null,
         grading_policy: row.grading_policy || '',
 
@@ -224,6 +279,8 @@ function normalizeIpepWrongRow(row, source) {
         correct_answer: correctAnswer,
         correctAnswer,
         answer: correctAnswer,
+        user_answer: row.user_answer || '',
+        userAnswer: row.user_answer || '',
 
         // 보기 이미지와 해설 이미지: 프론트 호환성을 위해 여러 별칭을 같이 내려줍니다.
         choice_img_stem: row.choice_img_stem || '',
@@ -242,6 +299,8 @@ function normalizeIpepWrongRow(row, source) {
         explanation_img_path: row.explanation_img_path || '',
         explanationImgPath: explanationImgUrl,
         explanationImage: explanationImgUrl,
+        explanation_text: row.explanation_text || '',
+        explanation: row.explanation_text || '',
 
         savedAt: row.savedAt
     };
@@ -277,14 +336,15 @@ app.post('/api/save-ipep-wrong', async (req, res) => {
             // 저장에 반드시 필요한 userId/question_id/source/year/session/savedAt 컬럼만 사용합니다.
             // 문제의 보기 이미지와 지문은 아래 조회 API에서 ipep_random_questions 또는 ipep_past_questions와 JOIN해서 가져온다.
             await pool.query(
-                `INSERT INTO wgs_wrong_notes (userId, question_id, source, year, session, savedAt)
-                 VALUES (?, ?, ?, ?, ?, NOW())`,
+                `INSERT INTO wgs_wrong_notes (userId, question_id, source, year, session, user_answer, savedAt)
+                 VALUES (?, ?, ?, ?, ?, ?, NOW())`,
                 [
                     id,
                     questionId,
                     source,
                     question.exam_year || question.year || req.body.year || null,
-                    question.exam_session || question.session || req.body.session || null
+                    question.exam_session || question.session || req.body.session || null,
+                    question.user_answer || question.userAnswer || req.body.userAnswer || ''
                 ]
             );
         }
@@ -306,19 +366,21 @@ app.get('/api/user/:id/ipep-wrongnotes', async (req, res) => {
 
         if (!id) return res.status(400).json({ success: false, msg: '사용자 정보가 없습니다.' });
 
-        const result = { random: [], past: [] };
+        const result = { random: [], past: [], threeWeek: [] };
 
         if (!sourceFilter || sourceFilter === 'ipep_random') {
             const [randomRows] = await pool.query(
                 `SELECT
                     wn.id AS wrongNoteId,
                     DATE_FORMAT(wn.savedAt, '%Y-%m-%d %H:%i:%s') AS savedAt,
+                    wn.user_answer,
                     q.question_id,
                     NULL AS exam_year,
                     NULL AS exam_session,
                     NULL AS question_no,
                     q.subject_code,
                     q.subject_no,
+                    s.subject_name,
                     q.question_text,
                     q.answer_raw,
                     q.answer_normalized,
@@ -332,6 +394,7 @@ app.get('/api/user/:id/ipep-wrongnotes', async (req, res) => {
                     q.explanation_img_path
                  FROM wgs_wrong_notes wn
                  INNER JOIN ipep_random_questions q ON q.question_id = wn.question_id
+                 LEFT JOIN ipep_subjects s ON s.subject_code = q.subject_code
                  WHERE wn.userId = ? AND wn.source = 'ipep_random' ORDER BY wn.savedAt DESC, wn.id DESC`,
                 [id]
             );
@@ -343,6 +406,7 @@ app.get('/api/user/:id/ipep-wrongnotes', async (req, res) => {
                 `SELECT
                     wn.id AS wrongNoteId,
                     DATE_FORMAT(wn.savedAt, '%Y-%m-%d %H:%i:%s') AS savedAt,
+                    wn.user_answer,
                     q.question_id,
                     q.exam_year,
                     q.exam_session,
@@ -368,12 +432,51 @@ app.get('/api/user/:id/ipep-wrongnotes', async (req, res) => {
             result.past = pastRows.map(row => normalizeIpepWrongRow(row, 'ipep_past'));
         }
 
+        if (!sourceFilter || sourceFilter === 'ipep_three_week') {
+            const [threeWeekRows] = await pool.query(
+                `SELECT
+                    wn.id AS wrongNoteId,
+                    DATE_FORMAT(wn.savedAt, '%Y-%m-%d %H:%i:%s') AS savedAt,
+                    wn.user_answer,
+                    q.question_id,
+                    NULL AS exam_year,
+                    NULL AS exam_session,
+                    q.question_no,
+                    NULL AS subject_code,
+                    NULL AS subject_no,
+                    NULL AS subject_name,
+                    s.week_no,
+                    q.section_no,
+                    q.section_question_key,
+                    q.question_order,
+                    q.question_text,
+                    q.answer_raw,
+                    q.answer_normalized,
+                    q.grading_policy,
+                    q.score,
+                    NULL AS choice_img_stem,
+                    NULL AS choice_img_file,
+                    q.choice_img_path,
+                    NULL AS explanation_img_stem,
+                    NULL AS explanation_img_file,
+                    NULL AS explanation_img_path,
+                    q.explanation_text
+                 FROM wgs_wrong_notes wn
+                 INNER JOIN ipep_three_week_questions q ON q.question_id = wn.question_id
+                 INNER JOIN ipep_three_week_sections s ON s.section_no = q.section_no
+                 WHERE wn.userId = ? AND wn.source = 'ipep_three_week' ORDER BY wn.savedAt DESC, wn.id DESC`,
+                [id]
+            );
+            result.threeWeek = threeWeekRows.map(row => normalizeIpepWrongRow(row, 'ipep_three_week'));
+        }
+
         // 기존 프론트가 wrongNotes 배열만 읽는 경우도 영향을 받지 않도록 같이 반환합니다.
         const wrongNotes = sourceFilter === 'ipep_past'? result.past
             : sourceFilter === 'ipep_random'? result.random
-                : [...result.random, ...result.past];
+                : sourceFilter === 'ipep_three_week'? result.threeWeek
+                    : [...result.random, ...result.past, ...result.threeWeek];
 
-        return res.json({ success: true, ok: true, wrongNotes, random: result.random, past: result.past });
+        return res.json({ success: true, ok: true, wrongNotes, random: result.random, past: result.past, threeWeek: result.threeWeek });
     } catch (error) {
         console.error('실기 오답 SQL 조회 오류:', error);
         return res.status(500).json({ success: false, msg: '실기 오답 조회 중 오류가 발생했습니다.' });
@@ -423,7 +526,7 @@ app.post('/api/remove-all-ipep-wrong', async (req, res) => {
         if (source) {
             await pool.query('DELETE FROM wgs_wrong_notes WHERE userId = ? AND source = ?', [id, source]);
         } else {
-            await pool.query("DELETE FROM wgs_wrong_notes WHERE userId = ? AND source IN ('ipep_random', 'ipep_past')", [id]);
+            await pool.query("DELETE FROM wgs_wrong_notes WHERE userId = ? AND source IN ('ipep_random', 'ipep_past', 'ipep_three_week')", [id]);
         }
 
         return res.json({ success: true, msg: '실기 오답 전체 삭제 완료' });

@@ -592,6 +592,7 @@ app.use('/api', (req, res, next) => {
     if (req.path.startsWith('/gatekeeper/')) return next();
     if (req.method === 'OPTIONS') return next();
     if (req.method === 'GET' && (req.path === '/ipep/health' || req.path === '/ipep/health/')) return next();
+    if (req.method === 'GET' && (req.path === '/mobile-qr' || req.path === '/mobile-qr/')) return next();
 
     // 최고관리자가 결재를 승인할 때 서버 내부에서 원래 변경 API를 다시 호출합니다.
     // 이 내부 호출은 브라우저 쿠키를 들고 있지 않기 때문에 Gatekeeper에서 401이 발생할 수 있습니다.
