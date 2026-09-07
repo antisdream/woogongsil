@@ -35,7 +35,7 @@ export default function HomeHero({ homeDefaultBanner, homeHeroTitle, homeHeroDes
     return <div className="ui-home-intro" style={{ maxWidth: homeHeroLayout?.contentWidth || '100%', marginInline: 'auto' }}>
         <section className="ui-home-hero" aria-labelledby="ui-home-title">
             <div className="ui-hero-copy">
-                <p className="ui-hero-scope" style={titleStyle}><span aria-hidden="true" />{homeHeroTitle}</p>
+                {String(homeHeroTitle || '').trim() && <p className="ui-hero-scope" style={titleStyle}><span aria-hidden="true" />{homeHeroTitle}</p>}
                 {loggedInUser && <p className="ui-hero-welcome">{homeWelcomePrefix} {loggedInUser}{homeWelcomeSuffix}{dDay && <span>{homeDdayPrefix} {calcDday()}{homeDdaySuffix}</span>}</p>}
                 <h1 id="ui-home-title">오늘 푼 한 문제를,<br /><em>내일의 실력으로.</em></h1>
                 <p className="ui-hero-description" style={descStyle}>{homeHeroDesc}</p>

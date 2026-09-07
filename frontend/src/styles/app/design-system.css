@@ -32,7 +32,8 @@ body .ui-shell button:disabled { cursor:not-allowed; opacity:.55; }
 .ui-brand-mark { width:36px; height:39px; display:grid; place-items:center; border-radius:10px; background:#3157d5; color:white; font-size:21px; }
 .ui-desktop-nav { display:flex; align-items:center; gap:4px; margin-left:auto; }
 .ui-nav-link { min-height:44px; display:inline-flex; align-items:center; justify-content:center; gap:7px; padding:10px 12px; font-size:14px; font-weight:650; line-height:1.4; color:var(--wgs-muted); text-decoration:none; border:0; border-radius:9px; background:transparent; cursor:pointer; }
-.ui-nav-link:hover,.ui-nav-link.is-current { color:var(--wgs-primary); background:var(--wgs-active-bg); }
+.ui-nav-link.is-current { color:var(--wgs-primary); background:var(--wgs-active-bg); }
+@media (hover:hover) { .ui-nav-link:hover { color:var(--wgs-primary); background:var(--wgs-active-bg); } }
 .ui-header-actions { display:flex; align-items:center; gap:7px; }
 body .ui-icon-button { width:44px; height:44px; min-height:44px; padding:0; display:grid; place-items:center; border-radius:10px; border:1px solid var(--wgs-border); color:var(--wgs-muted); background:var(--wgs-card); box-shadow:none; font-size:19px; cursor:pointer; }
 .ui-account-link { min-height:44px; display:inline-flex; gap:8px; align-items:center; white-space:nowrap; padding:0 12px; text-decoration:none; color:var(--wgs-title); font-size:14px; font-weight:700; }
