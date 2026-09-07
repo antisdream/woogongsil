@@ -4,12 +4,6 @@
 function registerPracticalUserRoutes(options = {}) {
     const app = options.app;
     const pool = options.pool;
-    const getSeasonStatus = options.getSeasonStatus;
-    const getUserById = options.getUserById;
-    const getIpepRankingStore = options.getIpepRankingStore;
-    const saveIpepRankingStore = options.saveIpepRankingStore;
-    const safeNumber = options.safeNumber;
-    const getKSTDateTime = options.getKSTDateTime;
     const validateRealtimeSession = options.validateRealtimeSession;
 
     if (!app || typeof app.post !== 'function') {
@@ -52,107 +46,6 @@ function registerPracticalUserRoutes(options = {}) {
 
         return auth;
     }
-// 7-1. 실기 랭킹 / 실기 오답노트 API
-app.post('/api/ipep-ranking', async (req, res) => {
-    const auth = await requireSessionUser(req, res, req.body.id || req.body.userId);
-    if (!auth) return;
-
-    const id = authUserId(auth);
-    const mode = req.body.mode === 'past'? 'past' : 'random';
-
-    if (!id) return res.status(400).json({ success: false, msg: '로그인이 필요합니다.' });
-
-    try {
-        const { rankingDate, season } = getSeasonStatus();
-
-        // 실기 랭킹은 프리시즌 없이 서버 기준 날짜로 24시간 내내 기록합니다.
-        const user = await getUserById(id);
-        const userName = auth.user?.name || (user && user.name) || id;
-        const store = getIpepRankingStore();
-        const list = mode === 'past'? store.past : store.random;
-
-        const now = getKSTDateTime();
-        const year = req.body.year || null;
-        const session = req.body.session || null;
-        const detailKey = req.body.detailKey || `${year || ''}-${session || ''}`;
-
-        const totalCount = Math.max(1, safeNumber(req.body.totalCount, 1));
-        const correctCount = Math.max(0, safeNumber(req.body.correctCount, 0));
-        const attemptedCount = Math.max(0, safeNumber(req.body.attemptedCount, totalCount));
-        const totalScore = Math.max(0, safeNumber(req.body.totalScore, req.body.score || 0));
-
-        // 실기 기출은 아무 답도 입력하지 않은 제출은 랭킹에 남기지 않습니다.
-        // 사용자가 실제로 1문제 이상 입력했을 때만 최신 응시 기록으로 반영합니다.
-        if (mode === 'past' && attemptedCount <= 0) {
-            return res.json({ success: true, skipped: true, msg: '입력한 답안이 없어 실기 기출 랭킹을 기록하지 않았습니다.' });
-        }
-
-        // 문제은행은 사용자가 푼 문제 수가 계속 달라질 수 있으므로 누적형입니다.
-        // 기출문제는 같은 연도/회차를 재응시할 수 있으므로 최신 제출본으로 갱신하는 방식입니다.
-        const existing = list.find((row) => {
-            if (String(row.userId) !== id) return false;
-            if (String(row.rankingDate || '') !== String(rankingDate)) return false;
-            if (mode === 'past') {
-                return String(row.year || '') === String(year || '')
-                    && String(row.session || '') === String(session || '')
-                    && String(row.detailKey || `${row.year || ''}-${row.session || ''}`) === String(detailKey);
-            }
-            return true;
-        });
-
-        if (existing && mode === 'random') {
-            // 실기 문제은행: 1문제씩 또는 여러 문제씩 풀 때마다 누적합니다.
-            existing.userName = userName;
-            existing.totalCount = safeNumber(existing.totalCount) + totalCount;
-            existing.correctCount = safeNumber(existing.correctCount) + correctCount;
-            existing.totalScore = safeNumber(existing.totalScore) + totalScore;
-            existing.maxScore = safeNumber(existing.maxScore) + totalCount;
-            existing.attemptedCount = safeNumber(existing.attemptedCount) + attemptedCount;
-            existing.rankingDate = rankingDate;
-            existing.season = season;
-            existing.updatedAt = now;
-        } else if (existing && mode === 'past') {
-            // 실기 기출문제: 같은 연도/회차 재응시는 누적하지 않고 최신 제출본으로 교체합니다.
-            existing.userName = userName;
-            existing.year = year;
-            existing.session = session;
-            existing.detailKey = detailKey;
-            existing.totalCount = totalCount;          // 보통 20문제
-            existing.correctCount = correctCount;      // 부분점수라도 있으면 맞은 문제로 인정
-            existing.totalScore = totalScore;          // 부분점수를 합산한 실제 점수
-            existing.maxScore = Math.max(1, safeNumber(req.body.maxScore, 100));
-            existing.attemptedCount = attemptedCount;
-            existing.rankingDate = rankingDate;
-            existing.season = season;
-            existing.updatedAt = now;
-        } else {
-            list.push({
-                userId: id,
-                userName,
-                mode,
-                year,
-                session,
-                detailKey,
-                totalCount,
-                correctCount,
-                totalScore,
-                maxScore: mode === 'past'? Math.max(1, safeNumber(req.body.maxScore, 100)) : totalCount,
-                attemptedCount,
-                rankingDate,
-                season,
-                createdAt: now,
-                updatedAt: now
-            });
-        }
-
-        saveIpepRankingStore(store);
-        return res.json({ success: true, msg: mode === 'past'? '실기 기출 최신 랭킹 저장 완료' : '실기 문제은행 누적 랭킹 저장 완료' });
-    } catch (error) {
-        console.error('실기 랭킹 저장 오류:', error);
-        return res.status(500).json({ success: false, msg: '실기 랭킹 저장 중 오류가 발생했습니다.' });
-    }
-});
-
 // 7-2. 실기 오답노트 - SQL 저장/조회 방식
 // 기존 JSON 저장 방식은 실기 보기 이미지(choice_img_path)를 안정적으로 복원하기 어려웠습니다.
 // 그래서 wgs_wrong_notes에는 사용자ID + 문제ID + 출처만 저장하고,

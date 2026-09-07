@@ -215,7 +215,7 @@ async function importPostsFromJSON() {
     console.log(' 게시판 데이터 복구 완료');
 }
 
-async function importRankingsFromJSON() {
+async function importLearningResultsFromJSON() {
     const randomSources = [RANKING_RANDOM_FILE, RANKING_DATA_FILE];
 
     const [randomCountRows] = await pool.query('SELECT COUNT(*) AS cnt FROM wgs_ranking_random');
@@ -271,7 +271,7 @@ async function importDataFromJSON() {
     try {
         await importUsersFromJSON();
         await importPostsFromJSON();
-        await importRankingsFromJSON();
+        await importLearningResultsFromJSON();
     } catch (error) {
         console.error('JSON ->SQL 자동 복구 중 오류:', error.message);
     }

@@ -9,7 +9,6 @@ const registerAuthRoutes = require('./routes/auth/authRoutes');
 const registerAdminAuthRoutes = require('./routes/auth/adminAuthRoutes');
 const registerAccountRecoveryRoutes = require('./routes/auth/accountRecoveryRoutes');
 const registerUserRoutes = require('./routes/userRoutes');
-const registerRankingHistoryRoutes = require('./routes/ranking/rankingHistoryRoutes');
 const { createAdminSessionService } = require('./services/adminSessionService');
 const { createWgsSecurityHeaders } = require('./services/httpSecurity');
 
@@ -30,6 +29,9 @@ const RATE_ENV_KEYS = [
     'WGS_LIMIT_IP_REGISTER_PER_10MIN',
     'WGS_LIMIT_CLIENT_ERROR_REPORT_PER_10MIN',
     'WGS_LIMIT_IP_ERROR_REPORT_PER_10MIN',
+    'WGS_LIMIT_CLIENT_API_WRITE_PER_MIN',
+    'WGS_LIMIT_USER_API_WRITE_PER_MIN',
+    'WGS_LIMIT_IP_API_WRITE_PER_MIN',
 ];
 
 function withRateEnv(values, callback) {
@@ -587,110 +589,21 @@ test('administrator origin, credentials, role and separate session cookie checks
     assert.equal(continued, false);
 });
 
-function createRankingFixture(options = {}) {
-    const fixture = createMemberFixture();
-    const rankingQueries = [];
-    const pool = { async query(sql, params = []) {
-        rankingQueries.push({ sql: String(sql), params });
-        if (String(sql).includes('information_schema.tables')) return [[{ cnt: 1 }]];
-        if (String(sql).startsWith('SHOW COLUMNS')) {
-            const fields = options.fields || ['userId', 'rankingDate', 'score', 'attemptedCount', 'correctCount'];
-            return [fields.map((Field) => ({ Field }))];
-        }
-        return [[{ date: '2026-09-07', score: 9, solvedCount: 5, correctCount: 4, totalScore: 9, attemptedCount: 5, totalCount: 5 }]];
-    } };
-    registerRankingHistoryRoutes({
-        app: fixture.app, pool, validateRealtimeSession: fixture.validateRealtimeSession,
-        rankingDataFile: options.rankingDataFile,
+test('new practical result writes keep the shared learning write rate limit', () => {
+    withRateEnv({
+        WGS_RATE_LIMIT_ENABLED: 'true',
+        WGS_LIMIT_CLIENT_API_WRITE_PER_MIN: '2',
+        WGS_LIMIT_USER_API_WRITE_PER_MIN: '50',
+        WGS_LIMIT_IP_API_WRITE_PER_MIN: '50',
+    }, () => {
+        const middleware = createRateMiddleware();
+        assert.equal(invokeRateMiddleware(middleware, { path: '/api/practice-results' }).nextCalled, true);
+        assert.equal(invokeRateMiddleware(middleware, { path: '/api/exam-results' }).nextCalled, true);
+        const limited = invokeRateMiddleware(middleware, { path: '/api/practical-results' });
+        assert.equal(limited.response.statusCode, 429);
+        assert.equal(limited.nextCalled, false);
+        assert.equal(invokeRateMiddleware(middleware, { path: '/api/online-users' }).nextCalled, true);
     });
-    return { ...fixture, rankingQueries };
-}
-
-test('every registered personal ranking history handler rejects anonymous sessions before any ranking query', async () => {
-    const fixture = createRankingFixture();
-    const personalRoutes = fixture.routes.filter((route) => route.path.startsWith('/api/my-ranking-history'));
-    assert.equal(personalRoutes.length, 5);
-    for (const route of personalRoutes) {
-        const response = await fixture.runHandlers(route.handlers, {
-            method: 'GET', path: route.path, body: {}, query: { userId: fixture.user.id }, headers: {},
-        });
-        assert.equal(response.statusCode, 401, route.path);
-        assert.match(response.headers['cache-control'], /private.*no-store/);
-    }
-    assert.equal(fixture.rankingQueries.length, 0);
-});
-
-test('both personal ranking URLs reject another member ID across all supported query aliases', async () => {
-    const fixture = createRankingFixture();
-    for (const routePath of ['/api/my-ranking-history', '/api/my-ranking-history-v2']) {
-        for (const alias of ['userId', 'userid', 'user_id', 'id']) {
-            const response = await fixture.dispatch('GET', `${routePath}?${alias}=another-member`, {
-                headers: { 'x-user-id': fixture.user.id, 'x-session-token': fixture.user.sessionToken },
-            });
-            assert.ok([401, 403].includes(response.statusCode), `${routePath} ${alias}`);
-        }
-    }
-    assert.equal(fixture.rankingQueries.length, 0);
-});
-
-test('personal ranking history uses the authenticated ID and does not expand legacy name or nickname candidates', async () => {
-    const fixture = createRankingFixture();
-    for (const routePath of ['/api/my-ranking-history', '/api/my-ranking-history-v2']) {
-        const response = await fixture.dispatch('GET', `${routePath}?type=random&startDate=2026-09-07&endDate=2026-09-07`, {
-            headers: { 'x-user-id': fixture.user.id, 'x-session-token': fixture.user.sessionToken },
-        });
-        assert.equal(response.statusCode, 200);
-        assert.equal(response.body.success, true);
-        assert.ok(Array.isArray(response.body.rows));
-    }
-    const historyQueries = fixture.rankingQueries.filter(({ params }) => Array.isArray(params[2]));
-    assert.ok(historyQueries.length >= 2, 'both personal ranking routes must read history');
-    for (const { params } of historyQueries) {
-        assert.deepEqual(params[2], [fixture.user.id], 'query must bind only the authenticated ID');
-    }
-    assert.equal(fixture.rankingQueries.some(({ sql, params }) => /FROM\s+`users`/i.test(sql) || params.includes('users')), false);
-});
-
-test('personal written ranking does not use a display name column as record ownership', async () => {
-    const fixture = createRankingFixture({ fields: ['name', 'rankingDate', 'score', 'attemptedCount', 'correctCount'] });
-    const response = await fixture.dispatch('GET', '/api/my-ranking-history?type=random&startDate=2026-09-07&endDate=2026-09-07', {
-        headers: { 'x-user-id': fixture.user.id, 'x-session-token': fixture.user.sessionToken },
-    });
-    assert.equal(response.statusCode, 200);
-    assert.deepEqual(response.body.rows, []);
-    assert.equal(fixture.rankingQueries.some(({ params }) => Array.isArray(params[2])), false, 'ownerless tables must not be read');
-});
-
-test('personal practical ranking excludes ownerless, display-name-only and other-member JSON records', async (t) => {
-    const fs = require('node:fs');
-    const rankingDataFile = require('node:path').join(__dirname, 'unit-personal-ranking.json');
-    const fixture = createRankingFixture({ rankingDataFile });
-    const baseRecord = { type: 'ipep_random', date: '2026-09-07', correctCount: 1, solvedCount: 1 };
-    const records = [
-        ...['userId', 'user_id', 'userid', 'loginId'].map((key, index) => ({
-            ...baseRecord, [key]: fixture.user.id, score: index + 1,
-        })),
-        { ...baseRecord, userId: 'another-member', score: 500 },
-        { ...baseRecord, score: 500 },
-        { ...baseRecord, name: fixture.user.id, score: 500 },
-        { ...baseRecord, nickname: fixture.user.id, score: 500 },
-        { ...baseRecord, userId: '', loginId: fixture.user.id, score: 500 },
-    ];
-    t.mock.method(fs, 'existsSync', (filePath) => String(filePath) === rankingDataFile);
-    t.mock.method(fs, 'readFileSync', (filePath) => {
-        assert.equal(String(filePath), rankingDataFile, 'only the synthetic ranking fixture may be read');
-        return JSON.stringify(records);
-    });
-    for (const routePath of ['/api/my-ranking-history', '/api/my-ranking-history-v2']) {
-        const response = await fixture.dispatch('GET', `${routePath}?type=ipep_random&startDate=2026-09-07&endDate=2026-09-07`, {
-            headers: { 'x-user-id': fixture.user.id, 'x-session-token': fixture.user.sessionToken },
-        });
-        assert.equal(response.statusCode, 200);
-        assert.equal(response.body.summary.totalScore, 10);
-        assert.equal(response.body.rows.length, 1);
-        assert.equal(response.body.rows[0].score, 10);
-    }
-    assert.equal(fixture.rankingQueries.length, 0, 'practical JSON ownership checks must not consult a user-name table');
 });
 
 test('HTTP security headers no longer allow hCaptcha resources and retain the other protection directives', () => {

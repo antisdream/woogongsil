@@ -1,6 +1,8 @@
 // 화면 설정 관리자 API를 제공합니다.
 'use strict';
 
+const { isRetiredScreenSetting, SCREEN_SETTING_VISIBLE_SQL } = require('../services/screenSettingVisibility');
+
 function registerSiteManagementRoutes(options = {}) {
     const app = options.app;
     const pool = options.pool;
@@ -56,6 +58,7 @@ function normalizeScreenSettingPayload(body = {}) {
 }
 
 function validateScreenSetting(payload) {
+    if (isRetiredScreenSetting(payload)) return '종료된 기능의 화면 설정은 변경할 수 없습니다.';
     if (!SCREEN_SETTING_PAGE_KEYS.includes(payload.page_key)) {
         return `page_key는 ${SCREEN_SETTING_PAGE_KEYS.join(', ')} 중 하나여야 합니다.`;
     }
@@ -79,7 +82,7 @@ app.get('/api/screen-settings', async (req, res) => {
     try {
         const pageKey = cleanScreenSettingText(req.query.page_key || req.query.pageKey, '');
         const params = [];
-        let where = ' WHERE is_active = 1';
+        let where = ` WHERE is_active = 1 AND ${SCREEN_SETTING_VISIBLE_SQL}`;
 
         if (pageKey) {
             where += ' AND page_key IN (?, ?)';
@@ -95,13 +98,14 @@ app.get('/api/screen-settings', async (req, res) => {
             [...params, pageKey || 'all']
         );
 
-        const settingsMap = buildScreenSettingsMap(rows);
+        const visibleRows = rows.filter(row => !isRetiredScreenSetting(row));
+        const settingsMap = buildScreenSettingsMap(visibleRows);
 
         res.json({
             ok: true,
-            settings: rows,
+            settings: visibleRows,
             settingsMap,
-            version: rows.reduce((latest, row) => {
+            version: visibleRows.reduce((latest, row) => {
                 const value = row.updated_at ? new Date(row.updated_at).getTime() : 0;
                 return value >latest ? value : latest;
             }, 0),
@@ -189,7 +193,7 @@ app.get('/api/admin/screen-settings', async (req, res) => {
         const keyword = cleanScreenSettingText(req.query.keyword, '');
         const activeOnly = cleanScreenSettingText(req.query.activeOnly, '') === '1';
 
-        const where = [];
+        const where = [SCREEN_SETTING_VISIBLE_SQL];
         const params = [];
 
         if (pageKey) {
@@ -232,9 +236,10 @@ app.get('/api/admin/screen-settings', async (req, res) => {
                 SUM(CASE WHEN setting_type = 'color'THEN 1 ELSE 0 END) AS color_count,
                 SUM(CASE WHEN setting_type = 'image'THEN 1 ELSE 0 END) AS image_count
               FROM wgs_screen_settings
+              WHERE ${SCREEN_SETTING_VISIBLE_SQL}
         `);
 
-        res.json({ ok: true, settings: rows, summary });
+        res.json({ ok: true, settings: rows.filter(row => !isRetiredScreenSetting(row)), summary });
     } catch (error) {
         console.error('GET /api/admin/screen-settings error:', error);
         res.status(500).json({ ok: false, message: '화면 설정 목록을 불러오지 못했습니다.' });
@@ -311,7 +316,7 @@ app.put('/api/admin/screen-settings/:id', async (req, res) => {
             `UPDATE wgs_screen_settings
                 SET page_key = ?, section_key = ?, setting_type = ?, setting_key = ?, setting_label = ?,
                     setting_value = ?, description = ?, sort_order = ?, is_active = ?, updated_by = ?
-              WHERE id = ?`,
+              WHERE id = ? AND ${SCREEN_SETTING_VISIBLE_SQL}`,
             [payload.page_key, payload.section_key, payload.setting_type, payload.setting_key, payload.setting_label,
              payload.setting_value, payload.description, payload.sort_order, payload.is_active, adminId, id]
         );
@@ -350,7 +355,7 @@ app.patch('/api/admin/screen-settings/:id/toggle', async (req, res) => {
         const [result] = await pool.query(
             `UPDATE wgs_screen_settings
                 SET is_active = IF(is_active = 1, 0, 1), updated_by = ?
-              WHERE id = ?`,
+              WHERE id = ? AND ${SCREEN_SETTING_VISIBLE_SQL}`,
             [adminId, id]
         );
 
@@ -377,7 +382,7 @@ app.delete('/api/admin/screen-settings/:id', async (req, res) => {
         const id = Number(req.params.id);
         if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ ok: false, message: '잘못된 설정 ID입니다.' });
 
-        const [result] = await pool.query('DELETE FROM wgs_screen_settings WHERE id = ?', [id]);
+        const [result] = await pool.query(`DELETE FROM wgs_screen_settings WHERE id = ? AND ${SCREEN_SETTING_VISIBLE_SQL}`, [id]);
 
         if (result.affectedRows === 0) return res.status(404).json({ ok: false, message: '삭제할 화면 설정을 찾지 못했습니다.' });
 

@@ -33,8 +33,8 @@ const { sendEmail } = require('./mailer');
 // 실제 메일 발송 로직은 backend/routes/errorReportRoutes.js에서 처리합니다.
 const errorReportRoutes = require('./routes/errorReportRoutes');
 const registerSiteManagementRoutes = require('./routes/siteManagementRoutes');
-const registerRankingRoutes = require('./routes/ranking/rankingRoutes');
-const registerRankingHistoryRoutes = require('./routes/ranking/rankingHistoryRoutes');
+const registerLearningResultsRoutes = require('./routes/learningResultsRoutes');
+const registerRetiredFeatureRoutes = require('./routes/retiredFeatureRoutes');
 const registerAdminRoutes = require('./routes/adminRoutes');
 const registerBoardRoutes = require('./routes/boardRoutes');
 const registerStudyRoutes = require('./routes/studyRoutes');
@@ -97,6 +97,8 @@ registerRobotsTxt(app);
 
 // JSON body를 Express가 읽을 수 있도록 설정합니다.
 app.use(express.json({ limit: '10mb' }));
+
+registerRetiredFeatureRoutes({ app });
 
 registerGatekeeperSecurity({
     app,
@@ -166,16 +168,10 @@ const SERVER_INSTANCE_ID = `${Date.now()}_${Math.random().toString(36).slice(2, 
 let adminSessionService = null;
 const {
     activeUsers,
-    realtimeChatMessages,
-    realtimeChatMaxMessages: REALTIME_CHAT_MAX_MESSAGES,
     touchActiveUser,
     pruneActiveUsers,
     removeActiveUser,
     getActiveUserList,
-    isRealtimeAdminUser,
-    sanitizeChatText,
-    getValidChatSince,
-    getRealtimeChatMessagesAfter,
 } = createRealtimeState({ adminUserId: ADMIN_USER_ID });
 
 async function validateRealtimeSession(req) {
@@ -310,7 +306,6 @@ const {
     RANKING_RANDOM_FILE,
     RANKING_PAST_FILE,
     RANKING_DATA_FILE,
-    IPEP_RANKING_FILE,
     readJSON,
     getIpepRankingStore,
     saveIpepRankingStore,
@@ -806,12 +801,6 @@ registerRealtimeRoutes({
     validateRealtimeSession,
     touchActiveUser,
     getActiveUserList,
-    getValidChatSince,
-    getRealtimeChatMessagesAfter,
-    isRealtimeAdminUser,
-    sanitizeChatText,
-    realtimeChatMessages,
-    realtimeChatMaxMessages: REALTIME_CHAT_MAX_MESSAGES,
     serverInstanceId: SERVER_INSTANCE_ID,
 });
 
@@ -829,13 +818,7 @@ registerAccountRecoveryRoutes({
 registerPracticalUserRoutes({
     app,
     pool,
-    getSeasonStatus,
-    getUserById,
     validateRealtimeSession,
-    getIpepRankingStore,
-    saveIpepRankingStore,
-    safeNumber,
-    getKSTDateTime,
 });
 
 registerUserRoutes({
@@ -855,30 +838,16 @@ registerExamRoutes({
     buildQuestionSelect,
 });
 
-registerRankingRoutes({
+registerLearningResultsRoutes({
     app,
     pool,
     getSeasonStatus,
     validateRealtimeSession,
+    getUserById,
     getIpepRankingStore,
+    saveIpepRankingStore,
     safeNumber,
-});
-
-
-// 개인 랭킹 히스토리 조회 API
-// - 홈 화면의 실시간 Top 3는 기존 /api/rankings 그대로 유지합니다.
-// - 이 API는 사용자의 과거 랭킹 기록을 날짜 범위로 조회하기 위한 전용 API입니다.
-// - 연도/회차는 하드코딩하지 않고 DB 또는 실기 랭킹 JSON에 저장된 값을 기준으로만 집계합니다.
-
-registerRankingHistoryRoutes({
-    app,
-    pool,
-    validateRealtimeSession,
-    fs,
-    backendDir: __dirname,
-    rankingDataFile: RANKING_DATA_FILE,
-    ipepRankingFile: IPEP_RANKING_FILE,
-    getSeasonStatus,
+    getKSTDateTime,
 });
 
 registerFortuneRoutes({

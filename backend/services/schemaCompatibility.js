@@ -251,14 +251,6 @@ async function ensureSchemaCompatibility() {
             ['hero', 'welcome_prefix', '\u{1F389}', ''],
             ['hero', 'dday_prefix', '\u{1F525} 시험일까지', '시험일까지'],
             ['mobile_qr', 'title', '\u{1F4F1} 모바일에서 접속하기', '모바일에서 접속하기'],
-            ['score_ranking', 'section_title', '\u{1F3C6} 나의 점수는?', '나의 점수는?'],
-            ['score_ranking', 'year_select_title', '\u{1F4C5} 연도 선택', '연도 선택'],
-            ['score_ranking', 'session_select_title', '\u{1F4DD} 회차 선택', '회차 선택'],
-            ['score_ranking', 'top_title_prefix', '\u{1F525} 오늘의', '오늘의'],
-            ['score_ranking', 'season_text', '\u{1F4C5} 24시간 랭킹 (00:00 ~ 23:59)', '24시간 랭킹 (00:00 ~ 23:59)'],
-            ['score_ranking', 'my_ranking_title', '\u{1F464} 나의 실시간 랭킹', '나의 실시간 랭킹'],
-            ['ranking_history', 'metric_score_label', '\u25A0 점수', '점수'],
-            ['ranking_history', 'metric_accuracy_label', '\u25CF 정답률', '정답률'],
         ];
 
         for (const [sectionKey, settingKey, oldValue, newValue] of homeScreenEmojiCleanupRows) {
@@ -274,7 +266,7 @@ async function ensureSchemaCompatibility() {
 
 
         // 이전 v8 패치에서 page_key='home' / section_key='copy'로 등록했던 세부 문구는
-        // 실제 화면에서는 hero/live_chat/score_ranking 섹션으로 이관했습니다.
+        // 이미 이관되었거나 종료된 과거 화면 문구는 비활성 상태를 유지합니다.
         // 기존 DB 값은 삭제하지 않고 비활성화만 하여 관리자 목록이 헷갈리지 않도록 정리합니다.
         const legacyHomeCopyKeysFix18Cleanup = [
             'welcome_prefix', 'welcome_suffix', 'dday_prefix', 'dday_suffix',
@@ -297,7 +289,7 @@ async function ensureSchemaCompatibility() {
 
         // 일부 이전 행은 home.copy.* 형태의 setting_key로 저장되어 있었습니다.
         // 현재 홈 화면은 섹션 기반 키를 사용하므로 이 행들은 이전 중복 데이터입니다.
-        // 예: hero.*, live_chat.*, score_ranking.*, ranking_history.*
+        // 예: hero.*
         // 행은 백업 데이터로 보존하되 기본 활성 관리자 목록에서는 숨깁니다.
         await pool.query(
             `UPDATE wgs_screen_settings

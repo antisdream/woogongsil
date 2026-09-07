@@ -123,13 +123,12 @@ function wgsRouteGroup(req) {
 
   if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
     if (path.startsWith('/api/admin/')) return 'admin_write';
-    if (path.startsWith('/api/realtime-chat/')) return 'realtime_write';
     if (path.startsWith('/api/multiplayer/')) return 'multiplayer_write';
     if (path.startsWith('/api/posts')) return 'content_write';
     if (
       path === '/api/practice-results' ||
       path === '/api/exam-results' ||
-      path === '/api/ipep-ranking' ||
+      path === '/api/practical-results' ||
       path === '/api/save-wrong' ||
       path === '/api/save-ipep-wrong' ||
       path === '/api/remove-wrong' ||
@@ -221,7 +220,7 @@ function wgsRateSpecs(req, group) {
     add('notify:ip', ip, wgsRateNumber(process.env.WGS_LIMIT_IP_NOTIFY_EMAIL_PER_10MIN, 40), 600);
   }
 
-  if (group === 'content_write' || group === 'learning_write' || group === 'account_write' || group === 'multiplayer_write' || group === 'realtime_write') {
+  if (group === 'content_write' || group === 'learning_write' || group === 'account_write' || group === 'multiplayer_write') {
     const groupKey = group.replace(/[^a-z0-9_:-]/g, '_');
     add(`${groupKey}:client`, clientId, wgsRateNumber(process.env.WGS_LIMIT_CLIENT_API_WRITE_PER_MIN, 120), 60);
     add(`${groupKey}:user`, username, wgsRateNumber(process.env.WGS_LIMIT_USER_API_WRITE_PER_MIN, 180), 60);

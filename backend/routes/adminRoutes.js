@@ -368,45 +368,6 @@ function registerAdminRoutes(options = {}) {
         }
     });
 
-    // 관리자 전용 사용자 성적 조회는 관리자 쿠키 범위(/api/admin)를 벗어나지 않도록
-    // 기존 랭킹 조회기를 서버 내부 고정 경로로만 호출합니다.
-    app.get('/api/admin/users/:userId/ranking-history', async (req, res) => {
-        try {
-            const auth = await validateAdminSession(req);
-            if (!auth.valid || !auth.isAdmin) {
-                return res.status(403).json({ success: false, message: '관리자 권한이 필요합니다.' });
-            }
-
-            const targetUserId = String(req.params.userId || '').trim();
-            if (!targetUserId) {
-                return res.status(400).json({ success: false, message: '조회할 사용자를 선택해주세요.' });
-            }
-
-            const params = new URLSearchParams();
-            params.set('userId', targetUserId);
-            params.set('id', targetUserId);
-            for (const key of ['type', 'source', 'startDate', 'endDate', 'start', 'end', 'from', 'to']) {
-                const value = String(req.query?.[key] || '').trim();
-                if (value) params.set(key, value.slice(0, 80));
-            }
-
-            const baseUrl = `http://127.0.0.1:${Number(process.env.PORT || 5000)}`;
-            const response = await fetch(`${baseUrl}/api/my-ranking-history-v2?${params.toString()}`, {
-                method: 'GET',
-                headers: { 'x-admin-approval-bypass': getApprovalBypassToken() },
-                signal: AbortSignal.timeout(10000),
-            });
-            const responseText = await response.text();
-            res.status(response.status);
-            res.type(response.headers.get('content-type') || 'application/json');
-            return res.send(responseText);
-        } catch (error) {
-            console.error('[admin user ranking history] error:', error);
-            return res.status(500).json({ success: false, message: '사용자 성적 조회 중 오류가 발생했습니다.' });
-        }
-    });
-
-
     // 관리자 API 요청값 통합 헬퍼.
     // GET 요청은 req.query, POST 요청은 req.body에 값이 들어오므로 둘을 합쳐서 같은 로직으로 처리합니다.
     function getAdminRequestData(req) {

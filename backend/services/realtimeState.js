@@ -1,13 +1,11 @@
-// 현재 서버 프로세스에서 사용하는 실시간 접속자와 채팅 상태를 메모리에 보관합니다.
+// 현재 서버 프로세스에서 사용하는 실시간 접속자 상태를 메모리에 보관합니다.
 // 이 값들은 Node.js 프로세스가 재시작되면 의도적으로 초기화됩니다.
 function createRealtimeState(options = {}) {
     const activeUserTtlMs = Number(options.activeUserTtlMs || 45 * 1000);
-    const realtimeChatMaxMessages = Number(options.realtimeChatMaxMessages || 300);
     const adminUserId = String(options.adminUserId || '').trim().toLowerCase();
     const adminUserIds = new Set([adminUserId, 'skn29'].filter(Boolean));
 
     const activeUsers = new Map();
-    const realtimeChatMessages = [];
 
     function normalizeUserId(value) {
         return String(value || '').trim().toLowerCase();
@@ -114,52 +112,14 @@ function createRealtimeState(options = {}) {
             });
     }
 
-    function sanitizeChatText(value) {
-        return String(value || '')
-            .replace(/[\x00-\x1F\x7F]/g, ' ')
-            .replace(/\s+/g, ' ')
-            .trim()
-            .slice(0, 500);
-    }
-
-    function getValidChatSince(value) {
-        const n = Number(value);
-        return Number.isFinite(n) && n > 0 ? n : 0;
-    }
-
-    function getRealtimeChatMessagesAfter(sinceMs) {
-        const safeSinceMs = getValidChatSince(sinceMs);
-
-        return realtimeChatMessages
-            .filter((message) => Number(message.createdAtMs || 0) >= safeSinceMs)
-            .map((message) => {
-                const isAdminMessage = message.role === 'admin' || message.isAdmin === true;
-
-                return {
-                    id: message.id,
-                    userId: message.userId,
-                    userName: message.userName,
-                    role: isAdminMessage ? 'admin' : 'user',
-                    isAdmin: isAdminMessage,
-                    text: message.text,
-                    createdAt: new Date(message.createdAtMs).toISOString(),
-                };
-            });
-    }
-
     return {
         activeUsers,
-        realtimeChatMessages,
-        realtimeChatMaxMessages,
         getRequestIp,
         pruneActiveUsers,
         touchActiveUser,
         removeActiveUser,
         getActiveUserList,
         isRealtimeAdminUser,
-        sanitizeChatText,
-        getValidChatSince,
-        getRealtimeChatMessagesAfter,
     };
 }
 
