@@ -43,6 +43,7 @@ import {
     sortByStudyOrder,
 } from '../features/study/studyNoteUtils.js';
 import '../features/study/studyNotes.css';
+import '../styles/app/community-redesign.css';
 
 const API_BASE = '';
 const STUDY_DRAFT_PAGE_SIZE = 10;
@@ -1136,21 +1137,22 @@ function StudyNotes() {
 
     if (!loggedIn) {
         return (
-            <div className="wgs-study-page">
+            <div className="wgs-study-page community-page community-study">
+                <header className="ui-page-head"><p className="ui-eyebrow">나의 정리와 복습</p><h1>학습노트</h1><p className="ui-page-description">문제에서 배운 내용을 내 문서로 정리하는 공간입니다.</p></header>
                 <div className="wgs-study-empty">
-                    학습노트는 로그인 후 사용할 수 있습니다.
+                    <FiBookOpen aria-hidden="true" /><h2>내 노트를 불러오려면 로그인해주세요.</h2><p>개인 문서와 초안을 계정별로 관리하므로 회원 로그인이 필요합니다.</p><a className="ui-primary" href="/login">로그인</a>
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="wgs-study-page">
+        <div className="wgs-study-page community-page community-study">
             <header className="wgs-study-header">
                 <div>
-                    <p className="wgs-study-eyebrow">개인 학습 공간</p>
+                    <p className="wgs-study-eyebrow ui-eyebrow">나의 정리와 복습</p>
                     <h1>학습노트</h1>
-                    <p>시험 정리, 오답 복습, 공개 공유를 한 화면에서 관리합니다.</p>
+                    <p>폴더에서 문서를 찾고, 틀린 문제를 가져와 나만의 해설을 남겨보세요.</p>
                 </div>
                 <div className="wgs-study-header-actions">
                     <button type="button" className="wgs-study-button" onClick={() => loadTree(scope)} disabled={loadingTree}>
@@ -1168,6 +1170,8 @@ function StudyNotes() {
                         <button
                             type="button"
                             className={`wgs-study-tab ${scope === STUDY_SCOPE_MINE ? 'is-active' : ''}`}
+                            role="tab"
+                            aria-selected={scope === STUDY_SCOPE_MINE}
                             onClick={() => handleScopeChange(STUDY_SCOPE_MINE)}
                         >
                             내 학습노트
@@ -1175,6 +1179,8 @@ function StudyNotes() {
                         <button
                             type="button"
                             className={`wgs-study-tab ${scope === STUDY_SCOPE_PUBLIC ? 'is-active' : ''}`}
+                            role="tab"
+                            aria-selected={scope === STUDY_SCOPE_PUBLIC}
                             onClick={() => handleScopeChange(STUDY_SCOPE_PUBLIC)}
                         >
                             전체공개
@@ -1192,6 +1198,7 @@ function StudyNotes() {
                                         if (event.key === 'Enter') handleCreateFolder();
                                     }}
                                     placeholder="폴더 이름"
+                                    aria-label="새 폴더 이름"
                                 />
                                 <button
                                     type="button"
@@ -1276,7 +1283,7 @@ function StudyNotes() {
 
                 <section className={`wgs-study-editor ${canEditCurrentDocument ? '' : 'is-readonly'}`}>
                     <div className="wgs-study-editor-title">
-                        <h2>{editorHeading}</h2>
+                        <div className="community-editor-heading"><p className="ui-eyebrow">{canEditCurrentDocument ? '나의 학습노트' : '공유 학습노트'}</p><h2>{editorHeading}</h2></div>
                         <div className="wgs-study-editor-actions">
                             <div className="wgs-study-action-group">
                                 {canEditCurrentDocument && (
@@ -1354,10 +1361,12 @@ function StudyNotes() {
                                 value={editorState.title}
                                 onChange={(event) => setEditorState((previous) => ({ ...previous, title: event.target.value }))}
                                 placeholder="문서 제목"
+                                aria-label="문서 제목"
                             />
                             <select
                                 className="wgs-study-select"
                                 value={editorState.visibility}
+                                aria-label="문서 공개 범위"
                                 onChange={(event) => setEditorState((previous) => ({ ...previous, visibility: event.target.value }))}
                             >
                                 <option value="private">나만공개</option>
@@ -1366,6 +1375,7 @@ function StudyNotes() {
                             <select
                                 className="wgs-study-select"
                                 value={editorState.docType}
+                                aria-label="노트 유형"
                                 onChange={(event) => setEditorState((previous) => ({ ...previous, docType: event.target.value }))}
                             >
                                 <option value="note">일반노트</option>
@@ -1389,7 +1399,7 @@ function StudyNotes() {
                             </div>
                         </div>
                     ) : (
-                        <div className="wgs-study-empty">좌측 목록에서 전체공개 문서를 선택해주세요.</div>
+                        <div className="wgs-study-empty"><FiFileText aria-hidden="true" /><strong>읽을 문서를 선택해주세요.</strong><p>문서 목록에서 전체공개 노트를 찾을 수 있습니다. 다른 회원의 문서는 읽기 전용으로 표시됩니다.</p></div>
                     )}
 
                     <div className="wgs-study-editor-meta">
@@ -1422,7 +1432,7 @@ function StudyNotes() {
                             </div>
                         ) : (
                             <div className="wgs-study-readonly is-empty">
-                                표시할 문서가 없습니다.
+                                <strong>선택한 문서가 없습니다.</strong><p>목록에서 문서를 선택하면 내용이 이곳에 표시됩니다.</p>
                             </div>
                         )}
                     </div>

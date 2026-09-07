@@ -23,6 +23,7 @@ function StudyDocumentList({
                     value={searchTerm}
                     onChange={(event) => onSearchChange(event.target.value)}
                     placeholder="문서 검색"
+                    aria-label="학습노트 문서 검색"
                     style={{ border: 0, outline: 0, width: 'calc(100% - 24px)', font: 'inherit' }}
                 />
             </label>
@@ -36,7 +37,7 @@ function StudyDocumentList({
                     >
                         <FiFileText className="wgs-study-doc-icon" aria-hidden="true" />
                         <span className="wgs-study-doc-content">
-                            <strong>{document.title}</strong>
+                            <strong>{document.title || '제목 없음'}</strong>
                             <span className="wgs-study-doc-meta">
                                 {getDocumentFolderName(document.folderId)} · {document.visibility === 'public' ? '전체공개' : '나만공개'} · {document.updatedAt || document.createdAt || ''}
                             </span>
@@ -44,8 +45,10 @@ function StudyDocumentList({
                     </button>
                 ))}
                 {!documents.length && (
-                    <div className="wgs-study-empty">
-                        {loading ? '문서 목록을 불러오는 중입니다.' : '표시할 문서가 없습니다.'}
+                    <div className="wgs-study-empty" role="status">
+                        <FiFileText aria-hidden="true" />
+                        <strong>{loading ? '문서 목록을 불러오는 중입니다.' : '표시할 문서가 없습니다.'}</strong>
+                        {!loading && <p>{searchTerm ? '검색어를 바꾸거나 지워서 문서를 찾아보세요.' : '다른 폴더를 선택하거나 새 문서를 작성해보세요.'}</p>}
                     </div>
                 )}
             </div>

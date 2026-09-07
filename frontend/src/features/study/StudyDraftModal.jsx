@@ -18,9 +18,9 @@ function StudyDraftModal({
                 <div className="wgs-study-modal-header">
                     <div>
                         <h2>임시저장 목록</h2>
-                        <p>계정에 저장된 임시저장을 최근 순서로 확인합니다.</p>
+                        <p>최근에 남긴 초안을 불러와 이어서 작성하세요. 문서 저장과 초안 보관은 구분됩니다.</p>
                     </div>
-                    <button type="button" className="wgs-study-icon-button" onClick={onClose} title="닫기">
+                    <button type="button" className="wgs-study-icon-button" onClick={onClose} title="닫기" aria-label="임시저장 목록 닫기">
                         <FiX aria-hidden="true" />
                     </button>
                 </div>
@@ -53,8 +53,9 @@ function StudyDraftModal({
                             </article>
                         ))}
                         {!drafts.length && (
-                            <div className="wgs-study-empty">
-                                {loadingDrafts ? '임시저장을 불러오는 중입니다.' : '저장된 임시저장이 없습니다.'}
+                            <div className="wgs-study-empty" role="status">
+                                <strong>{loadingDrafts ? '임시저장을 불러오는 중입니다.' : '저장된 임시저장이 없습니다.'}</strong>
+                                {!loadingDrafts && <p>문서 편집 도구의 임시저장을 사용하면 이 목록에서 다시 불러올 수 있습니다.</p>}
                             </div>
                         )}
                     </div>

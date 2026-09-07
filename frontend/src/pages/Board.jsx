@@ -1,6 +1,8 @@
 // 게시판 라우트 페이지 컴포넌트입니다.
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import axios from 'axios';
+import { FiMessageSquare, FiSearch } from 'react-icons/fi';
+import '../styles/app/community-redesign.css';
 import { toast } from 'react-toastify';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import useScreenSettings from '../useScreenSettings';
@@ -121,6 +123,7 @@ const Board = () => {
 
     const tempStateRef = useRef({ title, content, contentJson });
     const skipNextDraftSaveRef = useRef(false);
+    const restoredEditorRouteRef = useRef(null);
     
     useEffect(() => {
         tempStateRef.current = { title, content, contentJson };
@@ -168,7 +171,9 @@ const Board = () => {
         }
 
         if (nextRoute.view !== view) setView(nextRoute.view);
-        if (nextRoute.boardTab !== boardTab) setBoardTab(nextRoute.boardTab);
+        // Detail URLs do not encode a board type. The matched post below owns it.
+        // Applying the parser's default here would alternate notice/free and refetch forever.
+        if (nextRoute.view !== 'detail' && nextRoute.boardTab !== boardTab) setBoardTab(nextRoute.boardTab);
         if (nextRoute.activityTab && nextRoute.activityTab !== activityTab) setActivityTab(nextRoute.activityTab);
     }, [LOGIN_REQUIRED_MESSAGE, activityTab, boardTab, isLoggedIn, location.pathname, navigate, routeSplat, view]);
 
@@ -256,6 +261,35 @@ const Board = () => {
             setCurrentPost(matchedPost);
         }
     }, [boardTab, currentPost, location.pathname, posts, routeSplat]);
+
+    useEffect(() => {
+        const nextRoute = parseBoardRoute(routeSplat);
+        if (nextRoute.view !== 'write') {
+            restoredEditorRouteRef.current = null;
+            if (isEditing) setIsEditing(false);
+            return;
+        }
+
+        // Create and edit share a URL, so history keeps only the edited post ID.
+        const editingPostId = location.state?.editingPostId;
+        if (!editingPostId) {
+            if (isEditing) setIsEditing(false);
+            return;
+        }
+        if (!isLoggedIn || posts.length === 0 || restoredEditorRouteRef.current === location.key) return;
+        const matchedPost = posts.find((post) => String(post.id) === String(editingPostId));
+        if (!matchedPost || (userId !== matchedPost.authorId && !isAdmin)) {
+            setIsEditing(false);
+            navigate(getBoardListPath(nextRoute.boardTab), { replace: true });
+            return;
+        }
+        restoredEditorRouteRef.current = location.key;
+        if (!isEditing || String(currentPost?.id) !== String(matchedPost.id)) {
+            setCurrentPost(matchedPost);
+            loadEditorState(getCleanTitle(matchedPost.title), getCleanContent(matchedPost.content), matchedPost.contentJson || '');
+            setIsEditing(true);
+        }
+    }, [currentPost, isAdmin, isEditing, isLoggedIn, loadEditorState, location.key, location.state, navigate, posts, routeSplat, userId]);
 
     // 현재 탭 설명 문구를 화면에 표시합니다.
     const handleChangeBoardTab = (nextTab) => {
@@ -755,10 +789,11 @@ const Board = () => {
             : t('guide.free', getBoardGuideText(boardTab));
 
         return (
-            <div className="board-page board-list-page wgs-typography-scope">
+            <div className="board-page board-list-page wgs-typography-scope community-page community-board" data-board-type={boardTab}>
                 <div className="board-topbar">
                     <div className="board-title-wrap">
-                        <h2 className="board-page-title">{pageTitle}</h2>
+                        <p className="ui-eyebrow"><FiMessageSquare aria-hidden="true" /> 우공실 커뮤니티</p>
+                        <h1 className="board-page-title">{pageTitle}</h1>
                     </div>
                     <div className="board-action-row">
                         {isAdmin && (
@@ -796,6 +831,15 @@ const Board = () => {
 
                 <p className="board-guide">{boardGuideText}</p>
 
+                <div className="board-controls community-list-controls">
+                    <label className="community-search-field"><FiSearch aria-hidden="true" /><input className="board-input" type="text" aria-label="게시글 제목 또는 내용 검색" placeholder={t('search.placeholder', '제목 또는 내용 검색')} value={searchTerm} onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }} /></label>
+                    <select className="board-select" aria-label="게시글 정렬" value={sortOrder} onChange={(e) => { setSortOrder(e.target.value); setCurrentPage(1); }}>
+                        <option value="desc">{t('sort.desc_label', '최근 작성일 내림차순 정렬')}</option>
+                        <option value="asc">{t('sort.asc_label', '최근 작성일 오름차순 정렬')}</option>
+                    </select>
+                </div>
+
+                <p className="community-table-hint">표를 가로로 밀면 작성자·조회·작성일을 함께 볼 수 있습니다.</p>
                 <div className="board-table-wrap table-wrapper">
                     <table className="board-table">
                         <thead>
@@ -827,26 +871,19 @@ const Board = () => {
                                                 <input type="checkbox" checked={selectedNoticeIds.includes(post.id)} onChange={() => toggleNoticeCheckbox(post.id)} />
                                             ) : post.isNotice ? t('table.notice_cell', '공지') : displayNo}
                                         </td>
-                                        <td className="board-table-title" onClick={() => !isSelectableMode && !noticeOrderMode && handleViewPost(post)}>
+                                        <td className="board-table-title"><button type="button" className="community-board-title-button" onClick={() => !isSelectableMode && !noticeOrderMode && handleViewPost(post)}>
                                             {post.isNotice && <span className="board-notice-badge">{t('table.notice_badge', '[공지]')}</span>}
                                             {getCleanTitle(post.title)} {totalComments >0 && <span className="board-count-badge">[{totalComments}]</span>}
+                                            </button>
                                         </td>
                                         <td className="board-subtle-text">{post.authorName}</td>
                                         <td className="board-subtle-text">{formatSetting('table.views_likes_value', '{views} / {likes}', { views: post.views || 0, likes: post.likes || 0 })}</td>
                                         <td className="board-subtle-text">{formatDateForList(post.date)}</td>
                                     </tr>
                                 );
-                            }) : ( <tr><td colSpan="5" className="board-subtle-text">{t('table.empty_posts', '게시글이 없습니다.')}</td></tr> )}
+                            }) : ( <tr><td colSpan="5" className="board-subtle-text"><div className="ui-empty"><FiMessageSquare aria-hidden="true" /><strong>{t('table.empty_posts', '게시글이 없습니다.')}</strong><p>{searchTerm ? '검색어를 바꾸거나 지우고 다시 확인해주세요.' : '새 글이 등록되면 이곳에서 확인할 수 있습니다.'}</p></div></td></tr> )}
                         </tbody>
                     </table>
-                </div>
-
-                <div className="board-controls">
-                    <select className="board-select" value={sortOrder} onChange={(e) => { setSortOrder(e.target.value); setCurrentPage(1); }}>
-                        <option value="desc">{t('sort.desc_label', '최근 작성일 내림차순 정렬')}</option>
-                        <option value="asc">{t('sort.asc_label', '최근 작성일 오름차순 정렬')}</option>
-                    </select>
-                    <input className="board-input" type="text" placeholder={t('search.placeholder', '제목 또는 내용 검색')} value={searchTerm} onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }} />
                 </div>
 
                 <div className="board-pagination">
@@ -867,10 +904,10 @@ const Board = () => {
         const currentItems = activeData.slice(idxFirst, idxLast);
 
         return (
-            <div className="board-page board-my-page wgs-typography-scope">
+            <div className="board-page board-my-page wgs-typography-scope community-page community-board" data-board-type={boardTab}>
                 <div className="board-activity-toolbar">
                     <button type="button" className="board-button" onClick={() => { navigate(getBoardListPath(boardTab)); setView('list'); setCurrentPage(1); }}>{t('common.back_to_list', '목록으로')}</button>
-                    <h2 className="board-page-title">{t('activity.title', '내가 작성한 활동')}</h2>
+                    <div><p className="ui-eyebrow">나의 커뮤니티 기록</p><h1 className="board-page-title">{t('activity.title', '내가 작성한 활동')}</h1></div>
                 </div>
                 <div className="board-tab-grid">
                     <button type="button" className={`board-tab-button ${activityTab === 'posts' ? 'is-active' : ''}`} onClick={() => { setActivityTab('posts'); setCheckedIds([]); setCurrentPage(1); navigate(getBoardActivityPath('posts')); }}>{formatSetting('activity.posts_tab', '내가 작성한 글 ({count})', { count: myPosts.length })}</button>
@@ -898,8 +935,9 @@ const Board = () => {
                                         <td>
                                             <input type="checkbox" checked={isChecked} onChange={() => toggleCheck(uniqueKey)} />
                                         </td>
-                                        <td className="board-table-title" onClick={() => goToPostById(item.postId || item.id)}>
+                                        <td className="board-table-title"><button type="button" className="community-board-title-button" onClick={() => goToPostById(item.postId || item.id)}>
                                             {activityTab === 'posts'? <span>{getCleanTitle(item.title)}</span> : <div><div>{item.text}</div><div className="board-original-title">{formatSetting('activity.original_title_label', '원본: {title}', { title: item.postTitle })}</div></div>}
+                                            </button>
                                         </td>
                                         <td className="board-subtle-text">{formatDateForList(item.date)}</td>
                                     </tr>
@@ -950,13 +988,13 @@ const Board = () => {
     if (view === 'detail' && currentPost) {
         const totalComments = currentPost.comments.reduce((acc, c) => acc + 1 + (c.replies ? c.replies.length : 0), 0);
         return (
-            <div className="board-page board-editor-page wgs-typography-scope">
+            <div className="board-page board-editor-page wgs-typography-scope community-page community-board community-board-reading" data-board-type={boardTab}>
                 <div className="board-detail-toolbar">
                     <button type="button" className="board-button" onClick={() => { navigate(getBoardListPath(boardTab)); setView('list'); }}>{t('common.back_to_list', '목록으로')}</button>
                     <div className="board-inline-actions">
                         {(userId === currentPost.authorId || isAdmin) && (
                             <>
-                                <button type="button" className="board-button board-button-success" onClick={() => { loadEditorState(getCleanTitle(currentPost.title), getCleanContent(currentPost.content), currentPost.contentJson || ''); setIsEditing(true); navigate(getBoardWritePath(getPostBoardType(currentPost))); setView('write'); }}>{t('common.edit', '수정')}</button>
+                                <button type="button" className="board-button board-button-success" onClick={() => { loadEditorState(getCleanTitle(currentPost.title), getCleanContent(currentPost.content), currentPost.contentJson || ''); setIsEditing(true); navigate(getBoardWritePath(getPostBoardType(currentPost)), { state: { editingPostId: currentPost.id } }); setView('write'); }}>{t('common.edit', '수정')}</button>
                                 <button type="button" className="board-button board-button-danger" onClick={() => handleDeletePost(currentPost.id)}>{t('common.delete', '삭제')}</button>
                             </>
                         )}
@@ -969,7 +1007,7 @@ const Board = () => {
                     <button type="button" className={`board-button board-like-button ${currentPost.likedUsers?.includes(userId) ? 'is-liked' : ''}`} onClick={handleToggleLike}>{formatSetting('detail.like_button', '추천 {count}', { count: currentPost.likes || 0 })}</button>
                 </div>
                 <section className="board-comment-section">
-                    <h3>{formatSetting('comments.title', '댓글 ({count})', { count: totalComments })}</h3>
+                    <h2 className="community-panel-title">{formatSetting('comments.title', '댓글 ({count})', { count: totalComments })}</h2>
                     <div className="board-comment-list">
                         {currentPost.comments.map(c => (
                             <article key={c.id} className="board-comment-item">

@@ -22,7 +22,7 @@ function StudyWrongNoteModal({
                         <h2>오답노트 가져오기</h2>
                         <p>필기, 실기, 3주 공략, 멀티플레이 오답을 선택해서 현재 문서에 삽입합니다.</p>
                     </div>
-                    <button type="button" className="wgs-study-icon-button" onClick={onClose} title="닫기">
+                    <button type="button" className="wgs-study-icon-button" onClick={onClose} title="닫기" aria-label="오답노트 가져오기 닫기">
                         <FiX aria-hidden="true" />
                     </button>
                 </div>
@@ -31,6 +31,7 @@ function StudyWrongNoteModal({
                         <select
                             className="wgs-study-select"
                             value={wrongKind}
+                            aria-label="오답 종류"
                             onChange={(event) => onKindChange(event.target.value)}
                         >
                             <option value="all">전체 오답</option>
@@ -42,6 +43,7 @@ function StudyWrongNoteModal({
                         <input
                             className="wgs-study-input"
                             value={wrongSearch}
+                            aria-label="가져올 오답 검색"
                             onChange={(event) => onSearchChange(event.target.value)}
                             placeholder="문제, 정답, 해설 검색"
                         />
@@ -71,8 +73,9 @@ function StudyWrongNoteModal({
                             </label>
                         ))}
                         {!visibleWrongNotes.length && (
-                            <div className="wgs-study-empty">
-                                {loadingWrongs ? '오답을 불러오는 중입니다.' : '가져올 오답이 없습니다.'}
+                            <div className="wgs-study-empty" role="status">
+                                <strong>{loadingWrongs ? '오답을 불러오는 중입니다.' : '가져올 오답이 없습니다.'}</strong>
+                                {!loadingWrongs && <p>오답 종류나 검색어를 바꾸어 확인해주세요. 저장된 오답이 있어야 가져올 수 있습니다.</p>}
                             </div>
                         )}
                     </div>
