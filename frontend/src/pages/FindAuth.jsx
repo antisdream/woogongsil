@@ -4,6 +4,7 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
 import useScreenSettings from '../useScreenSettings';
+import '../styles/app/community-redesign.css';
 
 const API_BASE = '';
 
@@ -190,7 +191,7 @@ const FindAuth = ({ embedded = false, loginPath = '/login' }) => {
         : t('common.request_button', '인증요청');
 
     const renderCodeBox = () => isEmailSent && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '10px', padding: embedded ? '17px' : '15px', background: 'var(--wgs-input-bg)', borderRadius: '8px' }}>
+        <div className="community-verification-box" style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '10px', padding: embedded ? '17px' : '15px', background: 'var(--wgs-input-bg)', borderRadius: '8px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', color: '#fcd34d', fontSize: embedded ? '16px' : '14px' }}>
                 <span>{t('common.code_label', '인증번호 6자리')}</span>
                 <span style={{ color: timer > 30 ? '#ef4444' : '#f87171', fontWeight: 'bold' }}>{formatTime(timer)}</span>
@@ -212,13 +213,21 @@ const FindAuth = ({ embedded = false, loginPath = '/login' }) => {
     );
 
     return (
-        <div className={embedded ? 'wgs-findauth-embedded' : 'wgs-findauth-standalone'} style={containerStyle}>
-            <div style={{ display: 'flex' }}>
-                <button type="button" style={tabStyle('id')} onClick={() => resetState('id')}>{t('tabs.id_label', '아이디 찾기')}</button>
-                <button type="button" style={tabStyle('pw')} onClick={() => resetState('pw')}>{t('tabs.pw_label', '비밀번호 찾기')}</button>
+        <div className={'community-page community-auth-flow community-find ' + (embedded ? 'wgs-findauth-embedded' : 'wgs-findauth-standalone')} style={containerStyle}>
+            <header className="ui-page-head community-form-heading">
+                <p className="ui-eyebrow">계정 찾기</p>
+                {embedded ? <h2>다시 학습으로 돌아가기</h2> : <h1>아이디·비밀번호 찾기</h1>}
+                <p className="ui-page-description">가입한 이메일로 본인을 확인한 뒤 계정 정보를 찾거나 비밀번호를 재설정합니다.</p>
+            </header>
+            <div className="community-segmented" role="tablist" aria-label="계정 찾기 방식">
+                <button type="button" role="tab" aria-selected={activeTab === 'id'} style={tabStyle('id')} onClick={() => resetState('id')}>{t('tabs.id_label', '아이디 찾기')}</button>
+                <button type="button" role="tab" aria-selected={activeTab === 'pw'} style={tabStyle('pw')} onClick={() => resetState('pw')}>{t('tabs.pw_label', '비밀번호 찾기')}</button>
             </div>
-
-            <div style={{ padding: contentPadding }}>
+            <ol className="community-steps" aria-label="본인 확인 단계">
+                <li className={step === 1 ? 'is-current' : 'is-complete'} aria-current={step === 1 ? 'step' : undefined}><span>1</span> 이메일 본인 인증</li>
+                <li className={step === 2 ? 'is-current' : ''} aria-current={step === 2 ? 'step' : undefined}><span>2</span> {activeTab === 'id' ? '아이디 확인' : '비밀번호 재설정'}</li>
+            </ol>
+            <div className="community-find-body" style={{ padding: contentPadding }}>
                 {activeTab === 'id' && (
                     <div style={{ animation: 'fadeIn 0.3s' }}>
                         {step === 1 && (
@@ -237,7 +246,7 @@ const FindAuth = ({ embedded = false, loginPath = '/login' }) => {
                             </div>
                         )}
                         {step === 2 && foundId && (
-                            <div style={{ textAlign: 'center', animation: 'fadeIn 0.5s' }}>
+                            <div className="community-account-result" role="status" style={{ textAlign: 'center', animation: 'fadeIn 0.5s' }}>
                                 <h3 style={{ color: 'var(--wgs-title)', marginBottom: '20px' }}>{t('result.title', '아이디를 찾았습니다')}</h3>
                                 <div style={{ background: 'var(--wgs-input-bg)', padding: '20px', borderRadius: '8px', fontSize: '22px', fontWeight: 'bold', color: '#10b981', border: '1px solid #3b82f6', marginBottom: '25px' }}>
                                     {foundId}

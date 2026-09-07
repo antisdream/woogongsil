@@ -1,6 +1,8 @@
 // 자주 묻는 질문 라우트 페이지 컴포넌트입니다.
 import React, { useMemo, useState } from 'react';
 import useScreenSettings from '../useScreenSettings';
+import { FiSearch, FiChevronDown, FiChevronUp, FiHelpCircle } from 'react-icons/fi';
+import '../styles/app/community-redesign.css';
 
 // 자주 묻는 질문 화면 구성
 // ------------------------------------------------------------
@@ -395,83 +397,37 @@ const FAQ = () => {
     };
 
     return (
-        <div className="faq-page-wrap wgs-typography-scope">
+        <div className="faq-page-wrap wgs-typography-scope community-page community-faq">
             <section className="faq-card">
                 <div className="faq-header">
-                    <h2>{getSetting('page.title', '자주 묻는 질문 (FAQ)')}</h2>
+                    <p className="ui-eyebrow"><FiHelpCircle aria-hidden="true" /> 이용 가이드</p>
+                    <h1>{getSetting('page.title', '자주 묻는 질문 (FAQ)')}</h1>
                     <p>
-                        {getSetting('page.desc', '직접 정보를 찾아보거나 하단의 검색창에 분류 또는 키워드를 입력하여 원하는 정보를 찾을 수 있습니다.')}
+                        {getSetting('page.desc', '분류나 키워드로 궁금한 내용을 찾고, 질문을 눌러 답변을 확인하세요.')}
                     </p>
                 </div>
-                <div className="faq-table-wrap">
-                    <table className="faq-table">
-                        <thead>
-                            <tr>
-                                <th style={{ width: '70px' }}>{getSetting('table.no_header', 'No')}</th>
-                                <th style={{ width: '140px' }}>{getSetting('table.category_header', '분류')}</th>
-                                <th>{getSetting('table.question_header', '질문')}</th>
-                                <th style={{ width: '90px' }}>{getSetting('table.action_header', '보기')}</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {currentItems.length === 0 ? (
-                                <tr>
-                                    <td colSpan="4" className="faq-empty-cell">
-                                        {getSetting('search.empty_result', '검색 결과가 없습니다. 다른 검색어로 다시 시도해 주세요.')}
-                                    </td>
-                                </tr>
-                            ) : (
-                                currentItems.map((item, idx) => {
-                                    const actualIdx = startIndex + idx;
-                                    const isOpen = openIdx === actualIdx;
-
-                                    return (
-                                        <React.Fragment key={`${item.category}-${item.question}`}>
-                                            <tr className={isOpen ? 'is-open' : ''}>
-                                                <td>{actualIdx + 1}</td>
-                                                <td>
-                                                    <span className="faq-category-badge">
-                                                        {item.category}
-                                                    </span>
-                                                </td>
-                                                <td className="faq-question-cell">
-                                                    <button
-                                                        type="button" onClick={() => handleToggle(actualIdx)}
-                                                    >
-                                                        {/* question 키를 사용해야 질문 문구가 화면에 정상 출력됩니다. */}
-                                                        {getSetting('table.question_prefix', 'Q.')} {item.question}
-                                                    </button>
-                                                </td>
-                                                <td>
-                                                    <button
-                                                        type="button" className="faq-open-btn" onClick={() => handleToggle(actualIdx)}
-                                                        aria-expanded={isOpen}
-                                                    >
-                                                        {isOpen ? getSetting('table.close_button', '닫기') : getSetting('table.open_button', '열기')}
-                                                    </button>
-                                                </td>
-                                            </tr>
-
-                                            {isOpen && (
-                                                <tr className="faq-answer-row">
-                                                    <td>{getSetting('table.answer_prefix', 'A.')}</td>
-                                                    <td colSpan="3" className="faq-answer-cell" style={{ textAlign: "left" }}>
-                                                        {/* 
-                                                             수정 핵심:
-                                                            기존 <p>{item.a}</p>는 문자열 안의 <br />을 그대로 출력합니다.
-                                                            renderAnswerText()를 사용해 실제 줄바꿈으로 변환합니다.
-                                                        */}
-                                                        <p className="faq-answer-text">{/* answer 키를 사용해야 답변 문구와 줄바꿈이 정상 출력됩니다. */}
-                                                            {renderAnswerText(item.answer)}</p>
-                                                    </td>
-                                                </tr>
-                                            )}
-                                        </React.Fragment>
-                                    );
-                                })
-                            )}
-                        </tbody>
-                    </table>
+                <form className="faq-search-form community-faq-search" onSubmit={handleSearch}>
+                    <label className="community-search-field"><FiSearch aria-hidden="true" /><input type="text" aria-label="FAQ 검색" value={searchTerm} onChange={(event) => setSearchTerm(event.target.value)} placeholder={getSetting('search.placeholder', '검색어를 입력하세요. 예: 오답노트, 기출문제, 로그인, 게시판')} /></label>
+                    <button type="submit" className="faq-search-btn">{getSetting('search.submit_button', '검색')}</button>
+                    {submittedSearch && <button type="button" className="faq-reset-btn" onClick={handleClearSearch}>{getSetting('search.reset_button', '초기화')}</button>}
+                </form>
+                {submittedSearch && <div className="faq-search-result" role="status">{formatSetting('search.result_text', '“{keyword}” 검색 결과: {count}건', { keyword: submittedSearch, count: filteredList.length })}</div>}
+                <div className="community-faq-column-guide" aria-hidden="true"><span>{getSetting('table.no_header', 'No')} · {getSetting('table.category_header', '분류')}</span><span>{getSetting('table.question_header', '질문')}</span><span>{getSetting('table.action_header', '보기')}</span></div>
+                <div className="community-faq-list">
+                    {currentItems.length === 0 ? <div className="ui-empty"><FiSearch aria-hidden="true" /><strong>{getSetting('search.empty_result', '검색 결과가 없습니다. 다른 검색어로 다시 시도해 주세요.')}</strong></div> : currentItems.map((item, idx) => {
+                        const actualIdx = startIndex + idx;
+                        const isOpen = openIdx === actualIdx;
+                        return (
+                            <article key={`${item.category}-${item.question}`} className={'community-faq-item ' + (isOpen ? 'is-open' : '')}>
+                                <h2><button type="button" className="community-faq-question" onClick={() => handleToggle(actualIdx)} aria-expanded={isOpen} aria-controls={'faq-answer-' + actualIdx}>
+                                    <span className="community-faq-category"><span className="community-faq-number">{actualIdx + 1}</span><span className="faq-category-badge">{item.category}</span></span>
+                                    <span className="community-faq-question-text">{getSetting('table.question_prefix', 'Q.')} {item.question}</span>
+                                    <span className="community-faq-toggle">{isOpen ? <FiChevronUp aria-hidden="true" /> : <FiChevronDown aria-hidden="true" />}<span>{isOpen ? getSetting('table.close_button', '닫기') : getSetting('table.open_button', '열기')}</span></span>
+                                </button></h2>
+                                {isOpen && <div id={'faq-answer-' + actualIdx} className="community-faq-answer"><strong>{getSetting('table.answer_prefix', 'A.')}</strong><div className="faq-answer-text">{renderAnswerText(item.answer)}</div></div>}
+                            </article>
+                        );
+                    })}
                 </div>
 
                 <div className="faq-pagination" aria-label={getSetting('pagination.aria_label', 'FAQ 페이지 이동')}>
@@ -500,31 +456,6 @@ const FAQ = () => {
                     </button>
                 </div>
 
-                {/* 검색 입력창과 검색 버튼은 페이지네이션 아래쪽에 유지합니다. */}
-                <form className="faq-search-form faq-search-bottom" onSubmit={handleSearch}>
-                    <input
-                        type="text" value={searchTerm}
-                        onChange={(event) => setSearchTerm(event.target.value)}
-                        placeholder={getSetting('search.placeholder', '검색어를 입력하세요. 예: 오답노트, 기출문제, 로그인, 게시판')}
-                    />
-                    <button type="submit" className="faq-search-btn">
-                        {getSetting('search.submit_button', '검색')}
-                    </button>
-
-                    {submittedSearch && (
-                        <button
-                            type="button" className="faq-reset-btn" onClick={handleClearSearch}
-                        >
-                            {getSetting('search.reset_button', '초기화')}
-                        </button>
-                    )}
-                </form>
-
-                {submittedSearch && (
-                    <div className="faq-search-result">
-                        {formatSetting('search.result_text', '“{keyword}” 검색 결과: {count}건', { keyword: submittedSearch, count: filteredList.length })}
-                    </div>
-                )}
             </section>
         </div>
     );

@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import LegalConsentBlock from '../components/LegalConsentBlock';
+import { FiShield } from 'react-icons/fi';
+import '../styles/app/community-redesign.css';
 
 const REQUIRED_CODES = ['TERMS', 'SIGNUP_PRIVACY'];
 
@@ -85,16 +87,18 @@ export default function AccountLegalConsent({ onAccepted, onLogout }) {
   };
 
   return (
-    <main className="wgs-account-consent-page">
+    <main className="wgs-account-consent-page community-page community-account-consent">
       <section className="wgs-account-consent-card" aria-labelledby="account-consent-title">
-        <p className="wgs-account-consent-kicker">WOOGONGSIL ACCOUNT UPDATE</p>
+        <p className="wgs-account-consent-kicker ui-eyebrow"><FiShield aria-hidden="true" /> 우공실 계정 안내</p>
         <h1 id="account-consent-title">서비스 이용 동의 확인</h1>
         <p className="wgs-account-consent-description">
           기존 회원도 현재 적용 중인 이용약관과 개인정보 수집·이용 내용을 확인해야 서비스를 계속 이용할 수 있습니다.
           각 내용을 읽고 동의 여부를 선택해주세요.
         </p>
 
-        {loading && <div className="wgs-account-consent-state">동의 문서를 불러오는 중입니다...</div>}
+        <div className="community-consent-guide"><strong>확인 순서</strong><span>필수 문서 2개 확인 → 동의 여부 선택 → 연령 확인 → 계속하기</span></div>
+
+        {loading && <div className="wgs-account-consent-state" role="status">동의 문서를 불러오는 중입니다...</div>}
         {error && (
           <div className="wgs-account-consent-state is-error" role="alert">
             <span>{error}</span>

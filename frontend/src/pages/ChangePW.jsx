@@ -4,6 +4,7 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
 import useScreenSettings from '../useScreenSettings';
+import '../styles/app/community-redesign.css';
 
 const API_BASE = '';
 
@@ -143,11 +144,19 @@ const ChangePW = () => {
     );
 
     return (
-        <div style={{ maxWidth: '500px', margin: '50px auto', background: 'var(--wgs-button-muted)', padding: '30px', borderRadius: '12px', color: 'white', border: '1px solid var(--wgs-border)', boxShadow: '0 4px 10px rgba(0,0,0,0.3)' }}>
-            <h2 style={{ textAlign: 'center', color: 'var(--wgs-title)', marginBottom: '30px' }}>{t('page.title', '비밀번호 변경(본인 인증)')}</h2>
+        <div className="community-page community-auth-flow community-change-pw" style={{ maxWidth: '500px', margin: '50px auto', background: 'var(--wgs-button-muted)', padding: '30px', borderRadius: '12px', color: 'white', border: '1px solid var(--wgs-border)', boxShadow: '0 4px 10px rgba(0,0,0,0.3)' }}>
+            <header className="ui-page-head community-form-heading">
+                <p className="ui-eyebrow">계정 보안</p>
+                <h1>{t('page.title', '비밀번호 변경(본인 인증)')}</h1>
+                <p className="ui-page-description">이메일 인증을 완료하면 새 비밀번호를 입력할 수 있습니다.</p>
+            </header>
+            <ol className="community-steps" aria-label="비밀번호 변경 단계">
+                <li className={isEmailVerified ? 'is-complete' : 'is-current'}><span>1</span> 이메일 인증</li>
+                <li className={isEmailVerified ? 'is-current' : ''}><span>2</span> 새 비밀번호</li>
+            </ol>
 
             <form onSubmit={handleUpdatePw} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                <div style={{ paddingBottom: '20px', borderBottom: '1px solid var(--wgs-border)' }}>
+                <div className="community-form-section" style={{ paddingBottom: '20px', borderBottom: '1px solid var(--wgs-border)' }}>
                     <label style={{ color: 'var(--wgs-muted)', fontSize: '14px', display: 'flex', justifyContent: 'space-between' }}>
                         {t('email.label', '가입된 이메일 주소')}
                         {isEmailVerified && <span style={{ color: '#10b981', fontSize: '12px' }}>{t('email.verified_label', '인증완료')}</span>}
@@ -192,7 +201,7 @@ const ChangePW = () => {
                     )}
                 </div>
 
-                <div style={{ opacity: isEmailVerified ? 1 : 0.4, pointerEvents: isEmailVerified ? 'auto' : 'none', transition: '0.3s' }}>
+                <div className="community-form-section" style={{ opacity: isEmailVerified ? 1 : 0.4, pointerEvents: isEmailVerified ? 'auto' : 'none', transition: '0.3s' }}>
                     <div>
                         <label style={{ color: 'var(--wgs-muted)', fontSize: '14px' }}>{t('password.new_label', '새 비밀번호 (영문+숫자+기호 8~15자)')}</label>
                         <div style={{ position: 'relative', marginTop: '5px' }}>
@@ -232,7 +241,7 @@ const ChangePW = () => {
                     </div>
                 </div>
 
-                <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+                <div className="community-form-actions" style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
                     <button type="button" onClick={() => navigate(-1)} style={{ flex: 1, padding: '15px', borderRadius: '8px', background: 'var(--wgs-border)', color: 'white', border: 'none', cursor: 'pointer', fontWeight: 'bold', fontSize: '15px' }}>{t('buttons.cancel', '취소')}</button>
                     <button type="submit" disabled={!isEmailVerified} style={{ flex: 1, padding: '15px', borderRadius: '8px', background: isEmailVerified ? '#3b82f6' : '#1e3a8a', color: isEmailVerified ? 'white' : 'var(--wgs-subtle)', border: 'none', cursor: isEmailVerified ? 'pointer' : 'not-allowed', fontWeight: 'bold', fontSize: '15px' }}>
                         {t('buttons.submit', '변경 완료')}

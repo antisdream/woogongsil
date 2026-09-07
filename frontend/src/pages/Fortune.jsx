@@ -3,6 +3,8 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import axios from 'axios';
 import useScreenSettings from '../useScreenSettings';
 import LegalConsentBlock from '../components/LegalConsentBlock';
+import { FiCompass, FiLoader } from 'react-icons/fi';
+import '../styles/app/community-redesign.css';
 
 const API_BASE = "";
 
@@ -200,7 +202,7 @@ const Fortune = () => {
     };
 
     const renderSajuBox = (sajuObj, title) => (
-        <div style={{ flex: 1, background: 'var(--wgs-practice-toggle-bg)', padding: '20px', borderRadius: '12px', border: '1px solid var(--wgs-border)' }}>
+        <div className="community-saju-card" style={{ flex: 1, background: 'var(--wgs-practice-toggle-bg)', padding: '20px', borderRadius: '12px', border: '1px solid var(--wgs-border)' }}>
             <h4 style={{ textAlign: 'center', color: 'var(--wgs-title)', marginTop: 0 }}>{formatSetting('result.saju_box_title', '{name} 사주', { name: title })}</h4>
             <div style={{ display: 'flex', justifyContent: 'space-between', gap: '5px' }}>
                 {[
@@ -221,7 +223,7 @@ const Fortune = () => {
     );
 
     const DateSelector = ({ data, setter }) => (
-        <div style={{ display: 'flex', gap: '5px' }}>
+        <div className="community-date-selectors" style={{ display: 'flex', gap: '5px' }}>
             <select value={data.bYear} onChange={(e) => setter({...data, bYear: e.target.value})} style={{ flex: 1.5, padding: '10px', borderRadius: '8px', border: '1px solid var(--wgs-border)', background: 'var(--wgs-input-bg)', color: 'white' }}>
                 <option value="연도">{t('date.year_placeholder', '연도')}</option>{YEARS.map(y => <option key={y} value={y}>{formatSetting('date.year_option', '{value}년', { value: y })}</option>)}
             </select>
@@ -235,9 +237,19 @@ const Fortune = () => {
     );
 
     return (
-        <div className="fortune-page wgs-typography-scope" style={{ maxWidth: '800px', margin: '30px auto', color: 'white', fontFamily: 'var(--wgs-font-body)' }}>
+        <div className="fortune-page wgs-typography-scope community-page community-fortune" style={{ maxWidth: '800px', margin: '30px auto', color: 'white', fontFamily: 'var(--wgs-font-body)' }}>
+            <header className="ui-page-head">
+                <p className="ui-eyebrow"><FiCompass aria-hidden="true" /> 공부 사이, 잠깐 쉬어가기</p>
+                <h1>운세와 궁합</h1>
+                <p className="ui-page-description">개인 운세 또는 두 사람의 궁합을 확인할 수 있습니다. 입력 전에 개인정보 처리와 결과 저장 범위를 선택해주세요.</p>
+            </header>
+            <ol className="community-steps" aria-label="운세 이용 단계">
+                <li className={step === 1 ? 'is-current' : 'is-complete'}><span>1</span> 동의·정보 입력</li>
+                <li className={step === 2 ? 'is-current' : step === 3 ? 'is-complete' : ''}><span>2</span> 계산</li>
+                <li className={step === 3 ? 'is-current' : ''}><span>3</span> 결과 확인</li>
+            </ol>
             {step === 1 && (
-                <section style={{ marginBottom: '20px', padding: '20px', borderRadius: '12px', border: '1px solid var(--wgs-border)', background: 'var(--wgs-card-bg)', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <section className="community-fortune-consent" style={{ marginBottom: '20px', padding: '20px', borderRadius: '12px', border: '1px solid var(--wgs-border)', background: 'var(--wgs-card-bg)', display: 'flex', flexDirection: 'column', gap: '14px' }}>
                     <div>
                         <h2 style={{ margin: '0 0 8px', color: 'var(--wgs-title)', fontSize: '20px' }}>운세 개인정보 처리 선택</h2>
                         <p style={{ margin: 0, color: 'var(--wgs-muted)', lineHeight: 1.6 }}>
@@ -261,22 +273,22 @@ const Fortune = () => {
                 </section>
             )}
             {step === 1 && (
-                <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
-                    <button onClick={() => setActiveTab('individual')} style={{ flex: 1, padding: '15px', background: activeTab === 'individual'? '#3b82f6' : 'var(--wgs-button-muted)', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', fontSize: '16px' }}>{t('tabs.individual_label', ' 오늘의 운세?')}</button>
-                    <button onClick={() => setActiveTab('couple')} style={{ flex: 1, padding: '15px', background: activeTab === 'couple'? '#ec4899' : 'var(--wgs-button-muted)', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', fontSize: '16px' }}>{t('tabs.couple_label', ' 오늘의 궁합?')}</button>
+                <div className="community-segmented" style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
+                    <button aria-pressed={activeTab === 'individual'} onClick={() => setActiveTab('individual')} style={{ flex: 1, padding: '15px', background: activeTab === 'individual'? '#3b82f6' : 'var(--wgs-button-muted)', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', fontSize: '16px' }}>{t('tabs.individual_label', ' 오늘의 운세?')}</button>
+                    <button aria-pressed={activeTab === 'couple'} onClick={() => setActiveTab('couple')} style={{ flex: 1, padding: '15px', background: activeTab === 'couple'? '#ec4899' : 'var(--wgs-button-muted)', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', fontSize: '16px' }}>{t('tabs.couple_label', ' 오늘의 궁합?')}</button>
                 </div>
             )}
 
             {step === 1 && activeTab === 'individual' && (
-                <div style={{ background: 'var(--wgs-button-muted)', padding: '40px', borderRadius: '12px' }}>
+                <div className="community-fortune-form-panel" style={{ background: 'var(--wgs-button-muted)', padding: '40px', borderRadius: '12px' }}>
                     <h2 style={{ color: '#fcd34d', textAlign: 'center', marginTop: 0 }}>{t('individual.title', ' 오늘의 운세 정보 입력')}</h2>
                     <form onSubmit={handleIndivSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px', marginTop: '20px' }}>
                         <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap' }}>
                             <div style={{ flex: '1 1 200px' }}><label style={{ color: 'var(--wgs-muted)', fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>{t('form.name_label', '이름')}</label><input type="text" placeholder={t('form.name_placeholder', '이름 입력')} value={indiv.name} onChange={(e) => setIndiv({...indiv, name: e.target.value})} style={{ width: '100%', boxSizing: 'border-box', padding: '12px', borderRadius: '8px', border: '1px solid var(--wgs-border)', background: 'var(--wgs-input-bg)', color: 'white' }} /></div>
                             <div style={{ flex: '1 1 150px' }}><label style={{ color: 'var(--wgs-muted)', fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>{t('form.gender_label', '성별')}</label>
                                 <div style={{ display: 'flex', gap: '10px' }}>
-                                    <button type="button" onClick={() => setIndiv({...indiv, gender: 'male'})} style={{ flex: 1, padding: '12px', borderRadius: '8px', border: `2px solid ${indiv.gender === 'male'? '#3b82f6' : 'var(--wgs-border)'}`, background: indiv.gender === 'male'? 'rgba(59, 130, 246, 0.2)' : 'var(--wgs-input-bg)', color: 'white' }}>{t('form.male_short_label', '남')}</button>
-                                    <button type="button" onClick={() => setIndiv({...indiv, gender: 'female'})} style={{ flex: 1, padding: '12px', borderRadius: '8px', border: `2px solid ${indiv.gender === 'female'? '#ef4444' : 'var(--wgs-border)'}`, background: indiv.gender === 'female'? 'rgba(239, 68, 68, 0.2)' : 'var(--wgs-input-bg)', color: 'white' }}>{t('form.female_short_label', '여')}</button>
+                                    <button type="button" aria-pressed={indiv.gender === 'male'} onClick={() => setIndiv({...indiv, gender: 'male'})} style={{ flex: 1, padding: '12px', borderRadius: '8px', border: `2px solid ${indiv.gender === 'male'? '#3b82f6' : 'var(--wgs-border)'}`, background: indiv.gender === 'male'? 'rgba(59, 130, 246, 0.2)' : 'var(--wgs-input-bg)', color: 'white' }}>{t('form.male_short_label', '남')}</button>
+                                    <button type="button" aria-pressed={indiv.gender === 'female'} onClick={() => setIndiv({...indiv, gender: 'female'})} style={{ flex: 1, padding: '12px', borderRadius: '8px', border: `2px solid ${indiv.gender === 'female'? '#ef4444' : 'var(--wgs-border)'}`, background: indiv.gender === 'female'? 'rgba(239, 68, 68, 0.2)' : 'var(--wgs-input-bg)', color: 'white' }}>{t('form.female_short_label', '여')}</button>
                                 </div>
                             </div>
                         </div>
@@ -292,11 +304,11 @@ const Fortune = () => {
             )}
 
             {step === 1 && activeTab === 'couple' && (
-                <div style={{ background: 'var(--wgs-button-muted)', padding: '30px', borderRadius: '12px' }}>
+                <div className="community-fortune-form-panel" style={{ background: 'var(--wgs-button-muted)', padding: '30px', borderRadius: '12px' }}>
                     <h2 style={{ color: '#f9a8d4', textAlign: 'center', marginTop: 0 }}>{t('couple.title', ' 오늘의 궁합 정보 입력')}</h2>
-                    <form onSubmit={handleCoupleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '30px', marginTop: '20px' }}>
+                    <form className="community-couple-form" onSubmit={handleCoupleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '30px', marginTop: '20px' }}>
                         {couplePersonBlocks.map(person => (
-                            <div key={person.id} style={{ padding: '20px', background: 'var(--wgs-practice-toggle-bg)', borderRadius: '10px', borderLeft: `4px solid ${person.color}` }}>
+                            <div className="community-person-fields" key={person.id} style={{ padding: '20px', background: 'var(--wgs-practice-toggle-bg)', borderRadius: '10px', borderLeft: `4px solid ${person.color}` }}>
                                 <h3 style={{ margin: '0 0 15px 0', color: person.color }}>{person.label}</h3>
                                 <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap', marginBottom: '15px' }}>
                                     <div style={{ flex: '2 1 150px' }}><label style={{ color: 'var(--wgs-subtle)', fontSize: '13px', display: 'block', marginBottom: '5px' }}>{t('form.name_label', '이름')}</label><input type="text" placeholder={t('form.name_placeholder', '이름 입력')} value={couple[person.id].name} onChange={e => setCouple({...couple, [person.id]: {...couple[person.id], name: e.target.value}})} style={{ width: '100%', boxSizing: 'border-box', padding: '10px', borderRadius: '8px', border: '1px solid var(--wgs-border)', background: 'var(--wgs-input-bg)', color: 'white' }} /></div>
@@ -312,15 +324,15 @@ const Fortune = () => {
             )}
 
             {step === 2 && (
-                <div style={{ background: 'var(--wgs-button-muted)', padding: '60px 20px', borderRadius: '12px', textAlign: 'center' }}>
-                    <div style={{ fontSize: '60px', animation: 'spin 2s linear infinite', display: 'inline-block' }}></div>
+                <div className="community-fortune-loading" role="status" style={{ background: 'var(--wgs-button-muted)', padding: '60px 20px', borderRadius: '12px', textAlign: 'center' }}>
+                    <FiLoader className="community-loading-icon" aria-hidden="true" />
                     <h2 style={{ color: activeTab === 'couple'? '#f9a8d4' : '#fcd34d', marginTop: '20px' }}>{t('loading.text', '만세력을 세우는 중입니다...')}</h2>
                     <style>{`@keyframes spin { 100% { transform: rotate(360deg); } }`}</style>
                 </div>
             )}
 
             {step === 3 && activeTab === 'individual' && result && (
-                <div style={{ animation: 'fadeIn 0.8s' }}>
+                <div className="community-fortune-result" style={{ animation: 'fadeIn 0.8s' }}>
                     {resultSaveStatus && <div style={{ marginBottom: '14px', padding: '12px 14px', borderRadius: '8px', background: 'rgba(16,185,129,0.12)', color: '#6ee7b7' }}>{resultSaveStatus}</div>}
                     <div style={{ background: 'var(--wgs-practice-toggle-bg)', padding: '30px', borderRadius: '12px', marginBottom: '20px' }}>
                         <h2 style={{ textAlign: 'center', color: '#fcd34d', marginTop: 0 }}>{formatSetting('result.individual_saju_title', ' {name}님의 사주 명식', { name: result.name })}</h2>
@@ -343,7 +355,7 @@ const Fortune = () => {
             )}
 
             {step === 3 && activeTab === 'couple' && result && (
-                <div style={{ animation: 'fadeIn 0.8s' }}>
+                <div className="community-fortune-result" style={{ animation: 'fadeIn 0.8s' }}>
                     {resultSaveStatus && <div style={{ marginBottom: '14px', padding: '12px 14px', borderRadius: '8px', background: 'rgba(16,185,129,0.12)', color: '#6ee7b7' }}>{resultSaveStatus}</div>}
                     <div style={{ textAlign: 'center', marginBottom: '20px' }}>
                         <h2 style={{ color: '#f9a8d4', margin: 0 }}>{formatSetting('result.couple_score_title', ' {name1} & {name2} 궁합 지수', { name1: result.p1.name, name2: result.p2.name })}</h2>

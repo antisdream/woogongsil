@@ -6,6 +6,8 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import Signup from './Signup';
 import FindAuth from './FindAuth';
 import useScreenSettings from '../useScreenSettings';
+import { FiBookOpen, FiLock, FiArrowRight } from 'react-icons/fi';
+import '../styles/app/community-redesign.css';
 
 const API_BASE = '';
 
@@ -152,6 +154,7 @@ const Login = () => {
 
     const renderLoginForm = () => (
         <div className="wgs-login-panel-body">
+            <span className="community-section-icon"><FiLock aria-hidden="true" /></span>
             <h2 className="wgs-login-title">{getSetting('form.title', '로그인')}</h2>
             <p className="wgs-login-desc">{getSetting('form.desc', '우공실 학습 기능을 이용하려면 로그인해주세요.')}</p>
 
@@ -161,14 +164,18 @@ const Login = () => {
                     handleLogin('');
                 }}
             >
+                <label className="community-field-label" htmlFor="community-login-id">아이디</label>
                 <input
+                    id="community-login-id"
                     type="text" placeholder={getSetting('form.id_placeholder', '아이디')} value={id}
                     onChange={(e) => setId(e.target.value)}
                     autoComplete="username"required
                 />
 
+                <label className="community-field-label" htmlFor="community-login-password">비밀번호</label>
                 <div className="wgs-login-password-wrap">
                     <input
+                        id="community-login-password"
                         type={showLoginPw ? 'text' : 'password'}
                         placeholder={getSetting('form.password_placeholder', '비밀번호')} value={password}
                         onChange={(e) => setPassword(e.target.value)}
@@ -189,7 +196,7 @@ const Login = () => {
     );
 
     return (
-        <div className="wgs-auth-page">
+        <div className="wgs-auth-page community-page community-auth">
             <div className="wgs-auth-hero">
                 <div>
                     <span className="wgs-auth-kicker">{getSetting('hero.eyebrow', 'SKN_우공실 계정')}</span>
@@ -199,6 +206,7 @@ const Login = () => {
                 {/* 상단 공통 메뉴의 홈 버튼과 겹치지 않도록 로그인 센터 내부의 별도 홈 버튼은 렌더링하지 않습니다. */}
             </div>
 
+            <div className="community-auth-layout">
             <section className="wgs-auth-shell" aria-label={getSetting('a11y.auth_shell_label', '로그인 회원 기능')}>
                 <div className="wgs-auth-tabs" role="tablist" aria-label={getSetting('a11y.tabs_label', '로그인 페이지 탭')}>
                     {loginTabs.map((tab) => (
@@ -220,6 +228,18 @@ const Login = () => {
                     {activeTab === 'find' && <FindAuth embedded loginPath="/login" />}
                 </div>
             </section>
+                <aside className="community-auth-guide">
+                    <FiBookOpen aria-hidden="true" />
+                    <h2>다음 공부를<br /> 이어갈 준비.</h2>
+                    <p>계정에 연결된 오답과 학습 노트를 확인하고, 나에게 필요한 학습을 이어가세요.</p>
+                    <ol className="community-guide-list">
+                        <li><span>01</span><div><strong>처음이라면</strong><p>약관 확인과 이메일 인증 후 가입을 요청하세요.</p></div></li>
+                        <li><span>02</span><div><strong>계정이 있다면</strong><p>아이디와 비밀번호로 로그인하세요.</p></div></li>
+                        <li><span>03</span><div><strong>기억나지 않는다면</strong><p>ID/PW 찾기에서 가입 이메일로 인증하세요.</p></div></li>
+                    </ol>
+                    <a href="/faq">이용 안내 보기 <FiArrowRight aria-hidden="true" /></a>
+                </aside>
+            </div>
         </div>
     );
 };

@@ -1,6 +1,8 @@
 // 마이페이지 라우트 페이지 컴포넌트입니다.
 import React, { useCallback, useEffect, useState } from 'react';
 import axios from 'axios';
+import { FiBookOpen, FiCalendar, FiClock, FiUser } from 'react-icons/fi';
+import '../styles/app/community-redesign.css';
 import { useNavigate } from 'react-router-dom';
 
 import useScreenSettings from '../useScreenSettings';
@@ -151,7 +153,7 @@ const MyPage = () => {
 
     if (isLoading) {
         return (
-            <div className="mypage wrong-note-page wgs-typography-scope" style={{ color: 'var(--wgs-wrong-text)', textAlign: 'center', marginTop: '50px', fontSize: '20px' }}>
+            <div className="mypage wrong-note-page wgs-typography-scope community-page community-mypage ui-empty" role="status" style={{ color: 'var(--wgs-wrong-text)', textAlign: 'center', marginTop: '50px', fontSize: '20px' }}>
                 {t('loading.user_data', '사용자 데이터를 불러오는 중입니다...')}
             </div>
         );
@@ -159,7 +161,7 @@ const MyPage = () => {
 
     if (errorMessage || !user) {
         return (
-            <div className="mypage wrong-note-page wgs-typography-scope" style={{ width: '100%', boxSizing: 'border-box', color: 'var(--wgs-wrong-text)', textAlign: 'center', marginTop: '50px', padding: '20px', background: 'var(--wgs-button-muted)', borderRadius: '12px', maxWidth: '400px', margin: '50px auto' }}>
+            <div className="mypage wrong-note-page wgs-typography-scope community-page community-mypage ui-empty" role="alert" style={{ width: '100%', boxSizing: 'border-box', color: 'var(--wgs-wrong-text)', textAlign: 'center', marginTop: '50px', padding: '20px', background: 'var(--wgs-button-muted)', borderRadius: '12px', maxWidth: '400px', margin: '50px auto' }}>
                 <h3 style={{ color: '#ef4444' }}>{t('error.title', '오류 발생')}</h3>
                 <p style={{ color: 'var(--wgs-muted)' }}>{errorMessage || t('error.empty_user', '유저 정보를 표시할 수 없습니다.')}</p>
                 <button type="button" onClick={() => window.location.href = '/'} style={{ padding: '10px 20px', background: '#3b82f6', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', marginTop: '20px', fontWeight: 'bold' }}>
@@ -234,9 +236,13 @@ const MyPage = () => {
 
     return (
         <div
-            className="mypage wrong-note-page wgs-typography-scope" style={{ width: '100%', maxWidth: '600px', margin: '40px auto', background: 'var(--wgs-button-muted)', padding: '30px', borderRadius: '12px', color: 'var(--wgs-wrong-text)', position: 'relative', boxSizing: 'border-box' }}
+            className="mypage wrong-note-page wgs-typography-scope community-page community-mypage" style={{ width: '100%', maxWidth: '600px', margin: '40px auto', background: 'var(--wgs-button-muted)', padding: '30px', borderRadius: '12px', color: 'var(--wgs-wrong-text)', position: 'relative', boxSizing: 'border-box' }}
         >
-            <h2 className="wgs-page-title" style={{ color: 'var(--wgs-title)', borderBottom: '2px solid var(--wgs-border)', paddingBottom: '10px' }}>{t('page.title', '마이페이지')}</h2>
+            <header className="ui-page-head">
+                <p className="ui-eyebrow"><FiUser aria-hidden="true" /> 나의 학습 공간</p>
+                <h1 className="wgs-page-title">{t('page.title', '마이페이지')}</h1>
+                <p className="ui-page-description">목표 시험일을 정하고, 남겨둔 오답에서 다음 복습을 시작하세요.</p>
+            </header>
             <div className="mypage-header-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '20px 0', gap: '12px' }}>
                 <div>{formatSetting('page.greeting', '반갑습니다, {name} 님!', { name: user.name || t('page.default_user_name', '회원') })}</div>
                 <button type="button" onClick={() => navigate('/change-pw')} style={{ padding: '8px 15px', background: 'var(--wgs-border)', color: 'white', border: '1px solid var(--wgs-blue)', borderRadius: '6px', cursor: 'pointer', fontSize: '13px' }}>
@@ -255,9 +261,9 @@ const MyPage = () => {
             </div>
 
             {activeMyPageTab === 'profile' && (
-                <>
+                <div className="community-profile-grid">
             <div className="mobile-profile-panel" style={{ background: 'var(--wgs-practice-toggle-bg)', padding: '20px', borderRadius: '8px', marginBottom: '20px' }}>
-                <h3 style={{ color: '#fcd34d', marginTop: 0 }}>{t('dday.title', '목표 시험일 설정')}</h3>
+                <h2 className="community-panel-title"><FiCalendar aria-hidden="true" /> {t('dday.title', '목표 시험일 설정')}</h2>
                 <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#ef4444', marginBottom: '15px' }}>{dDayText}</div>
                 <div className="mypage-dday-selects" style={{ display: 'flex', gap: '5px', marginBottom: '15px' }}>
                     <select value={dDate.year} onChange={(e) => setDDate({ ...dDate, year: e.target.value })} style={{ flex: 1.5, padding: '10px', borderRadius: '8px', border: '1px solid var(--wgs-border)', background: 'var(--wgs-input-bg)', color: 'var(--wgs-wrong-text)' }}>
@@ -277,7 +283,7 @@ const MyPage = () => {
             </div>
 
             <div className="mobile-review-panel" style={{ background: 'var(--wgs-practice-toggle-bg)', padding: '20px', borderRadius: '8px', marginBottom: '20px' }}>
-                <h3 style={{ color: 'var(--wgs-blue)', marginTop: 0 }}>{t('wrong_notes.title', '오답노트 관리')}</h3>
+                <h2 className="community-panel-title"><FiBookOpen aria-hidden="true" /> {t('wrong_notes.title', '오답노트 관리')}</h2>
                 <p className="wrong-note-muted" style={{ color: 'var(--wgs-wrong-muted)', marginTop: 0, fontSize: '13px' }}>
                     {t('wrong_notes.desc', '필기/실기와 문제은행/기출문제를 구분해서 원하는 오답만 복습할 수 있습니다.')}
                 </p>
@@ -286,7 +292,7 @@ const MyPage = () => {
                     className="mypage-summary-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '15px', marginTop: '15px' }}
                 >
                     {wrongNoteCards.map((card) => (
-                        <div key={card.key} style={{ background: 'var(--wgs-input-bg)', padding: '15px', borderRadius: '8px', border: '1px solid var(--wgs-border)', textAlign: 'center' }}>
+                        <div className="community-review-card" key={card.key} style={{ background: 'var(--wgs-input-bg)', padding: '15px', borderRadius: '8px', border: '1px solid var(--wgs-border)', textAlign: 'center' }}>
                             <h4 style={{ color: card.color, margin: '0 0 10px 0' }}>{card.title}</h4>
                             <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#fcd34d', marginBottom: '10px' }}>
                                 {formatSetting('wrong_notes.count_label', '{count}개', { count: card.count })}
@@ -299,10 +305,10 @@ const MyPage = () => {
                 </div>
             </div>
 
-            <div style={{ background: 'var(--wgs-practice-toggle-bg)', padding: '20px', borderRadius: '8px', marginBottom: '20px' }}>
+            <div className="community-fortune-history" style={{ background: 'var(--wgs-practice-toggle-bg)', padding: '20px', borderRadius: '8px', marginBottom: '20px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
                     <div>
-                        <h3 style={{ color: '#f9a8d4', margin: 0 }}>저장한 운세 결과</h3>
+                        <h2 className="community-panel-title">저장한 운세 결과</h2>
                         <p style={{ color: 'var(--wgs-wrong-muted)', fontSize: '13px', margin: '6px 0 0' }}>이름·생년월일 등 입력 원본은 표시하거나 저장하지 않습니다.</p>
                     </div>
                     {fortuneHistoryArray.length > 0 && (
@@ -325,12 +331,12 @@ const MyPage = () => {
                                 <button type="button" onClick={() => handleDeleteFortuneHistory(history.id)} style={{ padding: '7px 10px', borderRadius: '6px', border: '1px solid #ef4444', background: 'transparent', color: '#fca5a5', cursor: 'pointer' }}>삭제</button>
                             </div>
                         );
-                    }) : <p style={{ margin: 0, color: 'var(--wgs-subtle)' }}>사용자가 저장을 선택한 결과가 없습니다.</p>}
+                    }) : <div className="ui-empty"><strong>저장한 결과가 없습니다.</strong><p>운세에서 결과 저장을 선택한 경우에만 이곳에 표시됩니다.</p></div>}
                 </div>
             </div>
 
-            <div style={{ background: 'var(--wgs-practice-toggle-bg)', padding: '20px', borderRadius: '8px', marginBottom: '40px' }}>
-                <h3 style={{ color: '#fbbf24', marginTop: 0 }}>{t('history.title', '최근 접속 기록')}</h3>
+            <div className="community-login-history" style={{ background: 'var(--wgs-practice-toggle-bg)', padding: '20px', borderRadius: '8px', marginBottom: '40px' }}>
+                <h2 className="community-panel-title"><FiClock aria-hidden="true" /> {t('history.title', '최근 접속 기록')}</h2>
                 <div style={{ maxHeight: '150px', overflowY: 'auto', paddingRight: '10px' }}>
                     {loginHistoryArray.length > 0 ? (
                         <ul style={{ listStyleType: 'none', padding: 0, margin: 0 }}>
@@ -360,10 +366,11 @@ const MyPage = () => {
                 </div>
             </div>
 
-            <div style={{ textAlign: 'right' }}>
+            <div className="community-danger-zone" style={{ textAlign: 'right' }}>
+                <div><h2 className="community-panel-title">계정 관리</h2><p>탈퇴 전 계정과 학습 기록의 삭제 안내를 확인해주세요.</p></div>
                 <button type="button" onClick={handleDeleteAccount} style={{ background: 'transparent', color: '#ff4d4d', border: '1px solid #ff4d4d', padding: '8px 15px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>{t('delete.button', '회원 탈퇴')}</button>
             </div>
-                </>
+                </div>
             )}
         </div>
     );

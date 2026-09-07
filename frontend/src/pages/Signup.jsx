@@ -4,6 +4,7 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import useScreenSettings from '../useScreenSettings';
 import LegalConsentBlock from '../components/LegalConsentBlock';
+import '../styles/app/community-redesign.css';
 
 const API_BASE = "";
 
@@ -235,14 +236,19 @@ const Signup = ({ embedded = false, afterSignupPath = '/' }) => {
     };
 
     return (
-        <div className={embedded ? 'wgs-signup-embedded' : 'wgs-signup-standalone'} style={containerStyle}>
-            <h2 style={{ textAlign: 'center', color: 'var(--wgs-title)', marginBottom: '12px' }}>{getSetting('form.title', '회원가입')}</h2>
-            <p style={{ textAlign: 'center', color: 'var(--wgs-subtle)', margin: '0 0 26px' }}>
-                {signupStep === 1 ? '1단계 · 약관 및 개인정보 동의' : '2단계 · 가입정보 입력'}
-            </p>
+        <div className={'community-page community-auth-flow community-signup ' + (embedded ? 'wgs-signup-embedded' : 'wgs-signup-standalone')} style={containerStyle}>
+            <header className="ui-page-head community-form-heading">
+                <p className="ui-eyebrow">우공실 계정 만들기</p>
+                {embedded ? <h2>{getSetting('form.title', '회원가입')}</h2> : <h1>{getSetting('form.title', '회원가입')}</h1>}
+                <p className="ui-page-description">이용 동의를 확인한 뒤 가입 정보를 입력해주세요. 가입 요청 후 관리자 승인이 필요합니다.</p>
+            </header>
+            <ol className="community-steps" aria-label="회원가입 단계">
+                <li aria-current={signupStep === 1 ? 'step' : undefined} className={signupStep === 1 ? 'is-current' : 'is-complete'}><span>1</span> 약관 및 동의</li>
+                <li aria-current={signupStep === 2 ? 'step' : undefined} className={signupStep === 2 ? 'is-current' : ''}><span>2</span> 가입정보 입력</li>
+            </ol>
 
             {signupStep === 1 ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+                <div className="community-consent-stack" style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
                     <p style={{ margin: 0, color: 'var(--wgs-muted)', lineHeight: 1.6 }}>
                         회원가입 전에 각 내용을 스크롤하여 확인한 뒤 동의 여부를 선택해주세요. 필수 항목에 동의하지 않으면 다음 단계로 이동하지 않습니다.
                     </p>
@@ -267,7 +273,7 @@ const Signup = ({ embedded = false, afterSignupPath = '/' }) => {
                 </div>
             ) : (
             /* 회원가입 폼 블록: 기존 입력 순서와 API 로직은 유지하고, 내장 모드 전용 CSS로 크기만 보강합니다. */
-            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <form className="community-signup-form" onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 <div>
                     <label style={{ color: 'var(--wgs-muted)', fontSize: '14px', display: 'flex', alignItems: 'center' }}>
                         {getSetting('form.id_label', '아이디 (영문+숫자 5~10자)')}
@@ -295,7 +301,7 @@ const Signup = ({ embedded = false, afterSignupPath = '/' }) => {
                 </div>
 
                 {isEmailSent && !isEmailVerified && (
-                    <div style={{ animation: 'fadeIn 0.3s ease-in-out' }}>
+                    <div className="community-verification-box" style={{ animation: 'fadeIn 0.3s ease-in-out' }}>
                         <label style={{ color: 'var(--wgs-muted)', fontSize: '14px', display: 'flex', justifyContent: 'space-between' }}>
                             {getSetting('form.code_label', '인증번호 입력')}
                             <span style={{ color: timer >30 ? '#ef4444' : '#f87171', fontWeight: 'bold' }}>{getSetting('form.remaining_time_label', '남은시간')} {formatTime(timer)}</span>
@@ -336,10 +342,10 @@ const Signup = ({ embedded = false, afterSignupPath = '/' }) => {
                     <input type="text" name="name" value={form.name} onChange={handleChange} required placeholder={getSetting('form.name_placeholder', '홍길동')} style={{ width: '100%', boxSizing: 'border-box', padding: '12px', borderRadius: '8px', border: '1px solid var(--wgs-border)', background: 'var(--wgs-input-bg)', color: 'white', marginTop: '5px' }} />
                 </div>
                 
-                <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+                <div className="community-form-actions" style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
                     <button type="button" onClick={() => setSignupStep(1)} disabled={isSubmitting} style={{ flex: 1, padding: '15px', background: 'var(--wgs-border)', color: 'white', border: 'none', borderRadius: '8px', cursor: isSubmitting ? 'not-allowed' : 'pointer', fontWeight: 'bold', fontSize: '16px' }}>이전</button>
                     <button type="submit" disabled={isSubmitting} style={{ flex: 1, padding: '15px', background: isSubmitting ? '#2563eb' : '#3b82f6', color: 'white', border: 'none', borderRadius: '8px', cursor: isSubmitting ? 'not-allowed' : 'pointer', fontWeight: 'bold', fontSize: '16px' }}>
-                        {isSubmitting ? getSetting('form.submit_loading_label', '처리 중...') : getSetting('form.submit_button', '가입완료')}
+                        {isSubmitting ? getSetting('form.submit_loading_label', '처리 중...') : getSetting('form.submit_button', '가입 요청하기')}
                     </button>
                 </div>
             </form>
