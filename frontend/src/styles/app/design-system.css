@@ -73,6 +73,7 @@ body .ui-secondary:hover { border-color:var(--wgs-primary); color:var(--wgs-prim
 @media(max-width:1100px) { .ui-header-row { gap:18px; } .ui-desktop-nav { gap:0; } .ui-desktop-nav .ui-nav-link { padding-inline:9px; } .ui-brand small { display:none; } }
 @media(max-width:900px) { .ui-desktop-nav { display:none; } .ui-header-actions { margin-left:auto; } .ui-menu-main { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); width:100%; gap:8px; } .ui-all-menu:not([hidden]) { display:block; } .ui-menu-extra { margin-top:12px; border-top:1px solid var(--wgs-border); padding-top:12px; } }
 @media(max-width:767px) {
+  html { scroll-padding-bottom:calc(76px + env(safe-area-inset-bottom,0px)); }
   body .ui-shell { padding:0 16px !important; padding-bottom:calc(76px + env(safe-area-inset-bottom,0px)) !important; }
   .ui-header-row { min-height:70px; gap:12px; } .ui-brand { font-size:22px; } .ui-brand-mark { width:32px; height:35px; font-size:20px; }
   .ui-account-link { display:none; } .ui-header-actions { gap:6px; } .ui-settings-panel { right:-50px; width:min(280px,calc(100vw - 32px)); }
