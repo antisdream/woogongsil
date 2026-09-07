@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.Woogongsil" parent="android:style/Theme.Material.NoActionBar">
+        <item name="android:fontFamily">sans</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:statusBarColor">#081426</item>
+        <item name="android:navigationBarColor">#081426</item>
+    </style>
+
+    <style name="Theme.Woogongsil.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">#081426</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_wgs_logo</item>
+        <item name="postSplashScreenTheme">@style/Theme.Woogongsil</item>
+    </style>
+</resources>

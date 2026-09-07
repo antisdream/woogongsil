@@ -1,17 +1,5 @@
 .ui-sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
 .ui-home-intro { width:100%; min-width:0; }
-.ui-qr-backdrop { position:fixed; inset:0; z-index:12000; background:#0c172ab3; display:flex; align-items:center; justify-content:center; padding:20px; }
-.ui-qr-dialog { position:relative; width:min(100%,460px); max-height:calc(100dvh - 40px); overflow:auto; box-sizing:border-box; padding:28px; border:1px solid var(--wgs-border); border-radius:18px; background:var(--wgs-card); color:var(--wgs-text); text-align:center; box-shadow:var(--ui-shadow); }
-body .ui-qr-close { display:block; margin-left:auto; margin-bottom:12px; min-height:44px; }
-.ui-qr-dialog h2 { font-size:23px; margin:0 0 12px; color:var(--wgs-title); }
-.ui-qr-dialog p { font-size:13px; line-height:1.8; color:var(--wgs-muted); }
-.ui-qr-image { display:inline-block; max-width:100%; padding:14px; box-sizing:border-box; background:white; border-radius:10px; }
-.ui-qr-image img { display:block; width:180px; max-width:100%; height:auto; }
-.ui-qr-address strong { display:block; overflow-wrap:anywhere; color:var(--wgs-title); font-size:14px; }
-.ui-qr-advanced { margin-top:20px; border-top:1px solid var(--wgs-border); text-align:left; font-size:12px; }
-.ui-qr-advanced summary { min-height:44px; display:flex; align-items:center; cursor:pointer; color:var(--wgs-muted); }
-.ui-qr-advanced label { display:grid; gap:8px; }
-.ui-qr-advanced input { min-height:44px; min-width:0; width:100%; box-sizing:border-box; border:1px solid var(--wgs-border); border-radius:8px; padding:9px 12px; background:var(--wgs-card-soft); color:var(--wgs-text); }
 .ui-home-hero { display:grid; grid-template-columns:1fr 1fr; gap:clamp(32px,6vw,80px); align-items:center; padding:38px 16px 64px; }
 .ui-hero-copy { min-width:0; }
 .ui-hero-scope { display:flex; align-items:center; gap:8px; color:var(--wgs-primary); font-size:13px; font-weight:750; margin:0 0 24px; transform:translate(var(--ui-hero-x,0),var(--ui-hero-y,0)); }
@@ -63,10 +51,6 @@ body .ui-preview-submit { margin-top:18px; width:100%; min-height:46px; font-siz
 .ui-home-faq details { border-bottom:1px solid var(--wgs-border); }
 .ui-home-faq summary { padding:17px 4px; cursor:pointer; color:var(--wgs-title); font-size:14px; font-weight:700; }
 .ui-home-faq details p { font-size:13px; line-height:1.9; color:var(--wgs-muted); margin:0 4px 18px; }
-.ui-home-resources { display:flex; align-items:center; gap:22px; flex-wrap:wrap; padding:16px 20px; border-radius:12px; background:var(--wgs-card-soft); border:1px solid var(--wgs-border); margin-bottom:36px; }
-.ui-home-resources > span { font-size:12px; color:var(--wgs-subtle); margin-right:auto; }
-.ui-home-resources a,.ui-home-resources button { display:inline-flex; align-items:center; gap:5px; min-height:44px; color:var(--wgs-muted); background:transparent; padding:0; border:0; text-decoration:none; font-size:12px; font-weight:650; cursor:pointer; }
-.ui-home-resources a:hover,.ui-home-resources button:hover { color:var(--wgs-primary); }
 body .ui-home-page { padding:0 !important; margin:0 auto !important; max-width:none !important; }
 body .ui-home-page .home-lower-grid { gap:24px !important; align-items:start; }
 .ui-home-record-invite { display:flex; justify-content:space-between; align-items:center; gap:24px; margin-bottom:10px; }
@@ -90,5 +74,4 @@ body .ui-home-page .home-realtime-panel {
   .ui-preview-options { grid-template-columns:1fr; gap:8px; } .ui-preview-option { min-height:46px; font-size:13px; } .ui-desktop-break { display:none; }
   .ui-learning-journey { padding:28px 0; gap:25px; } .ui-learning-journey ol { grid-template-columns:1fr; gap:23px; } .ui-learning-journey li { display:flex; gap:16px; } .ui-step-icon { flex:0 0 auto; margin:3px 0 0; } .ui-learning-journey h3 { margin-top:4px; }
   .ui-home-help { grid-template-columns:1fr; gap:14px; padding:30px 0; } .ui-home-help h2 { font-size:22px; } .ui-home-help h2 br { display:none; }
-  .ui-home-resources { gap:0 20px; padding:16px; } .ui-home-resources > span { width:100%; margin-bottom:4px; }
 }

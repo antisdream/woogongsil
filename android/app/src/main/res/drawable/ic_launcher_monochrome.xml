@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- [테마 아이콘] 시스템이 단일 색상으로 안전하게 착색할 수 있는 양문 실루엣입니다. -->
+    <path android:fillColor="#FFFFFF" android:pathData="M22,24L51,18L51,90L22,84Z" />
+    <path android:fillColor="#FFFFFF" android:pathData="M57,18L86,24L86,84L57,90Z" />
+</vector>

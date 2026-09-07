@@ -1,15 +1,11 @@
 // 홈 라우트 페이지 컴포넌트입니다.
-import React, { useCallback, useState, useEffect, useMemo } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import axios from 'axios';
 import useScreenSettings, { resolveWgsAssetUrl } from '../useScreenSettings';
 import HomeHero from '../features/home/HomeHero.jsx';
-import HomeQrModal from '../features/home/HomeQrModal.jsx';
 import HomeRealtimePanel from '../features/home/HomeRealtimePanel.jsx';
-import { buildMobileAccessUrl, buildQrImageUrls, normalizeQuickLinkUrl } from '../features/home/homeLinks.js';
 
 const API_BASE = "";
-const DEFAULT_NOTION_URL = 'https://app.notion.com/p/SKN-29th-328031734e3e805ba1a8d60026dcaf94?source=copy_link';
-const DEFAULT_DEVELOPER_URL = 'https://blog.naver.com/andisdream';
 
 
 // App.jsx와 동일한 세션/toast 키를 사용합니다.
@@ -48,19 +44,6 @@ const Home = () => {
         descOffsetY: getHomeScreenSetting('hero.desc_offset_y', '0'),
         contentWidth: getHomeScreenSetting('hero.content_width', '100%'),
     };
-    const homeExamButtonLabel = getHomeScreenSetting('quick_links.exam_button_label', '시험 접수');
-    const homeNotionButtonLabel = getHomeScreenSetting('quick_links.notion_button_label', 'Notion');
-    const homeDeveloperButtonLabel = getHomeScreenSetting('quick_links.developer_button_label', '개발자');
-    const homeMobileButtonLabel = getHomeScreenSetting('quick_links.mobile_button_label', '모바일');
-    const homeExamButtonUrl = getHomeScreenSetting('quick_links.exam_button_url', 'https://www.q-net.or.kr');
-    const homeNotionButtonUrl = normalizeQuickLinkUrl(
-        getHomeScreenSetting('quick_links.notion_button_url', DEFAULT_NOTION_URL),
-        DEFAULT_NOTION_URL
-    );
-    const homeDeveloperButtonUrl = normalizeQuickLinkUrl(
-        getHomeScreenSetting('quick_links.developer_button_url', DEFAULT_DEVELOPER_URL),
-        DEFAULT_DEVELOPER_URL
-    );
     const onlineSectionTitle = getHomeScreenSetting('online_users.section_title', '함께 공부하는 사람들');
     const onlineSectionDesc = getHomeScreenSetting('online_users.section_desc', '새로고침을 눌러 지금 함께 공부하는 접속자를 확인해 보세요.');
     const onlineVisitorsTitle = getHomeScreenSetting('online_users.visitors_title', '접속자 목록');
@@ -80,39 +63,10 @@ const Home = () => {
     const onlineMeLabel = getHomeScreenSetting('online_users.me_label', '(나)');
     const onlineRecentActivityLabel = getHomeScreenSetting('online_users.recent_activity_label', '최근 활동');
     const onlineJustNowLabel = getHomeScreenSetting('online_users.just_now_label', '방금 전');
-    const mobileQrTitle = getHomeScreenSetting('mobile_qr.title', '모바일에서 접속하기');
-    const mobileQrDesc = getHomeScreenSetting('mobile_qr.desc', 'PC와 동일한 네트워크 환경에 연결되어 있어야 합니다.');
-    const mobileQrUrlLabel = getHomeScreenSetting('mobile_qr.url_label', '접속 주소:');
-    const mobileQrDetectedIpLabel = getHomeScreenSetting('mobile_qr.detected_ip_label', '자동 감지 IP:');
-    const mobileQrDetectingLabel = getHomeScreenSetting('mobile_qr.detecting_label', '확인 중');
-    const mobileQrWifiHint = getHomeScreenSetting('mobile_qr.wifi_hint', '같은 와이파이에 연결된 휴대폰에서만 접속할 수 있습니다.');
-    const mobileQrChangeLabel = getHomeScreenSetting('mobile_qr.change_label', '주소 변경:');
-    const mobileQrPlaceholder = getHomeScreenSetting('mobile_qr.placeholder', '자동 감지 중');
     const homeDefaultBanner = resolveWgsAssetUrl(getHomeScreenSetting('image.default_banner', ''));
 
     const loggedInUser = sessionStorage.getItem('userName');
     const dDay = sessionStorage.getItem('dDay');
-
-    const [showQR, setShowQR] = useState(false);
-
-    // 모바일 QR 접속 주소에 사용할 IP/도메인 상태값입니다.
-    // 기존에는 192.168.0.4처럼 IP가 고정되어 있었기 때문에 네트워크가 바뀌면 직접 수정해야 했습니다.
-    // 이제는 서버의 /api/ip 응답값을 받아서 현재 서버 컴퓨터의 LAN IP를 자동으로 넣습니다.
-    const [customIp, setCustomIp] = useState(() => {
-        // 이미 www.ugongsil.kro.kr 같은 도메인으로 접속했다면 그 도메인을 그대로 사용합니다.
-        // 도메인 접속 중인데 굳이 내부 IP로 바꾸면 외부 접속자가 끊길 수 있기 때문입니다.
-        const host = window.location.hostname;
-
-        // localhost 또는 127.0.0.1은 휴대폰에서 접속할 수 없는 자기 자신 주소입니다.
-        // 그래서 초기값을 비워두고, 아래 useEffect에서 서버 LAN IP를 받아 채웁니다.
-        if (host === 'localhost' || host === '127.0.0.1') return '';
-
-        // IP 또는 도메인으로 이미 접속한 경우에는 현재 접속 주소를 기본값으로 사용합니다.
-        return host;
-    });
-
-    // 서버에서 자동 감지한 LAN IP를 표시용으로 보관합니다.
-    const [detectedServerIp, setDetectedServerIp] = useState('');
 
     // 홈 화면에 표시할 실시간 접속자 목록입니다.
     // 기존에는 10초마다 자동으로 새로고침했지만,
@@ -156,39 +110,6 @@ const Home = () => {
         };
 
         checkSession();
-    }, []);
-
-    useEffect(() => {
-        // 모바일 QR 주소 자동화 로직입니다.
-        // 백엔드 server.js에 이미 있는 /api/ip API를 호출해서 서버 컴퓨터의 현재 LAN IP를 가져옵니다.
-        // 이 코드는 실패해도 사이트 전체가 멈추지 않도록 catch에서 조용히 처리합니다.
-        const fetchServerIpForMobileQr = async () => {
-            try {
-                const host = window.location.hostname;
-
-                // 사용자가 도메인 또는 실제 IP로 접속 중이면 현재 주소가 가장 정확합니다.
-                // 예: www.ugongsil.kro.kr, 192.168.0.15 등
-                if (host !== 'localhost' && host !== '127.0.0.1') {
-                    setDetectedServerIp(host);
-                    setCustomIp((prev) => prev || host);
-                    return;
-                }
-
-                // localhost로 개발 중일 때만 백엔드에게 LAN IP를 물어봅니다.
-                const res = await axios.get(`${API_BASE}/api/ip`);
-                const serverIp = String(res.data?.ip || '').trim();
-
-                if (serverIp) {
-                    setDetectedServerIp(serverIp);
-                    setCustomIp((prev) => prev || serverIp);
-                }
-            } catch (err) {
-                // QR 자동 IP 조회 실패는 핵심 기능 장애가 아니므로 홈 화면은 그대로 유지합니다.
-                console.warn('모바일 QR용 서버 IP 자동 조회 실패:', err.message);
-            }
-        };
-
-        fetchServerIpForMobileQr();
     }, []);
 
     // 새로고침 버튼 옆에 보여줄 현재 시간 문자열입니다.
@@ -268,26 +189,6 @@ const Home = () => {
         return days >0 ? `D-${days}` : days === 0 ? "D-Day" : `D+${Math.abs(days)}`;
     };
 
-    const protocol = window.location.protocol;
-    const port = window.location.port ? `:${window.location.port}` : '';
-
-    // QR 주소를 만들 때 사용할 최종 host입니다.
-    // 1순위: 사용자가 직접 입력한 customIp
-    // 2순위: 서버에서 자동 감지한 LAN IP
-    // 3순위: 현재 브라우저의 hostname
-    const mobileHost = customIp || detectedServerIp || window.location.hostname;
-
-    // 모바일에서 접속할 주소입니다.
-    // 개발 PC가 localhost로 접속 중이어도 QR에는 localhost가 아니라 LAN IP가 들어가도록 처리했습니다.
-    const currentUrl = buildMobileAccessUrl({
-        protocol,
-        hostValue: mobileHost,
-        fallbackHost: window.location.hostname,
-        port,
-    });
-    const qrUrl = useMemo(() => buildQrImageUrls(currentUrl, API_BASE), [currentUrl]);
-
-
     const formatOnlineTime = (value) => {
         if (!value) return onlineJustNowLabel;
 
@@ -306,24 +207,6 @@ const Home = () => {
         <div
             className="home-page wgs-typography-scope ui-home-page" style={{ width: '100%', maxWidth: '1280px', margin: '0 auto', boxSizing: 'border-box' }}
         >
-            <HomeQrModal
-                open={showQR}
-                onClose={() => setShowQR(false)}
-                qrUrl={qrUrl}
-                currentUrl={currentUrl}
-                detectedServerIp={detectedServerIp}
-                customIp={customIp}
-                setCustomIp={setCustomIp}
-                mobileQrTitle={mobileQrTitle}
-                mobileQrDesc={mobileQrDesc}
-                mobileQrUrlLabel={mobileQrUrlLabel}
-                mobileQrDetectedIpLabel={mobileQrDetectedIpLabel}
-                mobileQrDetectingLabel={mobileQrDetectingLabel}
-                mobileQrWifiHint={mobileQrWifiHint}
-                mobileQrChangeLabel={mobileQrChangeLabel}
-                mobileQrPlaceholder={mobileQrPlaceholder}
-            />
-
             <HomeHero
                 homeDefaultBanner={homeDefaultBanner}
                 homeHeroTitle={homeHeroTitle}
@@ -335,15 +218,7 @@ const Home = () => {
                 homeWelcomeSuffix={homeWelcomeSuffix}
                 homeDdayPrefix={homeDdayPrefix}
                 homeDdaySuffix={homeDdaySuffix}
-                homeExamButtonUrl={homeExamButtonUrl}
-                homeExamButtonLabel={homeExamButtonLabel}
-                homeNotionButtonUrl={homeNotionButtonUrl}
-                homeNotionButtonLabel={homeNotionButtonLabel}
-                homeDeveloperButtonUrl={homeDeveloperButtonUrl}
-                homeDeveloperButtonLabel={homeDeveloperButtonLabel}
-                homeMobileButtonLabel={homeMobileButtonLabel}
                 homeHeroLayout={homeHeroLayout}
-                onShowQr={() => setShowQR(true)}
             />
 
             <div className="ui-home-community" style={{ display: 'flex', flexDirection: 'column', gap: '30px', marginBottom: '30px' }}>

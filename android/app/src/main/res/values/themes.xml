@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- [일반 앱 테마] Compose가 화면을 그리므로 ActionBar는 사용하지 않습니다. -->
+    <style name="Theme.Woogongsil" parent="android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:fontFamily">sans</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:statusBarColor">@color/wgs_splash_background</item>
+        <item name="android:navigationBarColor">@color/wgs_splash_background</item>
+    </style>
+
+    <!-- [시스템 시작 화면] 시스템 Splash 이후 Theme.Woogongsil로 전환합니다. -->
+    <style name="Theme.Woogongsil.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/wgs_splash_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_wgs_logo</item>
+        <item name="postSplashScreenTheme">@style/Theme.Woogongsil</item>
+    </style>
+</resources>

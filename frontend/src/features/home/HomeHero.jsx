@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { FiArrowRight, FiArrowUpRight, FiBookOpen, FiCheck, FiEdit3, FiRotateCcw, FiSmartphone } from 'react-icons/fi';
+import { FiArrowRight, FiArrowUpRight, FiBookOpen, FiCheck, FiEdit3, FiRotateCcw } from 'react-icons/fi';
 import '../../styles/app/landing-redesign.css';
 
 const sampleOptions = ['GROUP BY', 'ORDER BY', 'WHERE', 'HAVING'];
@@ -27,7 +27,7 @@ function LearningPreview() {
     </section>;
 }
 
-export default function HomeHero({ homeDefaultBanner, homeHeroTitle, homeHeroDesc, loggedInUser, dDay, calcDday, homeWelcomePrefix, homeWelcomeSuffix, homeDdayPrefix, homeDdaySuffix, homeExamButtonUrl, homeExamButtonLabel, homeNotionButtonUrl, homeNotionButtonLabel, homeDeveloperButtonUrl, homeDeveloperButtonLabel, homeMobileButtonLabel, homeHeroLayout, onShowQr }) {
+export default function HomeHero({ homeDefaultBanner, homeHeroTitle, homeHeroDesc, loggedInUser, dDay, calcDday, homeWelcomePrefix, homeWelcomeSuffix, homeDdayPrefix, homeDdaySuffix, homeHeroLayout }) {
     const align = (value) => ['left','center','right'].includes(value) ? value : 'left';
     const offset = (value) => Math.min(200, Math.max(-200, Number(value) || 0));
     const titleStyle = { textAlign: align(homeHeroLayout?.titleAlign), '--ui-hero-x': `${offset(homeHeroLayout?.titleOffsetX)}px`, '--ui-hero-y': `${offset(homeHeroLayout?.titleOffsetY)}px` };
@@ -58,9 +58,8 @@ export default function HomeHero({ homeDefaultBanner, homeHeroTitle, homeHeroDes
             <div className="ui-home-faq">
                 <details><summary>어떤 공부를 할 수 있나요?</summary><p>정보처리기사 필기 문제은행과 기출, 실기 문제은행·기출·3주완성 모드를 이용할 수 있어요. 학습 선택 화면에서 원하는 방식을 고르세요.</p></details>
                 <details><summary>학습 기록과 오답은 어디에서 보나요?</summary><p>로그인한 회원은 내 기록과 오답 복습에서 본인에게 저장된 기록을 확인할 수 있어요. 홈페이지 예제 풀이 결과는 저장되지 않아요.</p></details>
-                <details><summary>휴대폰에서도 사용할 수 있나요?</summary><p>같은 사이트를 휴대폰 브라우저에서도 이용할 수 있어요. 아래 모바일 접속 메뉴에서 접속 주소와 QR을 확인하세요.</p></details>
+                <details><summary>휴대폰에서도 사용할 수 있나요?</summary><p>휴대폰 브라우저에서 현재 사이트 주소로 접속하면 같은 학습 기능을 이용할 수 있어요.</p></details>
             </div>
         </section>
-        <nav className="ui-home-resources" aria-label="학습 관련 링크"><span>공부에 필요한 링크</span><a href={homeExamButtonUrl} target="_blank" rel="noopener noreferrer">{homeExamButtonLabel}<FiArrowUpRight aria-hidden="true" /></a><a href={homeNotionButtonUrl} target="_blank" rel="noopener noreferrer">{homeNotionButtonLabel}<FiArrowUpRight aria-hidden="true" /></a><a href={homeDeveloperButtonUrl} target="_blank" rel="noopener noreferrer">{homeDeveloperButtonLabel}<FiArrowUpRight aria-hidden="true" /></a><button type="button" onClick={onShowQr}><FiSmartphone aria-hidden="true" />{homeMobileButtonLabel}</button></nav>
     </div>;
 }
