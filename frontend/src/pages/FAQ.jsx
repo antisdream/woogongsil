@@ -289,27 +289,7 @@ const DEFAULT_FAQ_LIST = [
             '다만 문제 수가 부족한 경우에는 조건을 자동으로 완화해 학습이 막히지 않도록 처리됩니다.',
     },
     {
-        category: '회식맵',
-        question: '회식맵 장소를 제보하면 바로 공개되나요?',
-        answer:
-            '신규 장소 제보는 관리자 승인 없이 바로 회식맵에 공개됩니다.\n' +
-            '이미 등록된 장소의 수정 요청이나 삭제 요청은 관리자 또는 최고관리자 검토 후 반영됩니다.',
-    },
-    {
-        category: '회식맵',
-        question: '회식맵 장소 등록 시 카테고리는 어떻게 입력하나요?',
-        answer:
-            '카카오 지도 검색으로 장소를 선택하면 가져올 수 있는 카테고리 정보를 우선 사용합니다.\n' +
-            '직접 입력할 때는 한 글자나 초성을 입력하면 한식, 한정식처럼 관련 카테고리 추천을 확인할 수 있습니다.',
-    },
-    {
-        category: '회식맵',
-        question: '대표메뉴, 영업시간, 가격도 자동으로 채워지나요?',
-        answer:
-            '카카오 지도 API에서 기본으로 제공되는 장소명, 주소, 좌표, 전화번호, 카테고리 같은 정보는 자동 입력에 활용할 수 있습니다.\n' +
-            '대표메뉴, 영업시간, 최소가격, 최대가격처럼 API 응답에 없는 정보는 사용자가 직접 입력해야 합니다.',
-    },
-    {
+        settingSection: 'item_039',
         category: '화면/테마',
         question: '화면 밝기는 어떻게 조절하나요?',
         answer:
@@ -352,7 +332,7 @@ const FAQ = () => {
     const [submittedSearch, setSubmittedSearch] = useState('');
 
     const faqList = useMemo(() => DEFAULT_FAQ_LIST.map((item, index) => {
-        const sectionKey = getFaqItemSection(index);
+        const sectionKey = item.settingSection || getFaqItemSection(index);
 
         return {
             category: getSetting(`${sectionKey}.category`, item.category),

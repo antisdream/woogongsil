@@ -24,6 +24,48 @@ export const normalizeStudyFolderKey = (folderId) => {
     return String(folderId);
 };
 
+export const sortByStudyOrder = (left, right) => {
+    const sortDiff = Number(left?.sortOrder || 0) - Number(right?.sortOrder || 0);
+    if (sortDiff !== 0) return sortDiff;
+    const leftName = String(left?.name || left?.title || '');
+    const rightName = String(right?.name || right?.title || '');
+    const nameDiff = leftName.localeCompare(rightName, 'ko');
+    if (nameDiff !== 0) return nameDiff;
+    return Number(left?.id || 0) - Number(right?.id || 0);
+};
+
+export const normalizeTreeParentId = (key) => (
+    key === STUDY_ROOT_FOLDER || key === 'all' || key === undefined || key === null
+        ? null
+        : Number(key)
+);
+
+export const sanitizeStudyDownloadFileName = (value) => {
+    const cleanName = String(value || '학습노트')
+        .trim()
+        .replace(/[\\/:*?"<>|]/g, '_')
+        .replace(/\s+/g, ' ')
+        .slice(0, 80);
+    return cleanName || '학습노트';
+};
+
+export const isRouteNumber = (value) => /^\d+$/.test(String(value || ''));
+
+export const getInitialStudyRoute = () => {
+    if (typeof window === 'undefined') {
+        return { scope: STUDY_SCOPE_MINE, selectedFolderKey: STUDY_ROOT_FOLDER, documentId: null };
+    }
+    const params = new URLSearchParams(window.location.search);
+    const isPublicScope = String(params.get('scope') || '').toLowerCase() === 'public';
+    const documentId = params.get('doc') || params.get('documentId') || null;
+    const folderId = params.get('folder') || params.get('folderId') || null;
+    return {
+        scope: isPublicScope ? STUDY_SCOPE_PUBLIC : STUDY_SCOPE_MINE,
+        selectedFolderKey: isPublicScope || !isRouteNumber(folderId) ? (isPublicScope ? 'all' : STUDY_ROOT_FOLDER) : String(folderId),
+        documentId: isRouteNumber(documentId) ? String(documentId) : null,
+    };
+};
+
 export const getStudyBlockText = (block) => {
     if (block?.type === 'image') {
         return block?.props?.caption || block?.props?.name || '';

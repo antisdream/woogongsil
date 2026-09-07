@@ -1,0 +1,276 @@
+/* Mobile presentation only. Existing routes, controls and their handlers stay in place. */
+@media (max-width: 768px) {
+  .wgs-app-shell {
+    padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(28px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left)) !important;
+    font-size: 16px;
+  }
+
+  .wgs-app-shell .wgs-header {
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: start;
+    justify-items: stretch;
+    gap: 10px 12px;
+    margin-bottom: 0;
+    text-align: left;
+  }
+
+  .wgs-app-shell .wgs-site-logo {
+    padding: 10px 0 !important;
+    text-align: left !important;
+    font-size: 20px !important;
+    line-height: 1.3 !important;
+    letter-spacing: 0 !important;
+    overflow-wrap: anywhere;
+    min-width: 0;
+  }
+
+  .wgs-header .theme-switch-wrap {
+    justify-self: end;
+    justify-content: flex-end;
+    min-width: 0;
+    gap: 6px !important;
+  }
+
+  .wgs-header .wgs-theme-toggle {
+    gap: 4px !important;
+  }
+
+  .wgs-header .wgs-theme-toggle button {
+    min-width: 54px !important;
+    min-height: 44px !important;
+    padding: 0 10px !important;
+    font-size: 13px !important;
+    border-radius: 10px !important;
+    box-shadow: none !important;
+  }
+
+  .wgs-header .wgs-theme-tone-control {
+    min-width: 0;
+    max-width: 100%;
+    min-height: 44px !important;
+    padding: 0 8px !important;
+    gap: 6px !important;
+    border-radius: 10px !important;
+  }
+
+  .wgs-header .wgs-theme-tone-slider {
+    width: 72px !important;
+    min-width: 48px !important;
+  }
+
+  .wgs-header .wgs-theme-tone-value {
+    min-width: 32px !important;
+  }
+
+  .wgs-header .wgs-clock-bar {
+    flex-direction: row !important;
+    flex-wrap: wrap !important;
+    margin: 0 !important;
+    padding: 8px 10px !important;
+    gap: 4px 12px !important;
+    border-radius: 10px !important;
+    box-shadow: none !important;
+    text-align: left !important;
+  }
+
+  .wgs-header .wgs-clock-bar > div {
+    min-width: 0;
+    max-width: 100%;
+    font-size: 12px !important;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+  }
+
+  /* Keep every existing menu visible; no horizontal swipe is required. */
+  .wgs-header .wgs-main-nav {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 4px !important;
+    margin: 0 !important;
+    padding: 6px !important;
+    overflow: visible !important;
+    border-radius: 12px !important;
+    box-shadow: none !important;
+    backdrop-filter: none;
+  }
+
+  .wgs-main-nav .wgs-nav-item {
+    min-width: 0 !important;
+    min-height: 44px !important;
+    padding: 7px 6px !important;
+    font-size: 13px !important;
+    line-height: 1.4 !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere;
+    border-radius: 8px !important;
+    text-align: center;
+  }
+
+  .wgs-main-nav .wgs-nav-item[aria-current='page'] {
+    background: var(--wgs-active-bg) !important;
+    color: var(--wgs-primary) !important;
+    border-color: var(--wgs-focus) !important;
+    box-shadow: inset 0 -2px 0 var(--wgs-primary) !important;
+  }
+
+  .wgs-app-shell .wgs-main-content {
+    margin-top: 16px !important;
+    padding-bottom: 20px !important;
+  }
+
+  .wgs-app-shell .wgs-page-title {
+    font-size: 26px !important;
+    line-height: 1.3 !important;
+    overflow-wrap: anywhere;
+  }
+
+  .wgs-app-shell :is(.cert-ipe-home-page, .written-lobby-page, .mypage) {
+    padding: 16px !important;
+    margin-top: 0 !important;
+    border-radius: 14px !important;
+    box-shadow: none !important;
+    min-width: 0;
+  }
+
+  .wgs-app-shell .wgs-landing-hero {
+    min-height: 0 !important;
+    padding: 22px 16px !important;
+    gap: 14px !important;
+    margin-bottom: 16px !important;
+    border-radius: 16px !important;
+    box-shadow: none !important;
+  }
+
+  .wgs-landing-hero :is(.home-hero-title-zone, .wgs-home-hero-desc) {
+    transform: none !important;
+    width: 100% !important;
+  }
+
+  .wgs-landing-hero .home-hero-message-zone {
+    min-height: 0 !important;
+  }
+
+  .wgs-landing-hero .home-hero-message-zone:empty {
+    display: none;
+  }
+
+  .wgs-landing-hero :is(.home-hero-link-zone, .home-quick-links) {
+    width: 100% !important;
+    min-width: 0;
+  }
+
+  .wgs-landing-hero .home-quick-links {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+  }
+
+  .wgs-landing-hero .home-quick-link {
+    min-width: 0;
+    padding: 10px 8px !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere;
+    border-radius: 10px !important;
+    box-shadow: none !important;
+  }
+
+  .mobile-lobby-intro {
+    margin-bottom: 16px !important;
+  }
+
+  .home-ranking-body {
+    padding: 12px !important;
+  }
+
+  .home-ranking-results {
+    padding: 10px !important;
+    min-width: 0;
+  }
+
+  .home-page .home-ranking-tabs {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+    margin-bottom: 12px !important;
+  }
+
+  .home-ranking-tabs button {
+    min-width: 0;
+    min-height: 48px;
+    padding: 8px !important;
+    font-size: 14px;
+    overflow-wrap: anywhere;
+  }
+
+  .home-my-ranking-row {
+    flex-wrap: wrap;
+    padding: 12px !important;
+  }
+
+  .home-my-ranking-row > span:first-child {
+    color: var(--wgs-title) !important;
+    overflow-wrap: anywhere;
+  }
+
+  :is(.mobile-lobby-grid, .written-lobby-grid) {
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 12px !important;
+  }
+
+  .mobile-lobby-card {
+    min-height: 0 !important;
+    min-width: 0;
+    padding: 16px !important;
+    border-radius: 12px !important;
+    box-shadow: none !important;
+  }
+
+  .mobile-lobby-card h3 {
+    font-size: 20px !important;
+    margin-bottom: 8px !important;
+  }
+
+  .mobile-lobby-card p {
+    font-size: 15px;
+    overflow-wrap: anywhere;
+  }
+
+  .mobile-lobby-card button {
+    min-height: 48px;
+    margin-top: 14px !important;
+  }
+
+  .mypage :is(.mobile-profile-panel, .mobile-review-panel) {
+    padding: 12px !important;
+    margin-bottom: 14px !important;
+  }
+
+  .mypage .mypage-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+  }
+
+  .mypage-summary-grid > div {
+    min-width: 0;
+    padding: 12px 8px !important;
+  }
+
+  .mypage-summary-grid h4 {
+    font-size: 14px !important;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+  }
+
+  .mypage-summary-grid button {
+    min-height: 44px;
+    padding: 8px 6px !important;
+  }
+
+  .mypage :is(.mypage-header-row button, .mobile-profile-panel button, .mypage-dday-selects select) {
+    min-width: 0;
+    min-height: 44px;
+    padding: 8px !important;
+  }
+
+  .mypage-dday-selects select {
+    font-size: 16px;
+  }
+}

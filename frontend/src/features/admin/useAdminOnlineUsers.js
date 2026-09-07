@@ -1,12 +1,9 @@
 // 관리자 기능 모듈입니다: useAdminOnlineUsers
 import { useCallback, useState } from 'react';
 import {
-  getStoredServerInstanceId,
-  getStoredSessionToken,
   getStoredUser,
-  getStoredUserId,
-  getStoredUserName,
   isAdminAccessUser,
+  makeAdminHeadersFromStorage,
 } from './adminUtils.js';
 
 export default function useAdminOnlineUsers() {
@@ -20,7 +17,6 @@ export default function useAdminOnlineUsers() {
   // 기존 홈 화면의 접속자/채팅 기능에서 쓰던 /api/online-users API를 재사용해 DB 변경 없이 안전하게 연결합니다.
   const fetchOnlineUsers = useCallback(async () => {
     const user = getStoredUser();
-    const token = getStoredSessionToken(user);
 
     if (!isAdminAccessUser(user)) return;
 
@@ -28,16 +24,10 @@ export default function useAdminOnlineUsers() {
     setOnlineError('');
 
     try {
-      const response = await fetch('/api/online-users', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          id: getStoredUserId(user),
-          name: getStoredUserName(user),
-          sessionToken: token,
-          // 서버 재시작 후 오래된 세션을 걸러내는 기존 프로젝트 로직을 그대로 사용합니다.
-          serverInstanceId: getStoredServerInstanceId(user),
-        }),
+      const response = await fetch('/api/admin/online-users', {
+        method: 'GET',
+        credentials: 'include',
+        headers: makeAdminHeadersFromStorage(),
       });
 
       const data = await response.json().catch(() => ({}));

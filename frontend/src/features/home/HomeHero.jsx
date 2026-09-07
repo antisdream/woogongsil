@@ -41,14 +41,11 @@ export default function HomeHero({
     homeHeroDesc,
     loggedInUser,
     dDay,
-    todayClass,
     calcDday,
     homeWelcomePrefix,
     homeWelcomeSuffix,
     homeDdayPrefix,
     homeDdaySuffix,
-    homeTodayClassPrefix,
-    homeTodayClassSuffix,
     homeExamButtonUrl,
     homeExamButtonLabel,
     homeNotionButtonUrl,
@@ -176,21 +173,6 @@ export default function HomeHero({
                                 }}
                             >
                                 {homeDdayPrefix} {calcDday()}{homeDdaySuffix}
-                            </div>
-                        )}
-                        {todayClass && (
-                            <div
-                                style={{
-                                    color: '#f59e0b',
-                                    fontSize: 'clamp(13px, 1.3vw, 17px)',
-                                    fontWeight: 700,
-                                    letterSpacing: '-0.5px',
-                                    lineHeight: 1.5,
-                                    wordBreak: 'keep-all',
-                                    textShadow: '0 2px 10px rgba(255,255,255,0.55)'
-                                }}
-                            >
-                                {homeTodayClassPrefix} {todayClass.title} {homeTodayClassSuffix}
                             </div>
                         )}
                     </div>

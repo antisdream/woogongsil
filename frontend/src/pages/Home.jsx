@@ -2,13 +2,11 @@
 import React, { useCallback, useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import useScreenSettings, { resolveWgsAssetUrl } from '../useScreenSettings';
-import RealCalendar from '../features/home/RealCalendar.jsx';
 import HomeChatPanel from '../features/home/HomeChatPanel.jsx';
 import HomeHero from '../features/home/HomeHero.jsx';
 import HomeQrModal from '../features/home/HomeQrModal.jsx';
 import HomeRankingSection from '../features/home/HomeRankingSection.jsx';
 import HomeRealtimePanel from '../features/home/HomeRealtimePanel.jsx';
-import { getKstTodayString, normalizeScheduleToCalendarEvent } from '../features/home/calendarUtils.js';
 import { buildMobileAccessUrl, buildQrImageUrls, normalizeQuickLinkUrl } from '../features/home/homeLinks.js';
 import { getHomeRankingLabel, normalizeExamCatalogList } from '../features/home/homeRankingUtils.js';
 import { openChatPopupWindow as openHomeChatPopupWindow } from '../features/home/openChatPopupWindow.js';
@@ -109,8 +107,6 @@ const Home = () => {
     const homeWelcomeSuffix = getHomeScreenSetting('hero.welcome_suffix', '님, 환영합니다!');
     const homeDdayPrefix = getHomeScreenSetting('hero.dday_prefix', '시험일까지');
     const homeDdaySuffix = getHomeScreenSetting('hero.dday_suffix', '!');
-    const homeTodayClassPrefix = getHomeScreenSetting('hero.today_class_prefix', '오늘은');
-    const homeTodayClassSuffix = getHomeScreenSetting('hero.today_class_suffix', '수업입니다!');
     const liveChatCurrentVisitorPrefix = getHomeScreenSetting('live_chat.current_visitor_prefix', '현재');
     const liveChatCurrentVisitorSuffix = getHomeScreenSetting('live_chat.current_visitor_suffix', '명');
     const liveChatRefreshLoadingLabel = getHomeScreenSetting('live_chat.refresh_loading_label', '새로고침 중...');
@@ -137,20 +133,6 @@ const Home = () => {
     const mobileQrWifiHint = getHomeScreenSetting('mobile_qr.wifi_hint', '같은 와이파이에 연결된 휴대폰에서만 접속할 수 있습니다.');
     const mobileQrChangeLabel = getHomeScreenSetting('mobile_qr.change_label', '주소 변경:');
     const mobileQrPlaceholder = getHomeScreenSetting('mobile_qr.placeholder', '자동 감지 중');
-    const calendarCopy = {
-        yearSuffix: getHomeScreenSetting('calendar.year_suffix', '년'),
-        monthSuffix: getHomeScreenSetting('calendar.month_suffix', '월'),
-        todayLabel: getHomeScreenSetting('calendar.today_label', 'Today'),
-        weekdaySun: getHomeScreenSetting('calendar.weekday_sun', '일'),
-        weekdayMon: getHomeScreenSetting('calendar.weekday_mon', '월'),
-        weekdayTue: getHomeScreenSetting('calendar.weekday_tue', '화'),
-        weekdayWed: getHomeScreenSetting('calendar.weekday_wed', '수'),
-        weekdayThu: getHomeScreenSetting('calendar.weekday_thu', '목'),
-        weekdayFri: getHomeScreenSetting('calendar.weekday_fri', '금'),
-        weekdaySat: getHomeScreenSetting('calendar.weekday_sat', '토'),
-    };
-
-
     // 팝업창은 React JSX가 아니라 문자열 HTML이므로,
     // DB에서 가져온 문구를 HTML에 안전하게 넣기 위해 이스케이프 처리합니다.
 
@@ -160,9 +142,6 @@ const Home = () => {
     const dDay = sessionStorage.getItem('dDay');
 
     const [showQR, setShowQR] = useState(false);
-
-    // 홈 달력 일정은 DB API 응답만 사용합니다.
-    const [classSchedules, setClassSchedules] = useState([]); // 달력은 DB 일정만 사용합니다.
 
     // 모바일 QR 접속 주소에 사용할 IP/도메인 상태값입니다.
     // 기존에는 192.168.0.4처럼 IP가 고정되어 있었기 때문에 네트워크가 바뀌면 직접 수정해야 했습니다.
@@ -248,61 +227,6 @@ const Home = () => {
     // 외부 API 없이도 채팅 입력창에 빠르게 넣을 수 있는 보조 도구입니다.
     const [chatPickerOpen, setChatPickerOpen] = useState(false);
     const [chatPickerTab, setChatPickerTab] = useState('emoji');
-
-    useEffect(() => {
-        let isMounted = true;
-
-        const fetchClassSchedules = async () => {
-            try {
-                const res = await axios.get(`${API_BASE}/api/class-schedules`, {
-                    headers: { 'Cache-Control': 'no-cache' },
-                });
-                const commonSchedules = Array.isArray(res.data?.schedules)
-                    ? res.data.schedules.map(normalizeScheduleToCalendarEvent).filter(Boolean)
-                    : [];
-                let userSchedules = [];
-                const calendarUserId = sessionStorage.getItem('userId') || '';
-                const calendarSessionToken = sessionStorage.getItem('sessionToken') || '';
-                const calendarServerInstanceId = sessionStorage.getItem(SERVER_INSTANCE_ID_KEY) || localStorage.getItem(SERVER_INSTANCE_ID_KEY) || '';
-
-                if (calendarUserId && calendarSessionToken) {
-                    try {
-                        const userCalendarRes = await axios.get(`${API_BASE}/api/user/calendar-events`, {
-                            params: {
-                                id: calendarUserId,
-                                sessionToken: calendarSessionToken,
-                                serverInstanceId: calendarServerInstanceId,
-                                active: '1',
-                            },
-                            headers: { 'Cache-Control': 'no-cache' },
-                        });
-                        userSchedules = Array.isArray(userCalendarRes.data?.schedules)
-                            ? userCalendarRes.data.schedules.map(normalizeScheduleToCalendarEvent).filter(Boolean)
-                            : [];
-                    } catch (userCalendarError) {
-                        console.warn('[home calendar] user schedules fetch failed:', userCalendarError);
-                        userSchedules = [];
-                    }
-                }
-                const nextSchedules = [...commonSchedules, ...userSchedules];
-
-                if (isMounted) {
-                    setClassSchedules(nextSchedules);
-                }
-            } catch (error) {
-                console.error('[home calendar] DB 일정 불러오기 실패:', error);
-                if (isMounted) {
-                    setClassSchedules([]);
-                }
-            }
-        };
-
-        fetchClassSchedules();
-
-        return () => {
-            isMounted = false;
-        };
-    }, []);
 
     useEffect(() => {
         const checkSession = async () => {
@@ -715,16 +639,8 @@ const Home = () => {
     const pastSessionOptions = selectedPastYearCatalog?.sessions || [];
     const seasonText = scoreRankingSeasonText;
     
-    const todayStr = getKstTodayString();
-    // 홈 상단의 '오늘 수업' 안내는 종류가 '수업'인 일정만 표시합니다.
-    // 공휴일/시험일/개인 일정이 수업 문구로 잘못 노출되는 것을 방지합니다.
-    const todayClass = classSchedules.find(s => {
-        const type = String(s.scheduleType || s.type || s.category || '').trim();
-        return s.date === todayStr && type === 'class';
-    });
-
     // 로그인 기능은 Home.jsx에서 제거하고 /login 전용 페이지(Login.jsx)로 이동했습니다.
-    // 홈 화면은 배너, 실시간 패널, 랭킹, 캘린더만 담당합니다.
+    // 홈 화면은 배너, 실시간 패널, 랭킹을 담당합니다.
 
     const calcDday = () => {
         if (!dDay) return null;
@@ -832,14 +748,11 @@ const Home = () => {
                 homeHeroDesc={homeHeroDesc}
                 loggedInUser={loggedInUser}
                 dDay={dDay}
-                todayClass={todayClass}
                 calcDday={calcDday}
                 homeWelcomePrefix={homeWelcomePrefix}
                 homeWelcomeSuffix={homeWelcomeSuffix}
                 homeDdayPrefix={homeDdayPrefix}
                 homeDdaySuffix={homeDdaySuffix}
-                homeTodayClassPrefix={homeTodayClassPrefix}
-                homeTodayClassSuffix={homeTodayClassSuffix}
                 homeExamButtonUrl={homeExamButtonUrl}
                 homeExamButtonLabel={homeExamButtonLabel}
                 homeNotionButtonUrl={homeNotionButtonUrl}
@@ -936,8 +849,6 @@ const Home = () => {
                     getHomeScreenSetting={getHomeScreenSetting}
                 />
             </div>
-
-            <RealCalendar classSchedules={classSchedules} calendarCopy={calendarCopy} />
         </div>
     );
 };

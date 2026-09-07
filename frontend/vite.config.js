@@ -1,5 +1,9 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import { fileURLToPath } from 'node:url'
+import { resolve } from 'node:path'
+
+const frontendRoot = fileURLToPath(new URL('.', import.meta.url))
 
 // ============================================================
 // 개발 서버 프록시
@@ -43,5 +47,11 @@ export default defineConfig({
     // ============================================================
     build: {
         chunkSizeWarningLimit: 1000,
+        rollupOptions: {
+            input: {
+                main: resolve(frontendRoot, 'index.html'),
+                manage: resolve(frontendRoot, 'manage/index.html'),
+            },
+        },
     },
 });

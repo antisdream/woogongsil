@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import DrawingBoard from './DrawingBoard'; 
 import ErrorReportButton from '../components/ErrorReportButton';
 import useScreenSettings from '../useScreenSettings';
+import '../styles/app/mobile-practice.css';
 
 const API_BASE = "";
 
@@ -238,11 +239,12 @@ const RandomPractice = () => {
 
     return (
         <div
-            className="exam-page written-exam-page random-practice-page wgs-typography-scope" style={{ width: '100%', maxWidth: '800px', margin: '0 auto', color: 'var(--wgs-text)', paddingBottom: '50px', boxSizing: 'border-box' }}
+            className="exam-page written-exam-page random-practice-page wgs-typography-scope mobile-practice-page" style={{ width: '100%', maxWidth: '800px', margin: '0 auto', color: 'var(--wgs-text)', paddingBottom: '50px', boxSizing: 'border-box' }}
         >
             {/* 실기 페이지와 구조를 맞추기 위해 필기 문제은행에도 필기 로비 이동 버튼을 추가했습니다. */}
-            <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: '15px' }}>
+            <div className="mobile-practice-back-row" style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: '15px' }}>
                 <button
+                    className="mobile-practice-secondary-action"
                     onClick={() => navigate('/cert/ipe/written')}
                     style={{ padding: '10px 16px', background: '#475569', color: '#ffffff', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}
                 >
@@ -250,9 +252,9 @@ const RandomPractice = () => {
                 </button>
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+            <div className="mobile-practice-meta-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
                 {/*   문제은행 상단 뱃지에 연도, 회차, 문제 번호 출력 추가합니다. */}
-                <div style={{ background: '#3b82f6', color: 'white', padding: '6px 12px', borderRadius: '20px', fontWeight: 'bold', fontSize: '14px' }}>
+                <div className="mobile-practice-meta-badge" style={{ background: '#3b82f6', color: 'white', padding: '6px 12px', borderRadius: '20px', fontWeight: 'bold', fontSize: '14px' }}>
                     {formatSetting('meta.question_badge', '[{year}년 {session}회차 {number}번] {subject}', {
                         year: question.year,
                         session: question.session,
@@ -262,9 +264,9 @@ const RandomPractice = () => {
                 </div>
             </div>
 
-            <div className="exam-question-title-row" style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px', borderBottom: '2px solid var(--wgs-border)', paddingBottom: '10px' }}>
+            <div className="exam-question-title-row mobile-practice-title-row" style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px', borderBottom: '2px solid var(--wgs-border)', paddingBottom: '10px' }}>
                 {/* 문제은행 제목은 공통 섹션 제목 클래스 기준으로 통일합니다. */}
-                <h2 className="wgs-section-title" style={{ color: 'var(--wgs-blue)', margin: 0 }}>{t('page.title', '오늘의 문제은행')}</h2>
+                <h2 className="wgs-section-title mobile-practice-heading" style={{ color: 'var(--wgs-blue)', margin: 0 }}>{t('page.title', '오늘의 문제은행')}</h2>
                 {/* 현재 보고 있는 필기 문제은행 문항을 관리자에게 즉시 신고하는 버튼입니다. */}
                 <ErrorReportButton
                     examType={t('report.exam_type', '필기')} mode={t('report.mode', '문제은행')} questionInfo={{
@@ -277,13 +279,13 @@ const RandomPractice = () => {
                 />
             </div>
 
-            <div style={{ fontSize: '18px', lineHeight: '1.6', margin: '20px 0', padding: '20px', background: 'var(--wgs-input-bg)', borderRadius: '8px', borderLeft: '4px solid #3b82f6' }}>
+            <div className="mobile-practice-question" style={{ fontSize: '18px', lineHeight: '1.6', margin: '20px 0', padding: '20px', background: 'var(--wgs-input-bg)', borderRadius: '8px', borderLeft: '4px solid #3b82f6' }}>
                 <span style={{ fontWeight: 'bold', color: 'var(--wgs-blue)', marginRight: '10px' }}>{t('question.prefix', 'Q.')}</span>
                 {question.question_text}
             </div>
 
             {question.question_img && (
-                <div style={{ textAlign: 'center', margin: '20px 0', width: '100%' }}>
+                <div className="mobile-practice-image" style={{ textAlign: 'center', margin: '20px 0', width: '100%' }}>
                     <img 
                         src={`/question_image/${question.question_img}`} 
                         alt={t('image.question_alt', '문제 첨부 이미지')} style={{ maxWidth: '100%', maxHeight: '400px', objectFit: 'contain', borderRadius: '4px' }}
@@ -292,10 +294,10 @@ const RandomPractice = () => {
                 </div>
             )}
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div className="mobile-practice-options" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 {hasOptionsArray ? (
                     question.options.map((opt) => (
-                        <button key={opt.label} onClick={() => !isSubmitted && setSelectedAnswer(opt.label)}
+                        <button className="mobile-practice-option" key={opt.label} onClick={() => !isSubmitted && setSelectedAnswer(opt.label)}
                             style={{ padding: '15px', textAlign: 'left', borderRadius: '8px', background: selectedAnswer === opt.label ? '#3b82f6' : 'var(--wgs-input-bg)', border: `1px solid ${selectedAnswer === opt.label ? 'var(--wgs-blue)' : 'var(--wgs-border)'}`, color: 'white', cursor: isSubmitted ? 'default' : 'pointer', fontSize: '16px', transition: 'all 0.2s ease-in-out' }}>
                             <strong style={{ display: 'inline-block', width: '30px' }}>{opt.label}.</strong> {opt.option_text || opt.text}
                         </button>
@@ -305,7 +307,7 @@ const RandomPractice = () => {
                         const optText = question[`option_${num}`] || question[`option${num}`];
                         if (!optText) return null;
                         return (
-                            <button key={num} onClick={() => !isSubmitted && setSelectedAnswer(num)}
+                            <button className="mobile-practice-option" key={num} onClick={() => !isSubmitted && setSelectedAnswer(num)}
                                 style={{ padding: '15px', textAlign: 'left', borderRadius: '8px', background: selectedAnswer === num ? '#3b82f6' : 'var(--wgs-input-bg)', border: `1px solid ${selectedAnswer === num ? 'var(--wgs-blue)' : 'var(--wgs-border)'}`, color: 'white', cursor: isSubmitted ? 'default' : 'pointer', fontSize: '16px', transition: 'all 0.2s ease-in-out' }}>
                                 <strong style={{ display: 'inline-block', width: '30px' }}>{num}.</strong> {optText}
                             </button>
@@ -314,15 +316,15 @@ const RandomPractice = () => {
                 )}
             </div>
 
-            <div style={{ marginTop: '30px', textAlign: 'center' }}>
+            <div className="mobile-practice-answer-area" style={{ marginTop: '30px', textAlign: 'center' }}>
                 {!isSubmitted ? (
                     <>
-                        <button onClick={handleGrade} style={{ padding: '15px 40px', background: '#10b981', color: 'white', border: 'none', borderRadius: '8px', fontSize: '18px', fontWeight: 'bold', cursor: 'pointer', width: '100%', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
+                        <button className="mobile-practice-primary-action" onClick={handleGrade} style={{ padding: '15px 40px', background: '#10b981', color: 'white', border: 'none', borderRadius: '8px', fontSize: '18px', fontWeight: 'bold', cursor: 'pointer', width: '100%', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
                             {t('buttons.check_answer', '정답 확인하기')}
                         </button>
                         
                         <div style={{ marginTop: '15px' }}>
-                            <button onClick={() => setShowDrawing(!showDrawing)} style={{ width: '100%', padding: '12px', background: 'var(--wgs-button-muted)', color: 'var(--wgs-title)', border: '1px solid #3b82f6', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', fontSize: '16px', transition: '0.2s' }}>
+                            <button className="mobile-practice-secondary-action" onClick={() => setShowDrawing(!showDrawing)} style={{ width: '100%', padding: '12px', background: 'var(--wgs-button-muted)', color: 'var(--wgs-title)', border: '1px solid #3b82f6', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', fontSize: '16px', transition: '0.2s' }}>
                                 {showDrawing ? t('buttons.close_drawing', '연습장 닫기') : t('buttons.open_drawing', '연습장 열기')}
                             </button>
                         </div>
@@ -330,12 +332,12 @@ const RandomPractice = () => {
                     </>
                 ) : (
                     <div style={{ animation: 'fadeIn 0.5s' }}>
-                        <div style={{ padding: '20px', background: isCorrect ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)', border: `2px solid ${isCorrect ? '#10b981' : '#ef4444'}`, borderRadius: '8px', marginBottom: '18px' }}>
-                            <h3 style={{ color: isCorrect ? '#10b981' : '#ef4444', margin: '0 0 10px 0' }}>
+                        <div className="mobile-practice-result" style={{ padding: '20px', background: isCorrect ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)', border: `2px solid ${isCorrect ? '#10b981' : '#ef4444'}`, borderRadius: '8px', marginBottom: '18px' }}>
+                            <h3 className="mobile-practice-result-title" style={{ color: isCorrect ? '#10b981' : '#ef4444', margin: '0 0 10px 0' }}>
                                 {isCorrect ? t('result.correct_title', '정답입니다!') : t('result.wrong_title', '아쉽습니다, 다시 도전해보세요!')}
                             </h3>
-                            {!isCorrect && <p style={{ margin: 0, fontSize: '16px', color: 'white' }}>{formatSetting('result.correct_answer_prefix', '정답은 ', {})}<strong style={{ color: '#10b981' }}>{formatSetting('result.correct_answer_value', '{label}번', { label: question.correct_label })}</strong>{formatSetting('result.correct_answer_suffix', ' 입니다.', {})}</p>}
-                            {!isCorrect && userId && <p style={{ margin: '10px 0 0 0', color: 'var(--wgs-muted)', fontSize: '14px' }}>{t('result.wrong_saved_notice', '※ 틀린 문제는 마이페이지의 오답노트에 자동 저장되었습니다.')}</p>}
+                            {!isCorrect && <p className="mobile-practice-result-answer" style={{ margin: 0, fontSize: '16px', color: 'white' }}>{formatSetting('result.correct_answer_prefix', '정답은 ', {})}<strong style={{ color: '#10b981' }}>{formatSetting('result.correct_answer_value', '{label}번', { label: question.correct_label })}</strong>{formatSetting('result.correct_answer_suffix', ' 입니다.', {})}</p>}
+                            {!isCorrect && userId && <p className="mobile-practice-result-notice" style={{ margin: '10px 0 0 0', color: 'var(--wgs-muted)', fontSize: '14px' }}>{t('result.wrong_saved_notice', '※ 틀린 문제는 마이페이지의 오답노트에 자동 저장되었습니다.')}</p>}
                         </div>
 
                         {/* ============================================================
@@ -345,7 +347,7 @@ const RandomPractice = () => {
                             요청 위치: 정답/오답 결과 박스 아래, 랭킹 업데이트 박스 위.
                             ============================================================ */}
                         <div
-                            className="written-explanation-box" style={{
+                            className="written-explanation-box mobile-practice-explanation" style={{
                                 margin: '0 0 20px 0',
                                 padding: '18px 20px',
                                 background: 'rgba(59, 130, 246, 0.08)',
@@ -360,13 +362,13 @@ const RandomPractice = () => {
                             <div style={{ fontWeight: '900', color: '#60a5fa', marginBottom: '8px', fontSize: '16px' }}>
                                 {t('explanation.title', '해설')}
                             </div>
-                            <div style={{ whiteSpace: 'pre-wrap', fontSize: '15px' }}>
+                            <div className="mobile-practice-explanation-body" style={{ whiteSpace: 'pre-wrap', fontSize: '15px' }}>
                                 {getWrittenExplanation(question) || t('explanation.empty', '해설이 아직 등록되어 있지 않습니다. DB에는 해설이 있어도 이 문구가 보이면 /api/random-question 응답에 explanation_text가 포함되는지 확인해야 합니다.')}
                             </div>
                         </div>
 
                         {myRankData && (
-                            <div className="random-rank-row" style={{ background: 'var(--wgs-practice-toggle-bg)', padding: '12px', borderRadius: '8px', border: '1px dashed #fcd34d', marginBottom: '20px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '15px', flexWrap: 'wrap' }}>
+                            <div className="random-rank-row mobile-practice-rank" style={{ background: 'var(--wgs-practice-toggle-bg)', padding: '12px', borderRadius: '8px', border: '1px dashed #fcd34d', marginBottom: '20px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '15px', flexWrap: 'wrap' }}>
                                 <span style={{ color: '#fcd34d', fontWeight: 'bold', fontSize: '15px' }}>{t('ranking.update_title', '내 랭킹 업데이트!')}</span>
                                 <span style={{ color: 'white', fontSize: '15px' }}>
                                     <strong style={{ color: '#fcd34d' }}>{myRankData.rank ? formatSetting('ranking.rank_value', '{rank}등', { rank: myRankData.rank }) : t('ranking.out_of_rank', '순위권 밖')}</strong> {formatSetting('ranking.summary', '({score}점, 정답률 {accuracy}%)', { score: myRankData.score ?? 0, accuracy: myRankData.accuracy ?? 0 })}
@@ -374,12 +376,12 @@ const RandomPractice = () => {
                             </div>
                         )}
 
-                        <button ref={nextButtonRef} onClick={fetchRandomQuestion} style={{ padding: '15px 40px', background: '#3b82f6', color: 'white', border: 'none', borderRadius: '8px', fontSize: '18px', fontWeight: 'bold', cursor: 'pointer', width: '100%', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
+                        <button className="mobile-practice-primary-action" ref={nextButtonRef} onClick={fetchRandomQuestion} style={{ padding: '15px 40px', background: '#3b82f6', color: 'white', border: 'none', borderRadius: '8px', fontSize: '18px', fontWeight: 'bold', cursor: 'pointer', width: '100%', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
                             {t('buttons.next_question', '다음 문제 풀기')}
                         </button>
                         
                         <div style={{ marginTop: '15px' }}>
-                            <button onClick={() => setShowDrawing(!showDrawing)} style={{ width: '100%', padding: '12px', background: 'var(--wgs-button-muted)', color: 'var(--wgs-title)', border: '1px dashed var(--wgs-border)', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', fontSize: '16px' }}>
+                            <button className="mobile-practice-secondary-action" onClick={() => setShowDrawing(!showDrawing)} style={{ width: '100%', padding: '12px', background: 'var(--wgs-button-muted)', color: 'var(--wgs-title)', border: '1px dashed var(--wgs-border)', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', fontSize: '16px' }}>
                                 {showDrawing ? t('buttons.close_drawing', '연습장 닫기') : t('buttons.open_drawing', '연습장 열기')}
                             </button>
                         </div>

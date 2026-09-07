@@ -3,8 +3,6 @@ import React, { useCallback, useEffect, useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
-import HCaptchaBox from '../components/HCaptchaBox';
-import { guardMissingHcaptcha } from '../hcaptchaGuard';
 import useScreenSettings from '../useScreenSettings';
 
 const API_BASE = '';
@@ -23,9 +21,6 @@ const ChangePW = () => {
     });
     const [showNewPw, setShowNewPw] = useState(false);
     const [showConfirmPw, setShowConfirmPw] = useState(false);
-    const [hcaptchaToken, setHcaptchaToken] = useState('');
-    const [hcaptchaEnabled, setHcaptchaEnabled] = useState(false);
-    const [hcaptchaResetKey, setHcaptchaResetKey] = useState(0);
     const [isEmailSent, setIsEmailSent] = useState(false);
     const [isEmailVerified, setIsEmailVerified] = useState(false);
     const [authChecked, setAuthChecked] = useState(false);
@@ -62,13 +57,11 @@ const ChangePW = () => {
             alert(t('messages.need_email', '가입할 때 등록한 이메일을 입력해주세요.'));
             return;
         }
-        if (!guardMissingHcaptcha('change_pw', hcaptchaEnabled, hcaptchaToken)) return;
 
         try {
             const res = await axios.post(`${API_BASE}/api/auth/send-code`, {
                 email: form.email,
-                type: 'change',
-                hcaptchaToken
+                type: 'change'
             });
 
             if (res.data.success) {
@@ -78,8 +71,6 @@ const ChangePW = () => {
             }
         } catch (err) {
             alert(err.response?.data?.msg || t('messages.code_send_failed', '메일 전송에 실패했습니다. 이메일을 다시 확인해주세요.'));
-        } finally {
-            setHcaptchaResetKey((value) => value + 1);
         }
     };
 
@@ -116,7 +107,6 @@ const ChangePW = () => {
             alert(t('messages.need_email_verify', '이메일 본인 인증을 먼저 완료해주세요.'));
             return;
         }
-        if (!guardMissingHcaptcha('change_pw', hcaptchaEnabled, hcaptchaToken)) return;
 
         const pwRegex = /^(?=.*[a-zA-Z])(?=.*[0-9])(?=.*[@!,._-])[a-zA-Z0-9@!,._-]{8,15}$/;
         if (!pwRegex.test(form.newPw)) {
@@ -132,8 +122,7 @@ const ChangePW = () => {
         try {
             const res = await axios.post(`${API_BASE}/api/user/change-pw`, {
                 id: userId,
-                newPw: form.newPw,
-                hcaptchaToken
+                newPw: form.newPw
             });
 
             if (res.data.success) {
@@ -143,8 +132,6 @@ const ChangePW = () => {
             }
         } catch (err) {
             alert(err.response?.data?.msg || t('messages.update_failed', '비밀번호 변경에 실패했습니다.'));
-        } finally {
-            setHcaptchaResetKey((value) => value + 1);
         }
     };
 
@@ -204,13 +191,6 @@ const ChangePW = () => {
                         </div>
                     )}
                 </div>
-
-                <HCaptchaBox
-                    actionLabel={t('email.hcaptcha_label', '비밀번호 변경 인증메일 보안 확인')}
-                    onTokenChange={setHcaptchaToken}
-                    onEnabledChange={setHcaptchaEnabled}
-                    resetKey={hcaptchaResetKey}
-                />
 
                 <div style={{ opacity: isEmailVerified ? 1 : 0.4, pointerEvents: isEmailVerified ? 'auto' : 'none', transition: '0.3s' }}>
                     <div>

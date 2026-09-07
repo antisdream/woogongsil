@@ -3,8 +3,6 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
-import HCaptchaBox from '../components/HCaptchaBox';
-import { guardMissingHcaptcha } from '../hcaptchaGuard';
 import useScreenSettings from '../useScreenSettings';
 
 const API_BASE = '';
@@ -26,9 +24,6 @@ const FindAuth = ({ embedded = false, loginPath = '/login' }) => {
     const [verificationCode, setVerificationCode] = useState('');
     const [foundId, setFoundId] = useState('');
     const [isEmailSent, setIsEmailSent] = useState(false);
-    const [hcaptchaToken, setHcaptchaToken] = useState('');
-    const [hcaptchaEnabled, setHcaptchaEnabled] = useState(false);
-    const [hcaptchaResetKey, setHcaptchaResetKey] = useState(0);
     const [timer, setTimer] = useState(0);
 
     const resetState = (targetTab) => {
@@ -38,8 +33,6 @@ const FindAuth = ({ embedded = false, loginPath = '/login' }) => {
         setIsEmailSent(false);
         setTimer(0);
         setVerificationCode('');
-        setHcaptchaToken('');
-        setHcaptchaResetKey((value) => value + 1);
         setForm({ name: '', email: '', id: '', newPassword: '', confirmPassword: '' });
     };
 
@@ -71,13 +64,10 @@ const FindAuth = ({ embedded = false, loginPath = '/login' }) => {
             return;
         }
 
-        if (!guardMissingHcaptcha('find_reset', hcaptchaEnabled, hcaptchaToken)) return;
-
         try {
             const res = await axios.post(`${API_BASE}/api/auth/send-code`, {
                 email: form.email,
-                type: 'find',
-                hcaptchaToken
+                type: 'find'
             });
 
             if (res.data.success) {
@@ -87,8 +77,6 @@ const FindAuth = ({ embedded = false, loginPath = '/login' }) => {
             }
         } catch (err) {
             alert(err.response?.data?.msg || t('messages.send_failed', '일치하는 회원 정보가 없거나 메일 발송에 실패했습니다.'));
-        } finally {
-            setHcaptchaResetKey((value) => value + 1);
         }
     };
 
@@ -151,13 +139,11 @@ const FindAuth = ({ embedded = false, loginPath = '/login' }) => {
             alert(t('messages.password_mismatch', '비밀번호가 일치하지 않습니다.'));
             return;
         }
-        if (!guardMissingHcaptcha('find_reset', hcaptchaEnabled, hcaptchaToken)) return;
 
         try {
             const res = await axios.post(`${API_BASE}/api/find-pw/reset`, {
                 id: form.id,
-                newPassword: form.newPassword,
-                hcaptchaToken
+                newPassword: form.newPassword
             });
 
             if (res.data.success) {
@@ -166,8 +152,6 @@ const FindAuth = ({ embedded = false, loginPath = '/login' }) => {
             }
         } catch (err) {
             alert(err.response?.data?.msg || t('messages.reset_failed', '비밀번호 변경에 실패했습니다.'));
-        } finally {
-            setHcaptchaResetKey((value) => value + 1);
         }
     };
 
@@ -249,12 +233,6 @@ const FindAuth = ({ embedded = false, loginPath = '/login' }) => {
                                         {sendButtonLabel}
                                     </button>
                                 </div>
-                                <HCaptchaBox
-                                    actionLabel={t('id_step.hcaptcha_label', '아이디 찾기 보안 확인')}
-                                    onTokenChange={setHcaptchaToken}
-                                    onEnabledChange={setHcaptchaEnabled}
-                                    resetKey={hcaptchaResetKey}
-                                />
                                 {renderCodeBox()}
                             </div>
                         )}
@@ -286,12 +264,6 @@ const FindAuth = ({ embedded = false, loginPath = '/login' }) => {
                                         {sendButtonLabel}
                                     </button>
                                 </div>
-                                <HCaptchaBox
-                                    actionLabel={t('pw_step.hcaptcha_label', '비밀번호 찾기 보안 확인')}
-                                    onTokenChange={setHcaptchaToken}
-                                    onEnabledChange={setHcaptchaEnabled}
-                                    resetKey={hcaptchaResetKey}
-                                />
                                 {renderCodeBox()}
                             </div>
                         )}
@@ -308,12 +280,6 @@ const FindAuth = ({ embedded = false, loginPath = '/login' }) => {
                                     <label style={{ color: 'var(--wgs-muted)', fontSize: embedded ? '16px' : '14px' }}>{t('reset.confirm_password_label', '비밀번호 확인')}</label>
                                     <input type="password" name="confirmPassword" value={form.confirmPassword} placeholder={t('reset.confirm_password_placeholder', '새 비밀번호 재입력')} onChange={handleChange} required style={{ ...inputStyle, marginTop: '5px' }} />
                                 </div>
-                                <HCaptchaBox
-                                    actionLabel={t('reset.hcaptcha_label', '비밀번호 재설정 보안 확인')}
-                                    onTokenChange={setHcaptchaToken}
-                                    onEnabledChange={setHcaptchaEnabled}
-                                    resetKey={hcaptchaResetKey}
-                                />
                                 <button type="submit" style={{ width: '100%', padding: embedded ? '17px' : '15px', background: '#3b82f6', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', fontSize: embedded ? '17px' : '16px', marginTop: '10px' }}>
                                     {t('reset.submit_button', '비밀번호 변경하기')}
                                 </button>

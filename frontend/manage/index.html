@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex,nofollow,noarchive" />
+    <title>우공실 운영 관리</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script>
+      (() => {
+        let mode = 'light';
+        try {
+          mode = localStorage.getItem('wgsAdminThemeMode') === 'dark' ? 'dark' : 'light';
+        } catch {
+          // Hardened browser modes can block storage; light remains the safe default.
+        }
+        document.documentElement.classList.add(`wgs-theme-${mode}`);
+        document.documentElement.setAttribute('data-wgs-theme', mode);
+        document.body.classList.add(`wgs-theme-${mode}`);
+        document.body.setAttribute('data-wgs-theme', mode);
+        document.documentElement.style.colorScheme = mode;
+      })();
+    </script>
+    <script type="module" src="/src/main.admin.jsx"></script>
+  </body>
+</html>

@@ -11,7 +11,8 @@ export default function AdminDashboardTab({
     noticeHistory,
     maintenanceForm,
     questionMeta,
-    mealMapStats,
+    visitorSummary,
+    visitorError,
 }) {
     return (
     <section className="admin-panel admin-dashboard-panel">
@@ -26,6 +27,16 @@ export default function AdminDashboardTab({
         <button type="button" className="admin-dashboard-card" onClick={() => openAdminTab('users')}>
           <strong>사용자·접속 관리</strong>
           <p>회원 {summary.totalUsers || users.length}명 · 현재 접속 {onlineUsers.length}명</p>
+        </button>
+        <button type="button" className="admin-dashboard-card" onClick={() => openAdminTab('visitors')}>
+          <strong>방문 통계</strong>
+          <p>
+            {visitorError
+              ? '방문 통계를 확인할 수 없습니다.'
+              : visitorSummary
+                ? `오늘 ${visitorSummary.today || 0}회 · 누적 ${visitorSummary.total || 0}회`
+                : '방문 통계를 불러오는 중입니다.'}
+          </p>
         </button>
         <button type="button" className="admin-dashboard-card" onClick={() => openAdminTab('approvals')}>
           <strong>결재 사항</strong>
@@ -42,10 +53,6 @@ export default function AdminDashboardTab({
         <button type="button" className="admin-dashboard-card" onClick={() => openAdminTab('display')}>
           <strong>화면 설정 관리</strong>
           <p>레이아웃, 문구, 색상, 이미지 관리 영역 준비</p>
-        </button>
-        <button type="button" className="admin-dashboard-card" onClick={() => openAdminTab('mealmap')}>
-          <strong>회식맵 관리</strong>
-          <p>승인 대기 {mealMapStats.pending || 0}건 · 공개 {mealMapStats.approved || 0}건</p>
         </button>
       </div>
     </section>

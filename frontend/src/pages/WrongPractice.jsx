@@ -3,6 +3,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import useScreenSettings from '../useScreenSettings';
+import '../styles/app/mobile-practice.css';
 
 // 오답노트 공통 상수
 // ------------------------------------------------------------
@@ -742,12 +743,12 @@ const WrongPractice = () => {
 
         return (
             <>
-                <div style={{ background: 'var(--wgs-wrong-question-bg)', border: '1px solid var(--wgs-wrong-border)', borderRadius: '10px', padding: '16px', marginBottom: '16px', lineHeight: 1.7 }}>
+                <div className="mobile-practice-question" style={{ background: 'var(--wgs-wrong-question-bg)', border: '1px solid var(--wgs-wrong-border)', borderRadius: '10px', padding: '16px', marginBottom: '16px', lineHeight: 1.7 }}>
                     <strong style={{ color: 'var(--wgs-title)' }}>Q. </strong>{getQuestionText(currentNote)}
                 </div>
 
                 {currentNote?.question_img && (
-                    <div style={{ textAlign: 'center', marginBottom: '16px' }}>
+                    <div className="mobile-practice-image" style={{ textAlign: 'center', marginBottom: '16px' }}>
                         <img
                             src={`/question_image/${currentNote.question_img}`}
                             alt={t('image.written_alt', '필기 문제 이미지')} style={{ maxWidth: '100%', maxHeight: '420px', objectFit: 'contain', background: 'white', borderRadius: '8px' }}
@@ -756,7 +757,7 @@ const WrongPractice = () => {
                     </div>
                 )}
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <div className="mobile-practice-options" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                     {options.map((option, index) => {
                         const label = String(index + 1);
                         const isSelected = String(selectedAnswer) === label;
@@ -770,6 +771,7 @@ const WrongPractice = () => {
 
                         return (
                             <button
+                                className="mobile-practice-option"
                                 key={`${getQuestionId(currentNote)}-${label}`}
                                 onClick={() => !result && setSelectedAnswer(label)}
                                 disabled={Boolean(result)}
@@ -791,6 +793,7 @@ const WrongPractice = () => {
                 </div>
 
                 <button
+                    className="mobile-practice-primary-action"
                     onClick={handleWrittenCheck}
                     disabled={Boolean(result)}
                     style={{ ...buttonStyle, width: '100%', background: '#059669', marginTop: '18px', opacity: result ? 0.65 : 1 }}
@@ -804,12 +807,13 @@ const WrongPractice = () => {
     function renderIpepQuestion() {
         return (
             <>
-                <div style={{ background: 'var(--wgs-wrong-question-bg)', border: '1px solid var(--wgs-wrong-border)', borderRadius: '10px', padding: '16px', marginBottom: '16px', lineHeight: 1.7 }}>
+                <div className="mobile-practice-question" style={{ background: 'var(--wgs-wrong-question-bg)', border: '1px solid var(--wgs-wrong-border)', borderRadius: '10px', padding: '16px', marginBottom: '16px', lineHeight: 1.7 }}>
                     <strong style={{ color: 'var(--wgs-title)' }}>Q. </strong>{getQuestionText(currentNote)}
                     {renderIpepChoiceImage(currentNote, t('image.ipep_alt', '실기 문제 이미지'))}
                 </div>
 
                 <textarea
+                    className="mobile-practice-answer-input"
                     value={ipepAnswer}
                     onChange={(e) => setIpepAnswer(e.target.value)}
                     disabled={Boolean(result) || isChecking}
@@ -817,6 +821,7 @@ const WrongPractice = () => {
                 />
 
                 <button
+                    className="mobile-practice-primary-action"
                     onClick={handleIpepCheck}
                     disabled={Boolean(result) || isChecking}
                     style={{ ...buttonStyle, width: '100%', background: '#059669', marginTop: '14px', opacity: result || isChecking ? 0.65 : 1 }}
@@ -830,19 +835,19 @@ const WrongPractice = () => {
     function renderFilterBox() {
         if (activeTab === 'past') {
             return (
-                <section style={{ ...boxStyle, marginTop: '14px', marginBottom: '14px' }}>
+                <section className="mobile-practice-card mobile-practice-filter-card" style={{ ...boxStyle, marginTop: '14px', marginBottom: '14px' }}>
                     <h4 style={{ color: 'var(--wgs-title)', margin: '0 0 12px 0' }}>{t('filter.written_past_title', '필기 기출 회차 필터')}</h4>
-                    <div className="wrong-note-filter-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '12px' }}>
-                        <select value={writtenPastFilter.year} onChange={(e) => setWrittenPastFilter({ year: e.target.value, session: 'ALL' })} style={selectStyle}>
+                    <div className="wrong-note-filter-grid mobile-practice-filter-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '12px' }}>
+                        <select className="mobile-practice-filter-control" value={writtenPastFilter.year} onChange={(e) => setWrittenPastFilter({ year: e.target.value, session: 'ALL' })} style={selectStyle}>
                             <option value="ALL">{t('filter.all_year', '전체 연도')}</option>
                             {writtenPastYearOptions.map(year => <option key={year} value={year}>{formatSetting('filter.year_value', '{year}년', { year })}</option>)}
                         </select>
-                        <select value={writtenPastFilter.session} onChange={(e) => setWrittenPastFilter(prev => ({ ...prev, session: e.target.value }))} style={selectStyle}>
+                        <select className="mobile-practice-filter-control" value={writtenPastFilter.session} onChange={(e) => setWrittenPastFilter(prev => ({ ...prev, session: e.target.value }))} style={selectStyle}>
                             <option value="ALL">{t('filter.all_session', '전체 회차')}</option>
                             {writtenPastSessionOptions.map(session => <option key={session} value={session}>{formatSetting('filter.session_value', '{session}회차', { session })}</option>)}
                         </select>
                     </div>
-                    <button onClick={() => setWrittenPastFilter({ year: 'ALL', session: 'ALL' })} style={{ ...buttonStyle, background: 'var(--wgs-button-muted)', marginTop: '12px' }}>{t('buttons.reset_filter', '필터 초기화')}</button>
+                    <button className="mobile-practice-secondary-action" onClick={() => setWrittenPastFilter({ year: 'ALL', session: 'ALL' })} style={{ ...buttonStyle, background: 'var(--wgs-button-muted)', marginTop: '12px' }}>{t('buttons.reset_filter', '필터 초기화')}</button>
                 </section>
             );
         }
@@ -850,19 +855,19 @@ const WrongPractice = () => {
         if (activeTab === 'ipep_past') {
             const sessions = ipepPastSessionOptions;
             return (
-                <section style={{ ...boxStyle, marginTop: '14px', marginBottom: '14px' }}>
+                <section className="mobile-practice-card mobile-practice-filter-card" style={{ ...boxStyle, marginTop: '14px', marginBottom: '14px' }}>
                     <h4 style={{ color: 'var(--wgs-title)', margin: '0 0 12px 0' }}>{t('filter.ipep_past_title', '실기 기출 회차 필터')}</h4>
-                    <div className="wrong-note-filter-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '12px' }}>
-                        <select value={ipepPastFilter.year} onChange={(e) => setIpepPastFilter({ year: e.target.value, session: 'ALL' })} style={selectStyle}>
+                    <div className="wrong-note-filter-grid mobile-practice-filter-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '12px' }}>
+                        <select className="mobile-practice-filter-control" value={ipepPastFilter.year} onChange={(e) => setIpepPastFilter({ year: e.target.value, session: 'ALL' })} style={selectStyle}>
                             <option value="ALL">{t('filter.all_year', '전체 연도')}</option>
                             {ipepPastYearOptions.map(year => <option key={year} value={year}>{formatSetting('filter.year_value', '{year}년', { year })}</option>)}
                         </select>
-                        <select value={ipepPastFilter.session} onChange={(e) => setIpepPastFilter(prev => ({ ...prev, session: e.target.value }))} style={selectStyle}>
+                        <select className="mobile-practice-filter-control" value={ipepPastFilter.session} onChange={(e) => setIpepPastFilter(prev => ({ ...prev, session: e.target.value }))} style={selectStyle}>
                             <option value="ALL">{t('filter.all_session', '전체 회차')}</option>
                             {sessions.map(session => <option key={session} value={session}>{formatSetting('filter.session_value', '{session}회차', { session })}</option>)}
                         </select>
                     </div>
-                    <button onClick={() => setIpepPastFilter({ year: 'ALL', session: 'ALL' })} style={{ ...buttonStyle, background: 'var(--wgs-button-muted)', marginTop: '12px' }}>{t('buttons.reset_filter', '필터 초기화')}</button>
+                    <button className="mobile-practice-secondary-action" onClick={() => setIpepPastFilter({ year: 'ALL', session: 'ALL' })} style={{ ...buttonStyle, background: 'var(--wgs-button-muted)', marginTop: '12px' }}>{t('buttons.reset_filter', '필터 초기화')}</button>
                 </section>
             );
         }
@@ -876,26 +881,27 @@ const WrongPractice = () => {
 
     return (
         <div
-            className="wrong-note-page wgs-typography-scope" style={{ width: '100%', maxWidth: '1100px', margin: '30px auto', color: 'var(--wgs-wrong-text)', boxSizing: 'border-box' }}
+            className="wrong-note-page wgs-typography-scope mobile-practice-page" style={{ width: '100%', maxWidth: '1100px', margin: '30px auto', color: 'var(--wgs-wrong-text)', boxSizing: 'border-box' }}
         >
-            <button onClick={() => navigate('/mypage')} style={{ ...buttonStyle, background: 'var(--wgs-button-muted)', marginBottom: '18px' }}>{t('buttons.mypage', '마이페이지')}</button>
+            <button className="mobile-practice-secondary-action mobile-practice-back-button" onClick={() => navigate('/mypage')} style={{ ...buttonStyle, background: 'var(--wgs-button-muted)', marginBottom: '18px' }}>{t('buttons.mypage', '마이페이지')}</button>
 
-            <section style={{ ...boxStyle, display: 'flex', justifyContent: 'space-between', gap: '14px', alignItems: 'center', flexWrap: 'wrap' }}>
-                <div>
+            <section className="mobile-practice-card mobile-practice-header" style={{ ...boxStyle, display: 'flex', justifyContent: 'space-between', gap: '14px', alignItems: 'center', flexWrap: 'wrap' }}>
+                <div className="mobile-practice-header-copy">
                     {/* 오답노트 제목은 다른 학습 페이지와 같은 제목 체계를 사용합니다. */}
-                    <h2 className="wgs-page-title" style={{ color: 'var(--wgs-blue)', margin: '0 0 12px 0', fontSize: '32px' }}>{t('page.title', ' 오답노트 응시')}</h2>
-                    <p style={{ color: 'var(--wgs-wrong-muted)', margin: 0 }}>{t('page.description', '필기/실기, 문제은행/기출문제를 나눠서 복습합니다.')}</p>
+                    <h2 className="wgs-page-title mobile-practice-heading" style={{ color: 'var(--wgs-blue)', margin: '0 0 12px 0', fontSize: '32px' }}>{t('page.title', ' 오답노트 응시')}</h2>
+                    <p className="mobile-practice-description" style={{ color: 'var(--wgs-wrong-muted)', margin: 0 }}>{t('page.description', '필기/실기, 문제은행/기출문제를 나눠서 복습합니다.')}</p>
                 </div>
-                <button onClick={handleDeleteAllInTab} disabled={visibleNotes.length === 0} style={{ ...buttonStyle, background: '#ef4444', opacity: visibleNotes.length === 0 ? 0.5 : 1 }}>
+                <button className="mobile-practice-secondary-action mobile-practice-delete" onClick={handleDeleteAllInTab} disabled={visibleNotes.length === 0} style={{ ...buttonStyle, background: '#ef4444', opacity: visibleNotes.length === 0 ? 0.5 : 1 }}>
                     {t('buttons.delete_all_tab', '현재 탭 전체 삭제')}
                 </button>
             </section>
 
             <div
-                className="wrong-note-tabs" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '12px', marginTop: '18px' }}
+                className="wrong-note-tabs mobile-practice-tabs" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '12px', marginTop: '18px' }}
             >
                 {WRONG_TABS.map(tab => (
                     <button
+                        className="mobile-practice-tab"
                         key={tab}
                         onClick={() => changeTab(tab)}
                         style={{ ...buttonStyle, background: activeTab === tab ? TAB_COLORS[tab] : 'var(--wgs-button-muted)', fontSize: '16px' }}
@@ -908,38 +914,38 @@ const WrongPractice = () => {
             {renderFilterBox()}
 
             {visibleNotes.length === 0 ? (
-                <section style={{ ...boxStyle, marginTop: '18px', textAlign: 'center', color: 'var(--wgs-wrong-muted)' }}>
-                    <h3 style={{ color: '#10b981' }}>{t('messages.empty_title', '현재 조건에 해당하는 오답이 없습니다.')}</h3>
-                    <p>{t('messages.empty_desc', '문제를 풀고 틀린 문제를 저장하면 이곳에서 복습할 수 있습니다.')}</p>
+                <section className="mobile-practice-card mobile-practice-empty" style={{ ...boxStyle, marginTop: '18px', textAlign: 'center', color: 'var(--wgs-wrong-muted)' }}>
+                    <h3 className="mobile-practice-result-title" style={{ color: '#10b981' }}>{t('messages.empty_title', '현재 조건에 해당하는 오답이 없습니다.')}</h3>
+                    <p className="mobile-practice-description">{t('messages.empty_desc', '문제를 풀고 틀린 문제를 저장하면 이곳에서 복습할 수 있습니다.')}</p>
                 </section>
             ) : (
-                <section style={{ ...boxStyle, marginTop: '18px' }}>
-                    <div className="wrong-note-current-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', marginBottom: '18px' }}>
-                        <span style={{ background: TAB_COLORS[activeTab], borderRadius: '999px', padding: '10px 16px', fontWeight: '900' }}>{tabLabels[activeTab]}</span>
+                <section className="mobile-practice-card mobile-practice-content-card" style={{ ...boxStyle, marginTop: '18px' }}>
+                    <div className="wrong-note-current-row mobile-practice-meta-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', marginBottom: '18px' }}>
+                        <span className="mobile-practice-meta-badge" style={{ background: TAB_COLORS[activeTab], borderRadius: '999px', padding: '10px 16px', fontWeight: '900' }}>{tabLabels[activeTab]}</span>
                         <strong className="wrong-note-muted" style={{ color: 'var(--wgs-wrong-text)' }}>{currentIndex + 1} / {visibleNotes.length}</strong>
                     </div>
 
-                    <div className="wrong-note-muted" style={{ color: 'var(--wgs-wrong-muted)', fontWeight: '900', marginBottom: '12px' }}>
+                    <div className="wrong-note-muted mobile-practice-source" style={{ color: 'var(--wgs-wrong-muted)', fontWeight: '900', marginBottom: '12px' }}>
                         {getSourceLabel(currentNote, activeTab, currentIndex, sourceLabelHelpers)}
                     </div>
 
                     {isWrittenTab ? renderWrittenQuestion() : renderIpepQuestion()}
 
                     {result && (
-                        <div style={{ marginTop: '18px', padding: '16px', borderRadius: '10px', background: result.isCorrect ? 'rgba(16, 185, 129, 0.18)' : 'rgba(239, 68, 68, 0.18)', border: `1px solid ${result.isCorrect ? '#10b981' : '#ef4444'}` }}>
-                            <h3 style={{ marginTop: 0, color: result.isCorrect ? '#34d399' : '#f87171' }}>{result.isCorrect ? t('result.correct_title', '정답입니다.') : t('result.wrong_title', '다시 확인해볼 문제입니다.')}</h3>
-                            <p style={{ margin: '8px 0', color: 'var(--wgs-text)' }}>{t('result.correct_answer_label', '정답:')} <strong>{result.correctAnswer}</strong></p>
+                        <div className="mobile-practice-result" style={{ marginTop: '18px', padding: '16px', borderRadius: '10px', background: result.isCorrect ? 'rgba(16, 185, 129, 0.18)' : 'rgba(239, 68, 68, 0.18)', border: `1px solid ${result.isCorrect ? '#10b981' : '#ef4444'}` }}>
+                            <h3 className="mobile-practice-result-title" style={{ marginTop: 0, color: result.isCorrect ? '#34d399' : '#f87171' }}>{result.isCorrect ? t('result.correct_title', '정답입니다.') : t('result.wrong_title', '다시 확인해볼 문제입니다.')}</h3>
+                            <p className="mobile-practice-result-answer" style={{ margin: '8px 0', color: 'var(--wgs-text)' }}>{t('result.correct_answer_label', '정답:')} <strong>{result.correctAnswer}</strong></p>
                             {typeof result.score !== 'undefined' && <p style={{ margin: '8px 0', color: 'var(--wgs-text)' }}>{t('result.score_label', '점수:')} <strong>{result.score} / {result.maxScore}</strong></p>}
-                            {result.explanation && <p style={{ whiteSpace: 'pre-wrap', color: 'var(--wgs-wrong-muted)', lineHeight: 1.7 }}>{result.explanation}</p>}
+                            {result.explanation && <p className="mobile-practice-explanation-body" style={{ whiteSpace: 'pre-wrap', color: 'var(--wgs-wrong-muted)', lineHeight: 1.7 }}>{result.explanation}</p>}
                         </div>
                     )}
 
-                    <div className="wrong-note-action-row" style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', marginTop: '22px', alignItems: 'center', flexWrap: 'wrap' }}>
-                        <div className="wrong-note-prev-next" style={{ display: 'flex', gap: '10px' }}>
-                            <button onClick={() => moveQuestion(-1)} disabled={currentIndex === 0} style={{ ...buttonStyle, background: currentIndex === 0 ? 'var(--wgs-button-muted)' : 'var(--wgs-button-muted)', opacity: currentIndex === 0 ? 0.5 : 1 }}>{t('buttons.prev', '이전')}</button>
-                            <button onClick={() => moveQuestion(1)} disabled={currentIndex === visibleNotes.length - 1} style={{ ...buttonStyle, background: currentIndex === visibleNotes.length - 1 ? 'var(--wgs-button-muted)' : 'var(--wgs-button-muted)', opacity: currentIndex === visibleNotes.length - 1 ? 0.5 : 1 }}>{t('buttons.next', '다음')}</button>
+                    <div className="wrong-note-action-row mobile-practice-footer-actions" style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', marginTop: '22px', alignItems: 'center', flexWrap: 'wrap' }}>
+                        <div className="wrong-note-prev-next mobile-practice-pagination" style={{ display: 'flex', gap: '10px' }}>
+                            <button className="mobile-practice-secondary-action" onClick={() => moveQuestion(-1)} disabled={currentIndex === 0} style={{ ...buttonStyle, background: currentIndex === 0 ? 'var(--wgs-button-muted)' : 'var(--wgs-button-muted)', opacity: currentIndex === 0 ? 0.5 : 1 }}>{t('buttons.prev', '이전')}</button>
+                            <button className="mobile-practice-secondary-action" onClick={() => moveQuestion(1)} disabled={currentIndex === visibleNotes.length - 1} style={{ ...buttonStyle, background: currentIndex === visibleNotes.length - 1 ? 'var(--wgs-button-muted)' : 'var(--wgs-button-muted)', opacity: currentIndex === visibleNotes.length - 1 ? 0.5 : 1 }}>{t('buttons.next', '다음')}</button>
                         </div>
-                        <button onClick={handleDeleteCurrent} style={{ ...buttonStyle, background: '#ef4444' }}>{t('buttons.delete_current', '현재 오답 삭제')}</button>
+                        <button className="mobile-practice-secondary-action mobile-practice-delete" onClick={handleDeleteCurrent} style={{ ...buttonStyle, background: '#ef4444' }}>{t('buttons.delete_current', '현재 오답 삭제')}</button>
                     </div>
                 </section>
             )}

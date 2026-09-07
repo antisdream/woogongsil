@@ -10,7 +10,7 @@ import useScreenSettings from '../useScreenSettings';
 // 2. 실제 문제은행/기출문제 화면은 기존 컴포넌트를 유지하되, 주소는 /cert/ipe 하위로 연결합니다.
 // 3. 멀티플레이는 /multiplayer 독립 메뉴로 분리했기 때문에 이 화면에서는 제거합니다.
 // 4. 관리자페이지 > 화면 설정 관리에서 쓰던 필기문제 문구 연결은 유지합니다.
-// 5. 백엔드, DB, 달력, 실기 로직은 유지합니다.
+// 5. 백엔드, DB, 실기 로직은 유지합니다.
 
 const cardStyle = {
     boxSizing: 'border-box',
@@ -109,7 +109,7 @@ function WrittenLobby() {
                 {/*  필기 문제은행 카드
                     기존 RandomPractice 화면을 /cert/ipe/written-bank 주소에서 그대로 사용합니다.
                     랜덤 문제 풀이 기능 자체는 수정하지 않습니다. */}
-                <section style={cardStyle}>
+                <section className="mobile-lobby-card" style={cardStyle}>
                     <div>
                         <h3
                             style={{
@@ -148,7 +148,7 @@ function WrittenLobby() {
                 {/*  필기 기출문제 카드
                     기존 PastExam 화면을 /cert/ipe/written-past 주소에서 그대로 사용합니다.
                     제한시간, OMR, 결과표, PDF 출력 로직은 수정하지 않습니다. */}
-                <section style={cardStyle}>
+                <section className="mobile-lobby-card" style={cardStyle}>
                     <div>
                         <h3
                             style={{

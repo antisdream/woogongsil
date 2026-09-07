@@ -12,32 +12,15 @@ import './styles/app/page-adjustments.css';
 import './styles/app/responsive.css';
 import './styles/global/app-overrides.css';
 import './styles/global/auth.css';
-import './styles/admin/admin.css';
-import './styles/admin/admin-dashboard.css';
-import './styles/admin/admin-notice-maintenance.css';
-import './styles/admin/admin-questions-tabs.css';
-import './styles/admin/admin-display.css';
-import './styles/admin/admin-calendar.css';
-import './styles/admin/admin-calendar-hardening.css';
-import './styles/admin/mypage-calendar-hardening.css';
-import './styles/admin/admin-calendar-user-picker.css';
-import './styles/admin/admin-user-approval.css';
-import './styles/admin/admin-operation.css';
-import './styles/admin/admin-user-overrides.css';
-import './styles/admin/admin-approval-detail.css';
-import './styles/global/hcaptcha.css';
-import './styles/mealmap/mealmap.css';
-import './styles/mealmap/mealmap-theme.css';
-import './styles/mealmap/mealmap-admin.css';
-import './styles/mealmap/mealmap-dark-ui.css';
-import './styles/mealmap/mealmap-kakao.css';
-import './styles/mealmap/mealmap-activity.css';
-import './styles/mealmap/mealmap-tone-fixes.css';
-import './styles/admin/admin-theme-fixes.css';
+import './styles/global/legal-consent.css';
+import './styles/global/visitor-counter.css';
+import './styles/app/mobile-layout.css';
 
 import useScreenSettings from './useScreenSettings';
 import RealTimeClock from './components/app/RealTimeClock';
 import ThemeModeToggle from './components/app/ThemeModeToggle';
+import VisitorCounter from './features/visitor/VisitorCounter.jsx';
+import { getOrCreateWgsClientId } from './features/visitor/visitorClient.js';
 import {
     buildThemeToneVariables,
     clampThemeTone,
@@ -62,9 +45,8 @@ const IpepPractice = lazy(() => import('./pages/IpepPractice'));
 const WrittenLobby = lazy(() => import('./pages/WrittenLobby'));
 const CertificateIpeHome = lazy(() => import('./pages/CertificateIpeHome'));
 const PastExamMultiplayer = lazy(() => import('./pages/PastExamMultiplayer'));
-const MealMap = lazy(() => import('./pages/MealMap'));
-const Admin = lazy(() => import('./pages/Admin'));
-const AdminUserRanking = lazy(() => import('./pages/AdminUserRanking'));
+const LegalPolicyPage = lazy(() => import('./pages/LegalPolicyPage'));
+const AccountLegalConsent = lazy(() => import('./pages/AccountLegalConsent'));
 
 // App.jsx
 // 역할:
@@ -73,31 +55,11 @@ const AdminUserRanking = lazy(() => import('./pages/AdminUserRanking'));
 // 3. 기존 필기 문제은행(/practice), 필기 기출(/exam)은 삭제하지 않고 그대로 유지합니다.
 // 4. 정보처리기사 기능은 /cert/ipe 하위 주소로 묶되, 기존 필기/실기 화면 디자인과 기능은 그대로 재사용합니다.
 // 5. 기존 /written, /practice, /exam, /ipep 주소는 새 정보처리기사 주소로 넘겨 북마크 호환성을 유지합니다.
-// 6. 관리자/회식맵은 내부 탭 주소만 연결하고, DB·API·채점·승인 로직은 변경하지 않는다.
 
 const API_BASE = '';
 
-// 브라우저/기기 단위 요청 제한용 client id
-// localStorage를 지우면 초기화될 수 있지만, 같은 네트워크 전체 차단을 줄이는 1차 기준으로 사용합니다.
-function wgsGetOrCreateClientId() {
-  try {
-    const storageKey = 'wgs_client_id';
-    let value = window.localStorage.getItem(storageKey);
-    if (!value) {
-      const randomId = (window.crypto && window.crypto.randomUUID)
-        ? window.crypto.randomUUID()
-        : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-      value = `wgs-${randomId}`;
-      window.localStorage.setItem(storageKey, value);
-    }
-    return value;
-  } catch (err) {
-    return `wgs-fallback-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-  }
-}
-
 try {
-  axios.defaults.headers.common['X-WGS-Client-Id'] = wgsGetOrCreateClientId();
+  axios.defaults.headers.common['X-WGS-Client-Id'] = getOrCreateWgsClientId();
 } catch (err) {
   console.warn('[WGS] client id header setup failed:', err);
 }
@@ -167,14 +129,13 @@ function RouteLoadingFallback() {
 }
 
 
-// 관리자와 운영자 권한 값은 서버와 브라우저 저장소에서 true/false, 1/0, 'true'/'1'처럼 섞여 들어올 수 있습니다.
-// 상단 관리자 메뉴와 /admin 이동 가드가 같은 기준을 쓰도록 여기서 한 번에 정규화합니다.
+// 공개 화면의 역할별 기능에서 쓰는 권한 값은 true/false, 1/0, 'true'/'1'처럼 섞여 들어올 수 있습니다.
+// 관리자 전용 화면 인증은 이 값과 무관하며 별도의 HttpOnly 관리자 세션만 사용합니다.
 const isTruthySessionFlag = (value) => (
     value === true || value === 1 || value === '1' || String(value || '').toLowerCase() === 'true'
 );
 
-// /api/check-session 응답에 최신 권한값이 포함되면 sessionStorage에 동기화합니다.
-// 사용자가 새로 로그인하거나 새로고침하면 관리자 화면에서 변경한 최신 DB 권한을 반영합니다.
+// /api/check-session 응답에 최신 권한값이 포함되면 공개 게시판 같은 역할별 화면에만 동기화합니다.
 const syncSessionAdminFlags = (payload = {}) => {
     let changed = false;
 
@@ -224,13 +185,11 @@ function App() {
     const navHomeLabel = getGlobalScreenSetting('nav.home_label', '홈');
     const navCertIpeLabel = getGlobalScreenSetting('nav.cert_ipe_label', '정보처리기사');
     const navMultiplayerLabel = getGlobalScreenSetting('nav.multiplayer_label', '멀티플레이');
-    const navMealMapLabel = getGlobalScreenSetting('nav.mealmap_label', '회식맵');
     const navMyPageLabel = getGlobalScreenSetting('nav.mypage_label', '마이페이지');
     const navBoardLabel = getGlobalScreenSetting('nav.board_label', '게시판');
     const navStudyLabel = getGlobalScreenSetting('nav.study_label', '학습노트');
     const navFaqLabel = getGlobalScreenSetting('nav.faq_label', 'FAQ');
     const navFortuneLabel = getGlobalScreenSetting('nav.fortune_label', '운세');
-    const navAdminLabel = getGlobalScreenSetting('nav.admin_label', '관리자');
     const navLoginLabel = getGlobalScreenSetting('nav.login_label', '로그인');
     const navLogoutLabel = getGlobalScreenSetting('nav.logout_label', '로그아웃');
 
@@ -238,19 +197,51 @@ function App() {
     const location = useLocation();
 
     const loggedInUser = sessionStorage.getItem('userName');
-    // 운영자 권한은 sessionStorage에 'true' 또는 '1'로 저장될 수 있으므로 문자열 하나만 비교하지 않는다.
-    // authRevision은 /api/check-session 폴링이 최신 DB 권한을 동기화했을 때 상단 메뉴를 다시 렌더링하기 위한 값입니다.
-    const [authRevision, setAuthRevision] = useState(0);
-    const isAdminUser = Boolean(authRevision >= 0) && (
-        isTruthySessionFlag(sessionStorage.getItem('isOperator')) ||
-        isTruthySessionFlag(sessionStorage.getItem('is_operator')) ||
-        isTruthySessionFlag(sessionStorage.getItem('isPrimaryAdmin')) ||
-        isTruthySessionFlag(sessionStorage.getItem('is_primary_admin')) ||
-        isTruthySessionFlag(sessionStorage.getItem('isAdmin'))
-    );
+    // 공개 역할 플래그가 바뀌면 현재 공개 화면만 다시 렌더링합니다.
+    const [, setAuthRevision] = useState(0);
+    const [legalConsentGate, setLegalConsentGate] = useState(() => ({
+        status: loggedInUser ? 'checking' : 'idle',
+    }));
 
-    // 서버 점검 모드 상태입니다.
-    // 관리자는 점검 모드에서도 사이트를 계속 사용할 수 있고, 일반 사용자는 안내 화면으로 막습니다.
+    useEffect(() => {
+        let alive = true;
+        const id = sessionStorage.getItem('userId') || '';
+        const sessionToken = sessionStorage.getItem('sessionToken') || '';
+
+        if (!loggedInUser || !id || !sessionToken) {
+            setLegalConsentGate({ status: 'idle' });
+            return () => { alive = false; };
+        }
+
+        setLegalConsentGate({ status: 'checking' });
+        axios.post(`${API_BASE}/api/legal/user-status`, {
+            id,
+            userId: id,
+            sessionToken,
+            serverInstanceId: sessionStorage.getItem(SERVER_INSTANCE_ID_KEY) || localStorage.getItem(SERVER_INSTANCE_ID_KEY) || '',
+        }).then((response) => {
+            if (!alive) return;
+            const required = response.data?.required === true;
+            sessionStorage.setItem('wgsLegalConsentRequired', required ? 'true' : 'false');
+            setLegalConsentGate({ status: required ? 'required' : 'complete' });
+            if (required && window.location.pathname !== '/account-consent') {
+                navigate('/account-consent', { replace: true });
+            } else if (!required && window.location.pathname === '/account-consent') {
+                navigate('/', { replace: true });
+            }
+        }).catch((error) => {
+            if (!alive) return;
+            console.error('[legal consent status] failed:', error);
+            // 상태 확인 실패 때 일반 서비스 화면을 열지 않고 동의 화면 안에서 재시도하게 합니다.
+            sessionStorage.setItem('wgsLegalConsentRequired', 'true');
+            setLegalConsentGate({ status: 'required' });
+            if (window.location.pathname !== '/account-consent') navigate('/account-consent', { replace: true });
+        });
+
+        return () => { alive = false; };
+    }, [loggedInUser, navigate]);
+
+    // 일반 회원 SPA의 서버 점검 모드 상태입니다. 운영자는 별도 /manage 화면을 사용합니다.
     const [maintenanceStatus, setMaintenanceStatus] = useState({
         enabled: false,
         message: '현재 우공실 사이트 점검 중입니다. 잠시 후 다시 접속해주세요.',
@@ -512,6 +503,12 @@ function App() {
         window.location.reload();
     }, [navigate, recordExamWarning]);
 
+    const handleLegalConsentAccepted = useCallback(() => {
+        sessionStorage.setItem('wgsLegalConsentRequired', 'false');
+        setLegalConsentGate({ status: 'complete' });
+        navigate('/', { replace: true });
+    }, [navigate]);
+
     useEffect(() => {
         let pollTimer;
         const userId = sessionStorage.getItem('userId');
@@ -520,6 +517,7 @@ function App() {
 
         if (userId && sessionToken) {
             pollTimer = setInterval(async () => {
+                if (document.visibilityState === 'hidden') return;
                 try {
                     const res = await axios.post(`${API_BASE}/api/check-session`, {
                         id: userId,
@@ -536,7 +534,7 @@ function App() {
                         const reason = res.data.reason || 'session_expired';
                         handleLogout({ reason, isForced: true, callLogoutApi: false });
                     } else if (syncSessionAdminFlags(res.data)) {
-                        // 세션은 유효하지만 DB 권한값이 바뀐 경우 상단 관리자 메뉴 노출 상태를 즉시 갱신합니다.
+                        // 세션은 유효하지만 DB 권한값이 바뀐 경우 공개 역할별 화면을 즉시 갱신합니다.
                         setAuthRevision((prev) => prev + 1);
                     }
                 } catch (e) {
@@ -570,7 +568,7 @@ function App() {
         const fetchLatestAdminNotices = async () => {
             try {
                 const sinceMs = Number(localStorage.getItem(ADMIN_NOTICE_SEEN_KEY) || Date.now());
-                const res = await axios.post(`${API_BASE}/api/admin/notices/latest`, {
+                const res = await axios.post(`${API_BASE}/api/notices/latest`, {
                     id: userId,
                     sessionToken,
                     sinceMs
@@ -625,19 +623,11 @@ function App() {
 
         // 로그인이 필요한 메뉴 목록입니다.
         // 학습 라우트는 하위 호환 경로와 신규 화면 경로를 함께 제공합니다.
-        const loginRequiredPaths = ['/written', '/practice', '/exam', '/multiplayer', '/ipep', '/cert/ipe', '/mealmap', '/mypage', '/study', '/fortune', '/admin'];
+        const loginRequiredPaths = ['/written', '/practice', '/exam', '/multiplayer', '/ipep', '/cert/ipe', '/mypage', '/study', '/fortune'];
 
         if (!loggedInUser && (loginRequiredPaths.includes(path) || CERT_IPE_PATHS.includes(path) || path.startsWith('/cert/ipe/'))) {
             alert('로그인이 필요한 서비스입니다.');
             navigate('/login');
-            return;
-        }
-
-        // 관리자 메뉴는 DB에서 확인된 최고관리자 또는 운영자 권한 사용자만 이동할 수 있게 1차로 막는다.
-        // 백엔드 API에서도 같은 관리자 권한 검사를 수행해 실제 데이터 접근까지 보호합니다.
-        if ((path === '/admin' || path.startsWith('/admin/')) && !isAdminUser) {
-            alert('관리자 계정만 접근할 수 있습니다.');
-            navigate('/');
             return;
         }
 
@@ -662,6 +652,7 @@ function App() {
         return (
             <a
                 className="wgs-nav-item wgs-type-nav" href={path}
+                aria-current={isActive ? 'page' : undefined}
                 onClick={(e) => handleNavigation(e, path)}
                 style={{
                     color,
@@ -684,9 +675,30 @@ function App() {
     };
 
 
-    // 점검 모드가 켜져 있고 현재 사용자가 관리자 권한 사용자가 아니면 사이트 이용을 막습니다.
-    // 비로그인 상태는 관리자 로그인을 위해 막지 않고, 로그인 시 백엔드에서 일반 사용자만 차단합니다.
-    if (maintenanceStatus.enabled && loggedInUser && !isAdminUser) {
+    // 일반 회원 SPA는 브라우저 저장소의 역할 플래그로 점검 모드를 우회하지 않습니다.
+    // 운영 작업은 일반 회원 세션과 분리된 /manage 관리자 화면에서만 계속할 수 있습니다.
+    if (loggedInUser && (legalConsentGate.status === 'idle' || legalConsentGate.status === 'checking')) {
+        return (
+            <main className="wgs-account-consent-page">
+                <section className="wgs-account-consent-card">
+                    <div className="wgs-account-consent-state">최신 이용약관과 개인정보 동의 상태를 확인하는 중입니다...</div>
+                </section>
+            </main>
+        );
+    }
+
+    if (loggedInUser && (
+        legalConsentGate.status === 'required'
+        || sessionStorage.getItem('wgsLegalConsentRequired') === 'true'
+    )) {
+        return (
+            <Suspense fallback={<RouteLoadingFallback />}>
+                <AccountLegalConsent onAccepted={handleLegalConsentAccepted} onLogout={handleLogout} />
+            </Suspense>
+        );
+    }
+
+    if (maintenanceStatus.enabled && loggedInUser) {
         return (
             <div className="maintenance-lock-page">
                 <div className="maintenance-lock-card">
@@ -711,18 +723,11 @@ function App() {
             {adminNoticePopup && (
                 <div className="admin-notice-user-overlay" role="dialog" aria-modal="true">
                     <div className={`admin-notice-user-modal admin-notice-user-modal--${adminNoticePopup.level || adminNoticePopup.status || 'info'}`}>
-                        <div className="admin-notice-user-badge">{adminNoticePopup.source === 'mealmap' ? '회식맵 알림' : '관리자 공지'}</div>
-                        <h2>{adminNoticePopup.title || (adminNoticePopup.source === 'mealmap'? '회식맵 알림' : '관리자 공지')}</h2>
+                        <div className="admin-notice-user-badge">관리자 공지</div>
+                        <h2>{adminNoticePopup.title || '관리자 공지'}</h2>
                         <p>{adminNoticePopup.message}</p>
                         <div className="admin-notice-user-meta">
-                            {adminNoticePopup.source === 'mealmap'? (
-                                <>
-                                    <span>발송자: {adminNoticePopup.authorName || '회식맵 관리자'}</span>
-                                    <span>발송일시: {adminNoticePopup.createdAt ? new Date(adminNoticePopup.createdAt).toLocaleString('ko-KR') : '방금 전'}</span>
-                                </>
-                            ) : (
-                                <>발송자: {adminNoticePopup.authorName || '관리자'} · {adminNoticePopup.createdAt ? new Date(adminNoticePopup.createdAt).toLocaleString('ko-KR') : '방금 전'}</>
-                            )}
+                            <>발송자: {adminNoticePopup.authorName || '관리자'} · {adminNoticePopup.createdAt ? new Date(adminNoticePopup.createdAt).toLocaleString('ko-KR') : '방금 전'}</>
                         </div>
                         <button type="button" onClick={closeAdminNoticePopup}>확인</button>
                     </div>
@@ -775,16 +780,11 @@ function App() {
                         기존 /multiplayer 라우트와 기능은 그대로 두고, 상단 메뉴에서 바로 들어갈 수 있는 독립 입구만 추가합니다.
                         백엔드 멀티플레이 로직은 유지합니다. */}
                         <NavItem path="/multiplayer" color="#8b5cf6">{navMultiplayerLabel}</NavItem>
-                        <NavItem path="/mealmap" color="#fb7185">{navMealMapLabel}</NavItem>
                         {loggedInUser && <NavItem path="/mypage" color="#a78bfa">{navMyPageLabel}</NavItem>}
                         {loggedInUser && <NavItem path="/study" color="#14b8a6" activePaths={['/study/*']}>{navStudyLabel}</NavItem>}
                         <NavItem path="/board" color="#f97316">{navBoardLabel}</NavItem>
                         <NavItem path="/faq" color="#facc15">{navFaqLabel}</NavItem>
                         <NavItem path="/fortune" color="#fb7185">{navFortuneLabel}</NavItem>
-                        {/*  [관리자 Step1 메뉴]
-                            DB에서 확인된 관리자 권한 사용자에게만 운세와 로그아웃 사이에 관리자 버튼을 노출한다.
-                            일반 사용자는 버튼 자체가 보이지 않으며, /admin 직접 접근도 Admin.jsx에서 한 번 더 차단한다. */}
-                        {isAdminUser && <NavItem path="/admin" color="#22c55e" activePaths={['/admin/*']}>{navAdminLabel}</NavItem>}
                         {!loggedInUser ? (
                             <NavItem path="/login" color="#f8fafc">{navLoginLabel}</NavItem>
                         ) : (
@@ -833,7 +833,6 @@ function App() {
                             <Route path="/cert/ipe/practical-three-week" element={<IpepPractice key="ipep-three-week" setIsExamActive={setIsExamActive} initialMode="threeWeek" />} />
                             <Route path="/multiplayer" element={<PastExamMultiplayer setIsExamActive={setIsExamActive} />} />
                             <Route path="/multiplayer/:mpTab" element={<PastExamMultiplayer setIsExamActive={setIsExamActive} />} />
-                            <Route path="/mealmap/*" element={<MealMap />} />
                             <Route path="/mypage" element={<MyPage />} />
                             <Route path="/study/*" element={<StudyNotes />} />
                             <Route path="/wrong" element={<WrongPractice />} />
@@ -842,14 +841,17 @@ function App() {
                             <Route path="/faq" element={<FAQ />} />
                             <Route path="/change-pw" element={<ChangePW />} />
                             <Route path="/board/*" element={<Board />} />
-                            {/*  [관리자 Step1 라우트]
-                                관리자 본기능은 /admin 하위 라우트에서 탭 단위로 연결한다. */}
-                            <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
-                            <Route path="/admin/user-ranking/:targetUserId" element={<AdminUserRanking />} />
-                            <Route path="/admin/:adminTab" element={<Admin />} />
+                            <Route path="/terms" element={<LegalPolicyPage mode="terms" />} />
+                            <Route path="/privacy" element={<LegalPolicyPage mode="privacy" />} />
+                            <Route path="/account-consent" element={<Navigate to="/" replace />} />
                         </Routes>
                     </Suspense>
                 </main>
+                <VisitorCounter />
+                <footer style={{ display: 'flex', justifyContent: 'center', gap: '18px', flexWrap: 'wrap', padding: '18px 12px 28px', color: 'var(--wgs-subtle)', fontSize: '13px' }}>
+                    <a href="/terms" style={{ color: 'inherit' }}>이용약관</a>
+                    <a href="/privacy" style={{ color: 'inherit' }}>개인정보 처리 안내</a>
+                </footer>
             </div>
         </div>
     );

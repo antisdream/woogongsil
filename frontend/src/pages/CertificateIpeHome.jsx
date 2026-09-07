@@ -73,7 +73,7 @@ function CertificateIpeHome() {
                 color: 'var(--wgs-text)'
             }}
         >
-            <div style={{ marginBottom: '26px' }}>
+            <div className="mobile-lobby-intro" style={{ marginBottom: '26px' }}>
                 <p style={{ color: 'var(--wgs-muted)', fontWeight: '800', margin: '0 0 8px 0' }}>{eyebrow}</p>
                 <h2
                     className="wgs-page-title" style={{
@@ -92,13 +92,14 @@ function CertificateIpeHome() {
             </div>
 
             <div
+                className="mobile-lobby-grid"
                 style={{
                     display: 'grid',
                     gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
                     gap: '18px'
                 }}
             >
-                <section style={cardStyle}>
+                <section className="mobile-lobby-card" style={cardStyle}>
                     <div>
                         <h3 style={{ color: '#60a5fa', fontSize: '24px', margin: '0 0 14px 0', fontWeight: '900' }}>{writtenTitle}</h3>
                         <p style={{ color: 'var(--wgs-muted)', lineHeight: 1.75, margin: 0, whiteSpace: 'pre-line' }}>
@@ -113,7 +114,7 @@ function CertificateIpeHome() {
                     </button>
                 </section>
 
-                <section style={cardStyle}>
+                <section className="mobile-lobby-card" style={cardStyle}>
                     <div>
                         <h3 style={{ color: '#34d399', fontSize: '24px', margin: '0 0 14px 0', fontWeight: '900' }}>{practicalTitle}</h3>
                         <p style={{ color: 'var(--wgs-muted)', lineHeight: 1.75, margin: 0, whiteSpace: 'pre-line' }}>

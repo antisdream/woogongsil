@@ -7,7 +7,10 @@ export default function AdminPageHeader({
     adminStats,
     activeAdminTab,
     openAdminTab,
+    isPrimaryAdminViewer = false,
 }) {
+    const visibleTabs = ADMIN_TABS.filter((tab) => isPrimaryAdminViewer || tab.id !== 'signupRequests');
+
     return (
         <>
   <section className="admin-hero-card admin-hero-card-compact">
@@ -38,7 +41,7 @@ export default function AdminPageHeader({
 
   {/* 관리자 기능 탭 메뉴 */}
   <nav className="admin-tab-nav" aria-label="관리자 기능 탭">
-    {ADMIN_TABS.map((tab) => (
+    {visibleTabs.map((tab) => (
       <button
         key={tab.id}
         type="button" className={`admin-tab-button ${activeAdminTab === tab.id ? 'admin-tab-button-active' : ''}`}

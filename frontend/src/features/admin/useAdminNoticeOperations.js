@@ -101,7 +101,10 @@ export default function useAdminNoticeOperations({
     setMaintenanceError('');
 
     try {
-      const response = await fetch('/api/maintenance/status');
+      const response = await fetch('/api/admin/maintenance/status', {
+        credentials: 'include',
+        headers: makeAdminHeaders({ Accept: 'application/json' }),
+      });
       const data = await response.json().catch(() => ({}));
 
       if (!response.ok || !data.success) {
@@ -115,7 +118,7 @@ export default function useAdminNoticeOperations({
     } finally {
       setMaintenanceLoading(false);
     }
-  }, []);
+  }, [makeAdminHeaders]);
 
   const handleMaintenanceSave = useCallback(async (nextEnabled) => {
     const trimmedMessage = maintenanceForm.message.trim() || DEFAULT_MAINTENANCE_FORM.message;
@@ -138,6 +141,12 @@ export default function useAdminNoticeOperations({
 
       if (!response.ok || !data.success) {
         throw new Error(data.msg || data.message || '점검 모드 변경에 실패했습니다.');
+      }
+
+      if (data.pendingApproval) {
+        setMaintenanceSuccess(data.message || data.msg || '점검 모드 변경 요청이 결재 대기 목록에 등록되었습니다.');
+        fetchOperationLogs({ type: 'maintenance', page: 1, sort: operationLogSort });
+        return;
       }
 
       setMaintenanceForm({ ...DEFAULT_MAINTENANCE_FORM, ...(data.maintenance || {}) });

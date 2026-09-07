@@ -45,9 +45,11 @@ export default function AdminUsersTab({
     handleSuspendUser,
     handleDeleteUser,
     handleToggleOperator,
+    isPrimaryAdminViewer,
+    openPrivacyRevealModal,
     safeUserPage,
     userTotalPages,
-    setUserPage,
+    handleUserPageMove,
     displayedRecentLogs,
     safeRecentLogPage,
     recentLogTotalPages,
@@ -122,6 +124,7 @@ export default function AdminUsersTab({
             type="text" value={searchKeyword}
             onChange={(event) => setSearchKeyword(event.target.value)}
             placeholder="아이디, 이름, 이메일 검색" aria-label="회원 검색어"
+            maxLength={100}
           />
           <button type="submit">검색</button>
           <button type="button" className="admin-secondary-btn" onClick={handleResetSearch}>
@@ -136,7 +139,7 @@ export default function AdminUsersTab({
     <div className="admin-summary-grid">
       <article>
         <span>조회 회원</span>
-        <strong>{summary.totalUsers || users.length}명</strong>
+        <strong>{summary.totalUsers ?? users.length}명</strong>
       </article>
       <article>
         <span>현재 접속</span>
@@ -158,7 +161,7 @@ export default function AdminUsersTab({
           <div className="admin-card-title-row">
             <div>
               <h3>회원 목록</h3>
-              <p>회원 정보, 권한 상태, 접속 상태를 확인합니다.</p>
+              <p>이름·이메일은 기본 마스킹됩니다. 최고관리자만 재인증과 사유 기록 후 단건 원문을 60초간 열람할 수 있습니다.</p>
             </div>
             <div className="admin-card-action-row">
               <button type="button" onClick={() => fetchAdminUsers(appliedKeyword)} disabled={loadingUsers}>
@@ -175,6 +178,7 @@ export default function AdminUsersTab({
                   <th><button type="button" className="admin-sort-btn" onClick={() => handleUserSort('id')}>계정 {getUserSortMark(userSort, 'id')}</button></th>
                   <th><button type="button" className="admin-sort-btn" onClick={() => handleUserSort('name')}>이름 {getUserSortMark(userSort, 'name')}</button></th>
                   <th><button type="button" className="admin-sort-btn" onClick={() => handleUserSort('email')}>이메일 {getUserSortMark(userSort, 'email')}</button></th>
+                  <th>개인정보 원문</th>
                   <th>이메일 전송</th>
                   <th>D-Day</th>
                   <th>상태</th>
@@ -191,7 +195,7 @@ export default function AdminUsersTab({
               <tbody>
                 {displayedUsers.length === 0 ? (
                   <tr>
-                    <td colSpan="14" className="admin-empty-cell">
+                    <td colSpan="15" className="admin-empty-cell">
                       조회된 회원이 없습니다.
                     </td>
                   </tr>
@@ -202,8 +206,15 @@ export default function AdminUsersTab({
                       <td>{item.name || '-'}</td>
                       <td>{item.email || '-'}</td>
                       <td>
+                        {isPrimaryAdminViewer ? (
+                          <button type="button" className="admin-action-btn admin-action-btn-contrast" onClick={() => openPrivacyRevealModal(item)}>
+                            재인증 후 보기
+                          </button>
+                        ) : <span className="admin-protected-label">마스킹 적용</span>}
+                      </td>
+                      <td>
                         {isPrimaryAdminRow(item) ? <span className="admin-protected-label">관리자 보호</span> : (
-                          <button type="button" className="admin-action-btn admin-action-btn-contrast" onClick={() => openUserEmailModal(item)} disabled={!item.email}>
+                          <button type="button" className="admin-action-btn admin-action-btn-contrast" onClick={() => openUserEmailModal(item)} disabled={!item.hasEmail}>
                             전송
                           </button>
                         )}
@@ -262,9 +273,9 @@ export default function AdminUsersTab({
             </table>
           </div>
           <div className="admin-user-pagination">
-            <button type="button" className="admin-user-page-btn" disabled={safeUserPage <= 1} onClick={() => setUserPage((prev) => Math.max(1, prev - 1))}>이전</button>
+            <button type="button" className="admin-user-page-btn" disabled={safeUserPage <= 1 || loadingUsers} onClick={() => handleUserPageMove(safeUserPage - 1)}>이전</button>
             <span>{safeUserPage} / {userTotalPages}</span>
-            <button type="button" className="admin-user-page-btn" disabled={safeUserPage >= userTotalPages} onClick={() => setUserPage((prev) => Math.min(userTotalPages, prev + 1))}>다음</button>
+            <button type="button" className="admin-user-page-btn" disabled={safeUserPage >= userTotalPages || loadingUsers} onClick={() => handleUserPageMove(safeUserPage + 1)}>다음</button>
           </div>
         </div>
       ) : (

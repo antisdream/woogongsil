@@ -1,0 +1,339 @@
+.wgs-admin-root,
+.wgs-admin-login-page,
+.wgs-admin-session-loading {
+  min-height: 100vh;
+  background: radial-gradient(circle at top, #172554 0, #07111f 48%, #020617 100%);
+  color: #e2e8f0;
+}
+
+.wgs-admin-login-page,
+.wgs-admin-session-loading {
+  display: grid;
+  place-items: center;
+  padding: 32px 18px;
+  box-sizing: border-box;
+}
+
+.wgs-admin-login-card {
+  width: min(100%, 460px);
+  padding: 34px;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  border-radius: 24px;
+  background: rgba(15, 23, 42, 0.94);
+  box-shadow: 0 28px 80px rgba(2, 6, 23, 0.62);
+}
+
+.wgs-admin-login-kicker { margin: 0 0 10px; color: #67e8f9; font-size: 12px; font-weight: 800; letter-spacing: 0.14em; }
+.wgs-admin-login-card h1 { margin: 0; font-size: 30px; }
+.wgs-admin-login-description { margin: 12px 0 28px; color: #94a3b8; line-height: 1.6; }
+.wgs-admin-login-form, .wgs-admin-login-form label { display: grid; gap: 9px; }
+.wgs-admin-login-form { gap: 20px; }
+.wgs-admin-login-form label { color: #cbd5e1; font-size: 14px; font-weight: 700; }
+.wgs-admin-login-form input { width: 100%; min-height: 48px; padding: 0 14px; box-sizing: border-box; border: 1px solid #334155; border-radius: 12px; background: #0f172a; color: #f8fafc; font-size: 16px; }
+.wgs-admin-password-field { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+.wgs-admin-password-field button, .wgs-admin-login-submit, .wgs-admin-session-bar button { border: 0; border-radius: 10px; cursor: pointer; font-weight: 800; }
+.wgs-admin-password-field button { padding: 0 14px; background: #334155; color: #e2e8f0; }
+.wgs-admin-login-submit { min-height: 50px; background: linear-gradient(135deg, #06b6d4, #2563eb); color: white; font-size: 16px; }
+.wgs-admin-login-submit:disabled { cursor: wait; opacity: 0.6; }
+.wgs-admin-login-message { margin: 0; padding: 12px 14px; border: 1px solid rgba(248, 113, 113, 0.35); border-radius: 10px; background: rgba(127, 29, 29, 0.25); color: #fecaca; }
+.wgs-admin-session-bar { position: sticky; top: 0; z-index: 100; display: flex; justify-content: flex-end; align-items: center; gap: 14px; padding: 10px 20px; border-bottom: 1px solid rgba(148, 163, 184, 0.25); background: rgba(2, 6, 23, 0.94); color: #cbd5e1; backdrop-filter: blur(10px); }
+.wgs-admin-session-bar button { padding: 9px 13px; background: #b91c1c; color: white; }
+
+/* ---------------------------------------------------------------------
+   Standalone administrator theme
+   ---------------------------------------------------------------------
+   /manage does not load App.css. These semantic tokens reconnect the
+   admin bundle to a light-first palette and a lower-glare dimmed dark mode.
+   --------------------------------------------------------------------- */
+body.wgs-theme-light {
+  color-scheme: light;
+  --wgs-primary: #2563eb;
+  --wgs-primary-strong: #1d4ed8;
+  --wgs-success: #15803d;
+  --wgs-warning: #b45309;
+  --wgs-danger: #b42318;
+  --wgs-action-blue: #2563eb;
+  --wgs-action-green: #15803d;
+  --wgs-action-yellow: #b45309;
+  --wgs-action-purple: #7c3aed;
+  --wgs-action-red: #b42318;
+  --wgs-page-bg: #f3f5f8;
+  --wgs-deep-bg: #e9edf3;
+  --wgs-panel: #ffffff;
+  --wgs-panel-bg: #ffffff;
+  --wgs-panel-soft: #f8fafc;
+  --wgs-panel-strong: #ffffff;
+  --wgs-card: #ffffff;
+  --wgs-card-bg: #ffffff;
+  --wgs-card-soft: #f7f9fc;
+  --wgs-surface: #ffffff;
+  --wgs-surface-2: #eef2f7;
+  --wgs-neutral-bg: #f8fafc;
+  --wgs-button-muted: #eef2f7;
+  --wgs-input-bg: #ffffff;
+  --wgs-choice-bg: #ffffff;
+  --wgs-question-bg: #ffffff;
+  --wgs-exam-card: #ffffff;
+  --wgs-title: #172033;
+  --wgs-title-strong: #0f172a;
+  --wgs-text: #283548;
+  --wgs-text-main: #283548;
+  --wgs-text-strong: #172033;
+  --wgs-muted: #526176;
+  --wgs-subtle: #66758a;
+  --wgs-text-muted: #66758a;
+  --wgs-text-soft: #718096;
+  --wgs-text-sub: #526176;
+  --wgs-border: rgba(71, 85, 105, 0.20);
+  --wgs-border-strong: rgba(71, 85, 105, 0.34);
+  --wgs-focus: rgba(37, 99, 235, 0.28);
+  --wgs-active-bg: rgba(37, 99, 235, 0.10);
+  --wgs-shadow: 0 14px 36px rgba(15, 23, 42, 0.08);
+  --admin-shell-accent: rgba(37, 99, 235, 0.08);
+  --admin-shell-bar: rgba(255, 255, 255, 0.92);
+  --admin-shell-danger-bg: #fff5f4;
+  --admin-shell-danger-border: rgba(180, 35, 24, 0.28);
+  --admin-shell-danger-text: #9f1c13;
+}
+
+body.wgs-theme-dark {
+  color-scheme: dark;
+  --wgs-primary: #7db0ff;
+  --wgs-primary-strong: #9cc3ff;
+  --wgs-success: #6fca8d;
+  --wgs-warning: #e9b96e;
+  --wgs-danger: #f0958d;
+  --wgs-action-blue: #6ea8fe;
+  --wgs-action-green: #63c083;
+  --wgs-action-yellow: #dba85e;
+  --wgs-action-purple: #b69af7;
+  --wgs-action-red: #e98179;
+  --wgs-page-bg: #182230;
+  --wgs-deep-bg: #111923;
+  --wgs-panel: #202c3c;
+  --wgs-panel-bg: #202c3c;
+  --wgs-panel-soft: #263447;
+  --wgs-panel-strong: #243246;
+  --wgs-card: #243246;
+  --wgs-card-bg: #243246;
+  --wgs-card-soft: #29384c;
+  --wgs-surface: #26364a;
+  --wgs-surface-2: #2d3d52;
+  --wgs-neutral-bg: #202c3c;
+  --wgs-button-muted: #304157;
+  --wgs-input-bg: #1d2938;
+  --wgs-choice-bg: #26364a;
+  --wgs-question-bg: #26364a;
+  --wgs-exam-card: #243246;
+  --wgs-title: #edf2f7;
+  --wgs-title-strong: #f4f7fb;
+  --wgs-text: #dce5ef;
+  --wgs-text-main: #dce5ef;
+  --wgs-text-strong: #edf2f7;
+  --wgs-muted: #b2c0d0;
+  --wgs-subtle: #96a7ba;
+  --wgs-text-muted: #a5b5c7;
+  --wgs-text-soft: #96a7ba;
+  --wgs-text-sub: #b2c0d0;
+  --wgs-border: rgba(178, 192, 208, 0.24);
+  --wgs-border-strong: rgba(178, 192, 208, 0.38);
+  --wgs-focus: rgba(125, 176, 255, 0.34);
+  --wgs-active-bg: rgba(125, 176, 255, 0.15);
+  --wgs-shadow: 0 18px 44px rgba(5, 10, 18, 0.26);
+  --admin-shell-accent: rgba(125, 176, 255, 0.10);
+  --admin-shell-bar: rgba(28, 39, 54, 0.94);
+  --admin-shell-danger-bg: rgba(127, 29, 29, 0.20);
+  --admin-shell-danger-border: rgba(240, 149, 141, 0.34);
+  --admin-shell-danger-text: #f4b3ad;
+}
+
+html,
+body,
+#root,
+.wgs-admin-public-shell {
+  min-height: 100%;
+}
+
+body {
+  background: var(--wgs-page-bg);
+  color: var(--wgs-text);
+}
+
+.wgs-admin-root,
+.wgs-admin-login-page,
+.wgs-admin-session-loading {
+  background:
+    radial-gradient(circle at 100% 0, var(--admin-shell-accent) 0, transparent 34%),
+    linear-gradient(180deg, var(--wgs-page-bg) 0%, var(--wgs-deep-bg) 100%);
+  color: var(--wgs-text);
+}
+
+.wgs-admin-login-page,
+.wgs-admin-session-loading {
+  padding: 72px 18px 32px;
+}
+
+.wgs-admin-session-loading p {
+  margin: 0;
+  color: var(--wgs-muted);
+  font-weight: 700;
+}
+
+.wgs-admin-login-card {
+  border-color: var(--wgs-border);
+  border-radius: 20px;
+  background: var(--wgs-card);
+  box-shadow: var(--wgs-shadow);
+}
+
+.wgs-admin-login-kicker { color: var(--wgs-primary-strong); }
+.wgs-admin-login-card h1 { color: var(--wgs-title-strong); }
+.wgs-admin-login-description { color: var(--wgs-muted); }
+.wgs-admin-login-form label { color: var(--wgs-text); }
+
+.wgs-admin-login-form input {
+  margin: 0;
+  border-color: var(--wgs-border-strong);
+  border-radius: 10px;
+  background: var(--wgs-input-bg);
+  color: var(--wgs-text-strong);
+}
+
+.wgs-admin-login-form input:focus {
+  border-color: var(--wgs-primary);
+  box-shadow: 0 0 0 4px var(--wgs-focus);
+  outline: 0;
+}
+
+.wgs-admin-password-field button {
+  margin: 0;
+  border: 1px solid var(--wgs-border);
+  background: var(--wgs-button-muted);
+  color: var(--wgs-text);
+}
+
+.wgs-admin-login-submit {
+  border: 0;
+  background: var(--wgs-primary);
+  box-shadow: 0 8px 18px color-mix(in srgb, var(--wgs-primary) 22%, transparent);
+}
+
+.wgs-admin-login-message {
+  border-color: var(--admin-shell-danger-border);
+  background: var(--admin-shell-danger-bg);
+  color: var(--admin-shell-danger-text);
+}
+
+.wgs-admin-theme-corner {
+  position: fixed;
+  top: 18px;
+  right: 20px;
+  z-index: 200;
+}
+
+.wgs-admin-theme-toggle {
+  display: inline-flex;
+  gap: 3px;
+  padding: 3px;
+  border: 1px solid var(--wgs-border);
+  border-radius: 10px;
+  background: var(--wgs-button-muted);
+}
+
+.wgs-admin-theme-toggle button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 34px;
+  margin: 0;
+  padding: 0 11px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--wgs-muted);
+  font-size: 13px;
+  line-height: 1;
+  transform: none !important;
+}
+
+.wgs-admin-theme-toggle button:hover,
+.wgs-admin-theme-toggle button:focus-visible {
+  background: var(--wgs-surface-2);
+  color: var(--wgs-title);
+  outline: 0;
+}
+
+.wgs-admin-theme-toggle button.is-active {
+  background: var(--wgs-card);
+  color: var(--wgs-primary-strong);
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.14);
+}
+
+.wgs-admin-theme-toggle button:focus-visible,
+.wgs-admin-logout-button:focus-visible {
+  box-shadow: 0 0 0 3px var(--wgs-focus);
+}
+
+.wgs-admin-session-bar {
+  justify-content: space-between;
+  min-height: 58px;
+  padding: 8px 20px;
+  border-bottom-color: var(--wgs-border);
+  background: var(--admin-shell-bar);
+  color: var(--wgs-text);
+  backdrop-filter: blur(14px);
+}
+
+.wgs-admin-session-identity {
+  color: var(--wgs-muted);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.wgs-admin-session-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.wgs-admin-session-bar .wgs-admin-logout-button {
+  min-height: 40px;
+  margin: 0;
+  padding: 0 13px;
+  border: 1px solid var(--admin-shell-danger-border);
+  background: var(--admin-shell-danger-bg);
+  color: var(--admin-shell-danger-text);
+}
+
+@media (max-width: 640px) {
+  .wgs-admin-theme-corner {
+    top: 10px;
+    right: 10px;
+  }
+
+  .wgs-admin-login-page,
+  .wgs-admin-session-loading {
+    padding-top: 66px;
+  }
+
+  .wgs-admin-login-card {
+    padding: 26px 20px;
+    border-radius: 16px;
+  }
+
+  .wgs-admin-session-bar {
+    align-items: flex-start;
+    flex-direction: column;
+    padding: 10px 12px;
+  }
+
+  .wgs-admin-session-actions {
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  .wgs-admin-theme-toggle button {
+    padding-inline: 9px;
+  }
+}

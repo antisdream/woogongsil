@@ -2,9 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-import HCaptchaBox from '../components/HCaptchaBox';
-import { guardMissingHcaptcha } from '../hcaptchaGuard';
 import useScreenSettings from '../useScreenSettings';
+import LegalConsentBlock from '../components/LegalConsentBlock';
 
 const API_BASE = "";
 
@@ -31,14 +30,38 @@ const Signup = ({ embedded = false, afterSignupPath = '/' }) => {
     const [showPw, setShowPw] = useState(false);
     const [showPwConfirm, setShowPwConfirm] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [hcaptchaToken, setHcaptchaToken] = useState('');
-    const [hcaptchaEnabled, setHcaptchaEnabled] = useState(false);
-    const [hcaptchaResetKey, setHcaptchaResetKey] = useState(0);
 
     const [isEmailSent, setIsEmailSent] = useState(false);
     const [isEmailVerified, setIsEmailVerified] = useState(false);
     const [timer, setTimer] = useState(0); 
     const [resendTimer, setResendTimer] = useState(0); 
+    const [signupStep, setSignupStep] = useState(1);
+    const [legalDocuments, setLegalDocuments] = useState([]);
+    const [legalLoading, setLegalLoading] = useState(true);
+    const [legalError, setLegalError] = useState('');
+    const [legalDecisions, setLegalDecisions] = useState({ TERMS: '', SIGNUP_PRIVACY: '' });
+    const [age14Confirmed, setAge14Confirmed] = useState(false);
+
+    useEffect(() => {
+        let alive = true;
+        setLegalLoading(true);
+        axios.get(`${API_BASE}/api/legal/documents`, { params: { context: 'signup' } })
+            .then((response) => {
+                if (!alive) return;
+                const documents = Array.isArray(response.data?.documents) ? response.data.documents : [];
+                setLegalDocuments(documents);
+                setLegalError(documents.length >= 2 ? '' : '현재 적용 중인 회원가입 동의 문서를 확인할 수 없습니다.');
+            })
+            .catch((error) => {
+                if (!alive) return;
+                setLegalDocuments([]);
+                setLegalError(error.response?.data?.msg || '동의 문서를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.');
+            })
+            .finally(() => {
+                if (alive) setLegalLoading(false);
+            });
+        return () => { alive = false; };
+    }, []);
 
     useEffect(() => {
         let interval;
@@ -95,11 +118,10 @@ const Signup = ({ embedded = false, afterSignupPath = '/' }) => {
     const handleSendCode = async () => {
         if (!form.email.includes('@')) return alert(getSetting('messages.invalid_email', '올바른 이메일 형식을 입력해주세요.'));
         if (resendTimer >0) return alert(getSetting('messages.resend_wait', '{seconds}초 후에 다시 전송할 수 있습니다.').replace('{seconds}', String(resendTimer)));
-        if (!guardMissingHcaptcha('auth_send_code', hcaptchaEnabled, hcaptchaToken)) return;
 
         try {
             //  타입 지정: 회원가입 용도
-            const res = await axios.post(`${API_BASE}/api/auth/send-code`, { email: form.email, type: 'signup', hcaptchaToken });
+            const res = await axios.post(`${API_BASE}/api/auth/send-code`, { email: form.email, type: 'signup' });
             if (res.data.success) {
                 alert(isEmailSent ? getSetting('messages.code_resent', '인증번호가 재전송되었습니다. 메일함을 확인해주세요.') : getSetting('messages.code_sent', '인증번호가 전송되었습니다. (유효시간 2분)'));
                 setIsEmailSent(true);
@@ -108,8 +130,6 @@ const Signup = ({ embedded = false, afterSignupPath = '/' }) => {
             }
         } catch (err) {
             alert(err.response?.data?.msg || getSetting('messages.code_send_failed', '인증번호 전송에 실패했습니다.'));
-        } finally {
-            setHcaptchaResetKey((value) => value + 1);
         }
     };
 
@@ -134,10 +154,13 @@ const Signup = ({ embedded = false, afterSignupPath = '/' }) => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        if (legalDecisions.TERMS !== 'agree' || legalDecisions.SIGNUP_PRIVACY !== 'agree' || !age14Confirmed) {
+            setSignupStep(1);
+            return alert('필수 약관·개인정보 수집 및 이용에 동의하고 만 14세 이상임을 확인해주세요.');
+        }
         
         if (!isIdChecked) return alert(getSetting('messages.need_id_check', '아이디 중복 확인을 해주세요.'));
         if (!isEmailVerified) return alert(getSetting('messages.need_email_verify', '이메일 인증을 완료해주세요.'));
-        if (!guardMissingHcaptcha('signup', hcaptchaEnabled, hcaptchaToken)) return;
 
         const pwRegex = /^(?=.*[a-zA-Z])(?=.*[0-9])(?=.*[@!,._-])[a-zA-Z0-9@!,._-]{8,15}$/;
         if (!pwRegex.test(form.password)) {
@@ -151,8 +174,20 @@ const Signup = ({ embedded = false, afterSignupPath = '/' }) => {
         setIsSubmitting(true);
 
         try {
+            const acceptedDocuments = legalDocuments
+                .filter((document) => ['TERMS', 'SIGNUP_PRIVACY'].includes(document.documentCode))
+                .map((document) => ({
+                    documentCode: document.documentCode,
+                    version: document.version,
+                    sha256: document.sha256,
+                    accepted: true,
+                }));
             const res = await axios.post(`${API_BASE}/api/signup`, {
-                id: form.id, password: form.password, name: form.name, email: form.email, hcaptchaToken
+                id: form.id,
+                password: form.password,
+                name: form.name,
+                email: form.email,
+                legal: { age14Confirmed: true, acceptances: acceptedDocuments },
             });
             
             if (res.status === 200 || res.status === 201 || res.status === 202 || res.data.success) {
@@ -163,7 +198,6 @@ const Signup = ({ embedded = false, afterSignupPath = '/' }) => {
             alert(err.response?.data?.msg || getSetting('messages.signup_failed', '회원가입에 실패했습니다.'));
         } finally {
             setIsSubmitting(false);
-            setHcaptchaResetKey((value) => value + 1);
         }
     };
 
@@ -183,11 +217,56 @@ const Signup = ({ embedded = false, afterSignupPath = '/' }) => {
         else navigate(-1);
     };
 
+    const requiredLegalDocuments = ['TERMS', 'SIGNUP_PRIVACY']
+        .map((code) => legalDocuments.find((document) => document.documentCode === code))
+        .filter(Boolean);
+    const canContinueToForm = !legalLoading
+        && !legalError
+        && requiredLegalDocuments.length === 2
+        && legalDecisions.TERMS === 'agree'
+        && legalDecisions.SIGNUP_PRIVACY === 'agree'
+        && age14Confirmed;
+
+    const handleContinueToForm = () => {
+        if (!canContinueToForm) {
+            return alert('필수 동의 2개와 만 14세 이상 확인을 모두 완료해주세요.');
+        }
+        setSignupStep(2);
+    };
+
     return (
         <div className={embedded ? 'wgs-signup-embedded' : 'wgs-signup-standalone'} style={containerStyle}>
-            <h2 style={{ textAlign: 'center', color: 'var(--wgs-title)', marginBottom: '30px' }}>{getSetting('form.title', '회원가입')}</h2>
-            
-            {/* 회원가입 폼 블록: 기존 입력 순서와 API 로직은 유지하고, 내장 모드 전용 CSS로 크기만 보강합니다. */}
+            <h2 style={{ textAlign: 'center', color: 'var(--wgs-title)', marginBottom: '12px' }}>{getSetting('form.title', '회원가입')}</h2>
+            <p style={{ textAlign: 'center', color: 'var(--wgs-subtle)', margin: '0 0 26px' }}>
+                {signupStep === 1 ? '1단계 · 약관 및 개인정보 동의' : '2단계 · 가입정보 입력'}
+            </p>
+
+            {signupStep === 1 ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+                    <p style={{ margin: 0, color: 'var(--wgs-muted)', lineHeight: 1.6 }}>
+                        회원가입 전에 각 내용을 스크롤하여 확인한 뒤 동의 여부를 선택해주세요. 필수 항목에 동의하지 않으면 다음 단계로 이동하지 않습니다.
+                    </p>
+                    {legalLoading && <div style={{ padding: '24px', textAlign: 'center', color: 'var(--wgs-muted)' }}>동의 문서를 불러오는 중입니다...</div>}
+                    {legalError && <div role="alert" style={{ padding: '14px', borderRadius: '8px', background: 'rgba(239,68,68,0.12)', color: '#fca5a5' }}>{legalError}</div>}
+                    {requiredLegalDocuments.map((document) => (
+                        <LegalConsentBlock
+                            key={document.documentCode}
+                            document={document}
+                            decision={legalDecisions[document.documentCode]}
+                            onDecisionChange={(decision) => setLegalDecisions((current) => ({ ...current, [document.documentCode]: decision }))}
+                        />
+                    ))}
+                    <label className="wgs-age-confirm" style={{ padding: '16px', borderRadius: '10px', border: '1px solid var(--wgs-border)', background: 'var(--wgs-practice-toggle-bg)', color: 'var(--wgs-title)' }}>
+                        <input className="wgs-legal-check-input" type="checkbox" checked={age14Confirmed} onChange={(event) => setAge14Confirmed(event.target.checked)} />
+                        <span><strong>[필수]</strong> 본인은 만 14세 이상입니다. 우공실은 만 14세 미만 회원가입을 받지 않습니다.</span>
+                    </label>
+                    <div style={{ display: 'flex', gap: '10px', marginTop: '4px' }}>
+                        <button type="button" onClick={handleCancel} style={{ flex: 1, padding: '15px', background: 'var(--wgs-border)', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', fontSize: '16px' }}>취소</button>
+                        <button type="button" onClick={handleContinueToForm} disabled={!canContinueToForm} style={{ flex: 1, padding: '15px', background: canContinueToForm ? '#3b82f6' : 'var(--wgs-border)', color: 'white', border: 'none', borderRadius: '8px', cursor: canContinueToForm ? 'pointer' : 'not-allowed', fontWeight: 'bold', fontSize: '16px' }}>다음</button>
+                    </div>
+                </div>
+            ) : (
+            /* 회원가입 폼 블록: 기존 입력 순서와 API 로직은 유지하고, 내장 모드 전용 CSS로 크기만 보강합니다. */
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 <div>
                     <label style={{ color: 'var(--wgs-muted)', fontSize: '14px', display: 'flex', alignItems: 'center' }}>
@@ -214,12 +293,6 @@ const Signup = ({ embedded = false, afterSignupPath = '/' }) => {
                         </button>
                     </div>
                 </div>
-
-                <HCaptchaBox
-                    actionLabel={getSetting('form.hcaptcha_label', '회원가입/인증메일 보안 확인')} onTokenChange={setHcaptchaToken}
-                    onEnabledChange={setHcaptchaEnabled}
-                    resetKey={hcaptchaResetKey}
-                />
 
                 {isEmailSent && !isEmailVerified && (
                     <div style={{ animation: 'fadeIn 0.3s ease-in-out' }}>
@@ -264,12 +337,13 @@ const Signup = ({ embedded = false, afterSignupPath = '/' }) => {
                 </div>
                 
                 <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
-                    <button type="button" onClick={handleCancel} disabled={isSubmitting} style={{ flex: 1, padding: '15px', background: 'var(--wgs-border)', color: 'white', border: 'none', borderRadius: '8px', cursor: isSubmitting ? 'not-allowed' : 'pointer', fontWeight: 'bold', fontSize: '16px' }}>{getSetting('form.cancel_button', '취소')}</button>
+                    <button type="button" onClick={() => setSignupStep(1)} disabled={isSubmitting} style={{ flex: 1, padding: '15px', background: 'var(--wgs-border)', color: 'white', border: 'none', borderRadius: '8px', cursor: isSubmitting ? 'not-allowed' : 'pointer', fontWeight: 'bold', fontSize: '16px' }}>이전</button>
                     <button type="submit" disabled={isSubmitting} style={{ flex: 1, padding: '15px', background: isSubmitting ? '#2563eb' : '#3b82f6', color: 'white', border: 'none', borderRadius: '8px', cursor: isSubmitting ? 'not-allowed' : 'pointer', fontWeight: 'bold', fontSize: '16px' }}>
                         {isSubmitting ? getSetting('form.submit_loading_label', '처리 중...') : getSetting('form.submit_button', '가입완료')}
                     </button>
                 </div>
             </form>
+            )}
         </div>
     );
 };

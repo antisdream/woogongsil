@@ -7,12 +7,32 @@ import './boardBlockNote.css';
 import { getBoardEditorInitialContent } from './boardUtils';
 import { boardBlockNoteDictionary } from './boardBlockNoteDictionary';
 
-const fileToDataUrl = (file) => new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result || ''));
-    reader.onerror = () => reject(reader.error || new Error('file_read_failed'));
-    reader.readAsDataURL(file);
-});
+const MB = 1024 * 1024;
+const UPLOAD_LIMITS = {
+    image: 5 * MB,
+    file: 20 * MB,
+    audio: 30 * MB,
+    video: 30 * MB,
+};
+
+const getUploadKind = (file) => {
+    const mimeType = String(file?.type || '').toLowerCase();
+    const name = String(file?.name || '').toLowerCase();
+
+    if (mimeType.startsWith('image/') || /\.(jpg|jpeg|png|gif|webp|svg)$/.test(name)) return 'image';
+    if (mimeType.startsWith('video/') || /\.mp4$/.test(name)) return 'video';
+    if (mimeType.startsWith('audio/') || /\.(mp3|wav)$/.test(name)) return 'audio';
+    return 'file';
+};
+
+const formatUploadSize = (bytes) => `${Math.round((bytes / MB) * 10) / 10}MB`;
+
+const appendUploadAuth = (formData, uploadAuth) => {
+    Object.entries(uploadAuth || {}).forEach(([key, value]) => {
+        if (value === undefined || value === null) return;
+        formData.append(key, String(value));
+    });
+};
 
 function BoardBlockNoteEditor({
     content,
@@ -34,18 +54,24 @@ function BoardBlockNoteEditor({
     );
 
     const uploadFile = useCallback(async (file) => {
-        const dataUrl = await fileToDataUrl(file);
+        const uploadKind = getUploadKind(file);
+        const uploadLimit = UPLOAD_LIMITS[uploadKind] || UPLOAD_LIMITS.file;
+
+        if (file.size > uploadLimit) {
+            throw new Error(`${uploadKind === 'image' ? '이미지' : uploadKind === 'video' ? '영상' : uploadKind === 'audio' ? '오디오' : '파일'}은 ${formatUploadSize(uploadLimit)} 이하만 업로드할 수 있습니다.`);
+        }
+
+        const formData = new FormData();
+        appendUploadAuth(formData, uploadAuthRef.current);
+        formData.append('fileName', file.name || 'board-file');
+        formData.append('mimeType', file.type || 'application/octet-stream');
+        formData.append('size', String(file.size || 0));
+        formData.append('file', file);
+
         const response = await fetch(uploadUrl, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
-            body: JSON.stringify({
-                ...(uploadAuthRef.current || {}),
-                fileName: file.name,
-                mimeType: file.type || 'application/octet-stream',
-                size: file.size,
-                dataUrl,
-            }),
+            body: formData,
         });
 
         const result = await response.json().catch(() => ({}));

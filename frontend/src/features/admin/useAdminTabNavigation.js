@@ -15,7 +15,7 @@ function useAdminTabNavigation() {
   const openAdminTab = useCallback((tabId, options = {}) => {
     const nextTab = ADMIN_TABS.some((tab) => tab.id === tabId) ? tabId : 'dashboard';
     setActiveAdminTab(nextTab);
-    const nextPath = ADMIN_TAB_ROUTE_MAP[nextTab] || '/admin/dashboard';
+    const nextPath = ADMIN_TAB_ROUTE_MAP[nextTab] || '/manage/dashboard';
     if (location.pathname !== nextPath) {
       navigate(nextPath, { replace: Boolean(options.replace) });
     }

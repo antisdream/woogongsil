@@ -362,6 +362,24 @@ body.wgs-theme-dark .admin-mail-modal textarea {
   min-height: 220px;
 }
 
+.admin-privacy-modal textarea {
+  min-height: 104px;
+}
+
+.admin-privacy-modal .admin-alert,
+.admin-privacy-modal .admin-row-note {
+  max-width: none;
+  line-height: 1.6;
+}
+
+.admin-privacy-revealed {
+  margin-top: 16px;
+  padding: 16px;
+  border: 1px solid rgba(59, 130, 246, 0.28);
+  border-radius: 14px;
+  background: rgba(59, 130, 246, 0.08);
+}
+
 .admin-mail-error {
   margin: 12px 0 0;
   border-radius: 12px;

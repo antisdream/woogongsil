@@ -128,20 +128,3 @@ body.wgs-theme-dark .wgs-landing-hero p { color: var(--wgs-muted) !important; }
   border-radius: 14px !important;
   box-shadow: 0 16px 28px rgba(37, 99, 235, .20) !important;
 }
-
-.home-calendar-card {
-  padding: clamp(18px, 2.2vw, 28px) !important;
-  background: var(--wgs-panel) !important;
-}
-
-.home-calendar-card h3 { color: var(--wgs-title) !important; font-family: var(--wgs-font-h2) !important; }
-
-.home-calendar-card > div:last-child > div > div:last-child > div {
-  min-height: clamp(82px, 8.5vw, 128px) !important;
-  border-radius: 12px !important;
-  background: var(--wgs-surface) !important;
-  border: 1px solid var(--wgs-border) !important;
-  color: var(--wgs-text) !important;
-}
-
-body.wgs-theme-dark .home-calendar-card > div:last-child > div > div:last-child > div { background: #020817 !important; }

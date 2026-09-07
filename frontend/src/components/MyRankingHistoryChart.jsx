@@ -1,5 +1,6 @@
 // Shared UI component used across frontend pages.
 import React, { useEffect, useMemo, useState } from "react";
+import "../styles/app/mobile-ranking.css";
 import {
   API_ENDPOINTS,
   TYPE_OPTIONS,
@@ -10,12 +11,10 @@ import {
   isValidYmd,
   normalizeType,
   safeNumber,
-  getStoredToken,
-  getUserIdCandidates,
-  getServerUserCandidates,
   extractRows,
   aggregateRows,
 } from "../features/rankingHistory/rankingHistoryData.js";
+import { getPersonalRankingRequestContext } from "../features/rankingHistory/rankingHistorySession.js";
 
 /**
  * 개인 랭킹 히스토리 차트
@@ -23,13 +22,20 @@ import {
  * - 점수/정답률 탭 분리
  * - 일별/주별/월별 보기 지원
  * - API v2를 먼저 호출하고 실패 시 기존 API로 대체 처리합니다.
- * - localStorage/sessionStorage/JWT 안의 userId 후보를 모두 확인해 DB 연결 안정화
+ * - 개인 조회는 현재 WGS 로그인 세션의 본인 ID만 사용합니다.
+ * - 관리자 대상 조회는 별도 관리자 API와 HttpOnly 관리자 쿠키를 사용합니다.
  */
 
 
 import HistoryChart from "../features/rankingHistory/HistoryChart.jsx";
 
-export default function MyRankingHistoryChart({ activeType = "random", targetUserId = null, titlePrefix = "개인", getHomeScreenSetting = null }) {
+export default function MyRankingHistoryChart({
+  activeType = "random",
+  targetUserId = null,
+  titlePrefix = "개인",
+  getHomeScreenSetting = null,
+  apiEndpoints = API_ENDPOINTS,
+}) {
   const initialEnd = todayYmd();
   const initialStart = addDays(initialEnd, -20);
 
@@ -131,20 +137,23 @@ export default function MyRankingHistoryChart({ activeType = "random", targetUse
     setLastMessage("");
 
     try {
-      const storageCandidates = targetUserId ? [String(targetUserId).trim()].filter(Boolean) : getUserIdCandidates();
-      const serverCandidates = targetUserId ? [] : await getServerUserCandidates();
-      const candidates = Array.from(new Set([...storageCandidates, ...serverCandidates]));
-
-      const token = getStoredToken();
-      const headers = { Accept: "application/json" };
-
-      if (token) {
-        headers.Authorization = `Bearer ${token}`;
+      const personalSession = targetUserId ? null : getPersonalRankingRequestContext(
+        window.sessionStorage,
+        window.localStorage,
+      );
+      if (!targetUserId && !personalSession) {
+        setRows([]);
+        setLastMessage(historyLoadFailedMessage);
+        return;
       }
+      const candidates = targetUserId
+        ? [String(targetUserId).trim()].filter(Boolean)
+        : [personalSession.userId];
+      const headers = personalSession?.headers || { Accept: "application/json" };
 
       const attempts = [];
 
-      for (const endpoint of API_ENDPOINTS) {
+      for (const endpoint of apiEndpoints) {
         for (const userId of candidates) {
           const params = new URLSearchParams();
 
@@ -246,6 +255,7 @@ export default function MyRankingHistoryChart({ activeType = "random", targetUse
 
   return (
     <section
+      className="mobile-ranking-history"
       style={{
         width: "100%",
         border: "1px solid #dbe4ef",
@@ -256,6 +266,7 @@ export default function MyRankingHistoryChart({ activeType = "random", targetUse
       }}
     >
       <div
+        className="mobile-ranking-header"
         style={{
           display: "flex",
           justifyContent: "space-between",
@@ -265,16 +276,17 @@ export default function MyRankingHistoryChart({ activeType = "random", targetUse
           marginBottom: 18,
         }}
       >
-        <div>
-          <h3 style={{ margin: 0, fontSize: 24, fontWeight: 900, color: "#0f172a" }}>
+        <div className="mobile-ranking-header-copy">
+          <h3 className="mobile-ranking-title" style={{ margin: 0, fontSize: 24, fontWeight: 900, color: "#0f172a" }}>
              {historyTitlePrefix} {historyTitleSuffix}
           </h3>
-          <p style={{ margin: "10px 0 0", color: "#64748b", fontWeight: 700 }}>
+          <p className="mobile-ranking-description" style={{ margin: "10px 0 0", color: "#64748b", fontWeight: 700 }}>
             {targetUserId ? historyDescTarget : historyDescMy}
           </p>
         </div>
 
         <button
+          className="mobile-ranking-query"
           type="button" onClick={requestHistory}
           disabled={loading}
           style={{
@@ -293,6 +305,7 @@ export default function MyRankingHistoryChart({ activeType = "random", targetUse
       </div>
 
       <div
+        className="mobile-ranking-form"
         style={{
           display: "grid",
           gridTemplateColumns: "repeat(3, minmax(180px, 1fr))",
@@ -300,9 +313,10 @@ export default function MyRankingHistoryChart({ activeType = "random", targetUse
           marginBottom: 18,
         }}
       >
-        <label style={{ display: "grid", gap: 8, color: "#334155", fontWeight: 900 }}>
+        <label className="mobile-ranking-field" style={{ display: "grid", gap: 8, color: "#334155", fontWeight: 900 }}>
           {historyStartDateLabel}
           <input
+            className="mobile-ranking-control"
             type="date" value={startDate}
             onChange={(event) => setStartDate(event.target.value)}
             style={{
@@ -317,9 +331,10 @@ export default function MyRankingHistoryChart({ activeType = "random", targetUse
           />
         </label>
 
-        <label style={{ display: "grid", gap: 8, color: "#334155", fontWeight: 900 }}>
+        <label className="mobile-ranking-field" style={{ display: "grid", gap: 8, color: "#334155", fontWeight: 900 }}>
           {historyEndDateLabel}
           <input
+            className="mobile-ranking-control"
             type="date" value={endDate}
             onChange={(event) => setEndDate(event.target.value)}
             style={{
@@ -334,9 +349,10 @@ export default function MyRankingHistoryChart({ activeType = "random", targetUse
           />
         </label>
 
-        <label style={{ display: "grid", gap: 8, color: "#334155", fontWeight: 900 }}>
+        <label className="mobile-ranking-field" style={{ display: "grid", gap: 8, color: "#334155", fontWeight: 900 }}>
           {historyTypeLabel}
           <select
+            className="mobile-ranking-control"
             value={problemType}
             onChange={(event) => setProblemType(normalizeType(event.target.value))}
             style={{
@@ -359,6 +375,7 @@ export default function MyRankingHistoryChart({ activeType = "random", targetUse
       </div>
 
       <div
+        className="mobile-ranking-summary"
         style={{
           display: "grid",
           gridTemplateColumns: "repeat(3, minmax(160px, 1fr))",
@@ -367,6 +384,7 @@ export default function MyRankingHistoryChart({ activeType = "random", targetUse
         }}
       >
         <div
+          className="mobile-ranking-summary-card"
           style={{
             borderRadius: 14,
             background: "#dbeafe",
@@ -375,11 +393,12 @@ export default function MyRankingHistoryChart({ activeType = "random", targetUse
             fontWeight: 900,
           }}
         >
-          <div style={{ fontSize: 14, marginBottom: 8 }}>{historyScoreLabel}</div>
-          <div style={{ fontSize: 26 }}>{summary.score}{historyScoreUnit}</div>
+          <div className="mobile-ranking-summary-label" style={{ fontSize: 14, marginBottom: 8 }}>{historyScoreLabel}</div>
+          <div className="mobile-ranking-summary-value" style={{ fontSize: 26 }}>{summary.score}{historyScoreUnit}</div>
         </div>
 
         <div
+          className="mobile-ranking-summary-card"
           style={{
             borderRadius: 14,
             background: "#dcfce7",
@@ -388,11 +407,12 @@ export default function MyRankingHistoryChart({ activeType = "random", targetUse
             fontWeight: 900,
           }}
         >
-          <div style={{ fontSize: 14, marginBottom: 8 }}>{historyAccuracyLabel}</div>
-          <div style={{ fontSize: 26 }}>{summary.accuracy}%</div>
+          <div className="mobile-ranking-summary-label" style={{ fontSize: 14, marginBottom: 8 }}>{historyAccuracyLabel}</div>
+          <div className="mobile-ranking-summary-value" style={{ fontSize: 26 }}>{summary.accuracy}%</div>
         </div>
 
         <div
+          className="mobile-ranking-summary-card"
           style={{
             borderRadius: 14,
             background: "#fef3c7",
@@ -401,12 +421,13 @@ export default function MyRankingHistoryChart({ activeType = "random", targetUse
             fontWeight: 900,
           }}
         >
-          <div style={{ fontSize: 14, marginBottom: 8 }}>{historyRecordDaysLabel}</div>
-          <div style={{ fontSize: 26 }}>{summary.recordDays}{historyDaySuffix}</div>
+          <div className="mobile-ranking-summary-label" style={{ fontSize: 14, marginBottom: 8 }}>{historyRecordDaysLabel}</div>
+          <div className="mobile-ranking-summary-value" style={{ fontSize: 26 }}>{summary.recordDays}{historyDaySuffix}</div>
         </div>
       </div>
 
       <div
+        className="mobile-ranking-options"
         style={{
           display: "flex",
           gap: 10,
@@ -417,6 +438,7 @@ export default function MyRankingHistoryChart({ activeType = "random", targetUse
       >
         {historyMetricOptions.map((option) => (
           <button
+            className="mobile-ranking-option"
             key={option.value}
             type="button" onClick={() => setMetric(option.value)}
             style={
@@ -429,10 +451,11 @@ export default function MyRankingHistoryChart({ activeType = "random", targetUse
           </button>
         ))}
 
-        <div style={{ width: 14 }} />
+        <div className="mobile-ranking-option-spacer" style={{ width: 14 }} />
 
         {historyPeriodOptions.map((option) => (
           <button
+            className="mobile-ranking-option"
             key={option.value}
             type="button" onClick={() => setPeriodMode(option.value)}
             style={periodMode === option.value ? activeButton("#10b981") : buttonBase}
@@ -444,6 +467,7 @@ export default function MyRankingHistoryChart({ activeType = "random", targetUse
 
       {lastMessage && (
         <div
+          className="mobile-ranking-message"
           style={{
             border: "1px solid #fed7aa",
             background: "#fff7ed",

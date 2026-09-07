@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import axios from 'axios';
 import useScreenSettings from '../useScreenSettings';
+import LegalConsentBlock from '../components/LegalConsentBlock';
 
 const API_BASE = "";
 
@@ -55,6 +56,14 @@ const Fortune = () => {
     const [activeTab, setActiveTab] = useState('individual');
     const [step, setStep] = useState(1); 
     const [result, setResult] = useState(null);
+    const [resultSaveStatus, setResultSaveStatus] = useState('');
+    const [legalDocuments, setLegalDocuments] = useState([]);
+    const [legalLoading, setLegalLoading] = useState(true);
+    const [legalError, setLegalError] = useState('');
+    const [legalDecisions, setLegalDecisions] = useState({
+        FORTUNE_PROCESSING: '',
+        FORTUNE_RESULT_STORAGE: '',
+    });
 
     const [indiv, setIndiv] = useState({ name: loggedInUser, bYear: '연도', bMonth: '월', bDay: '일', birthtime: 'unknown', gender: 'male' });
     const [couple, setCouple] = useState({
@@ -71,13 +80,49 @@ const Fortune = () => {
         }
     }, [t]);
 
+    useEffect(() => {
+        let alive = true;
+        axios.get(`${API_BASE}/api/legal/documents`, { params: { context: 'fortune' } })
+            .then((response) => {
+                if (!alive) return;
+                const documents = Array.isArray(response.data?.documents) ? response.data.documents : [];
+                setLegalDocuments(documents);
+                setLegalError(documents.length >= 2 ? '' : '운세 개인정보 동의 문서를 확인할 수 없습니다.');
+            })
+            .catch((error) => {
+                if (!alive) return;
+                setLegalDocuments([]);
+                setLegalError(error.response?.data?.msg || '운세 개인정보 동의 문서를 불러오지 못했습니다.');
+            })
+            .finally(() => {
+                if (alive) setLegalLoading(false);
+            });
+        return () => { alive = false; };
+    }, []);
+
     const formatDate = (y, m, d) => `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
 
-    const saveFortuneHistory = async (type, searchData) => {
-        if (!userId) return;
-        try {
-            await axios.post(`${API_BASE}/api/user/fortune-history`, { ...getSessionAuth(), id: userId, type: type, searchData: searchData });
-        } catch (err) { console.error("운세 기록 저장 실패:", err); }
+    const buildFortuneLegalPayload = () => ({
+        acceptances: legalDocuments
+            .filter((document) => legalDecisions[document.documentCode] === 'agree')
+            .map((document) => ({
+                documentCode: document.documentCode,
+                version: document.version,
+                sha256: document.sha256,
+                accepted: true,
+            })),
+    });
+
+    const validateFortuneConsent = () => {
+        if (legalLoading || legalError) {
+            alert(legalError || '운세 개인정보 동의 문서를 불러오는 중입니다.');
+            return false;
+        }
+        if (legalDecisions.FORTUNE_PROCESSING !== 'agree') {
+            alert('운세 계산을 위한 개인정보 일시 처리에 동의해야 결과를 계산할 수 있습니다.');
+            return false;
+        }
+        return true;
     };
 
     // 이름 검증 로직 (완성된 한글만 허용. 자음, 모음, 영어, 특수문자, 숫자 불가)
@@ -88,24 +133,32 @@ const Fortune = () => {
 
     const handleIndivSubmit = async (e) => {
         e.preventDefault();
+        if (!validateFortuneConsent()) return;
         // 이름 검증 적용
         if (!validateName(indiv.name)) return alert(t('messages.invalid_name', '이름이 정확하지 않습니다, 올바른 이름을 입력해주세요!'));
         if (indiv.bYear === '연도' || indiv.bMonth === '월' || indiv.bDay === '일') return alert(t('messages.need_birthdate', '생년월일을 모두 선택해주세요!'));
         
-        const payload = { ...indiv, birthdate: formatDate(indiv.bYear, indiv.bMonth, indiv.bDay) };
+        const payload = {
+            ...indiv,
+            birthdate: formatDate(indiv.bYear, indiv.bMonth, indiv.bDay),
+            ...getSessionAuth(),
+            saveResult: legalDecisions.FORTUNE_RESULT_STORAGE === 'agree',
+            legal: buildFortuneLegalPayload(),
+        };
         setStep(2); 
         try {
             const res = await axios.post(`${API_BASE}/api/fortune/individual`, payload);
             if (res.data.success) { 
                 setResult(res.data.data); 
+                setResultSaveStatus(res.data.saved ? '결과만 안전하게 저장했습니다. 입력 원본은 저장하지 않았습니다.' : '이번 결과는 저장하지 않았습니다. 입력 원본도 저장하지 않았습니다.');
                 setStep(3); 
-                saveFortuneHistory('individual', payload);
             }
-        } catch (err) { alert(t('messages.server_error', '서버 에러')); setStep(1); }
+        } catch (err) { alert(err.response?.data?.msg || t('messages.server_error', '서버 에러')); setStep(1); }
     };
 
     const handleCoupleSubmit = async (e) => {
         e.preventDefault();
+        if (!validateFortuneConsent()) return;
         if (!validateName(couple.p1.name) || !validateName(couple.p2.name)) {
             return alert(t('messages.invalid_name', '이름이 정확하지 않습니다, 올바른 이름을 입력해주세요!'));
         }
@@ -124,17 +177,20 @@ const Fortune = () => {
         
         const payload = {
             p1: { ...couple.p1, birthdate: formatDate(couple.p1.bYear, couple.p1.bMonth, couple.p1.bDay) },
-            p2: { ...couple.p2, birthdate: formatDate(couple.p2.bYear, couple.p2.bMonth, couple.p2.bDay) }
+            p2: { ...couple.p2, birthdate: formatDate(couple.p2.bYear, couple.p2.bMonth, couple.p2.bDay) },
+            ...getSessionAuth(),
+            saveResult: legalDecisions.FORTUNE_RESULT_STORAGE === 'agree',
+            legal: buildFortuneLegalPayload(),
         };
         setStep(2); 
         try {
             const res = await axios.post(`${API_BASE}/api/fortune/couple`, payload);
             if (res.data.success) { 
                 setResult(res.data.data); 
+                setResultSaveStatus(res.data.saved ? '결과만 안전하게 저장했습니다. 두 사람의 입력 원본은 저장하지 않았습니다.' : '이번 결과는 저장하지 않았습니다. 두 사람의 입력 원본도 저장하지 않았습니다.');
                 setStep(3); 
-                saveFortuneHistory('couple', payload);
             }
-        } catch (err) { alert(t('messages.server_error', '서버 에러')); setStep(1); }
+        } catch (err) { alert(err.response?.data?.msg || t('messages.server_error', '서버 에러')); setStep(1); }
     };
 
     const getElementColor = (el) => {
@@ -180,6 +236,30 @@ const Fortune = () => {
 
     return (
         <div className="fortune-page wgs-typography-scope" style={{ maxWidth: '800px', margin: '30px auto', color: 'white', fontFamily: 'var(--wgs-font-body)' }}>
+            {step === 1 && (
+                <section style={{ marginBottom: '20px', padding: '20px', borderRadius: '12px', border: '1px solid var(--wgs-border)', background: 'var(--wgs-card-bg)', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                    <div>
+                        <h2 style={{ margin: '0 0 8px', color: 'var(--wgs-title)', fontSize: '20px' }}>운세 개인정보 처리 선택</h2>
+                        <p style={{ margin: 0, color: 'var(--wgs-muted)', lineHeight: 1.6 }}>
+                            이름·생년월일·성별·출생시간은 계산 중에만 사용하고 DB에 저장하지 않습니다. 결과 저장은 선택사항이며 기본적으로 저장되지 않습니다.
+                        </p>
+                    </div>
+                    {legalLoading && <div style={{ color: 'var(--wgs-muted)' }}>동의 문서를 불러오는 중입니다...</div>}
+                    {legalError && <div role="alert" style={{ color: '#fca5a5' }}>{legalError}</div>}
+                    {legalDocuments.map((document) => (
+                        <LegalConsentBlock
+                            key={document.documentCode}
+                            document={document}
+                            compact
+                            decision={legalDecisions[document.documentCode] || ''}
+                            onDecisionChange={(decision) => setLegalDecisions((current) => ({ ...current, [document.documentCode]: decision }))}
+                        />
+                    ))}
+                    <p style={{ margin: 0, color: 'var(--wgs-subtle)', fontSize: '13px' }}>
+                        선택 동의를 하지 않거나 “동의하지 않음”을 선택해도 계산은 가능하며 결과 이력만 남지 않습니다.
+                    </p>
+                </section>
+            )}
             {step === 1 && (
                 <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
                     <button onClick={() => setActiveTab('individual')} style={{ flex: 1, padding: '15px', background: activeTab === 'individual'? '#3b82f6' : 'var(--wgs-button-muted)', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', fontSize: '16px' }}>{t('tabs.individual_label', ' 오늘의 운세?')}</button>
@@ -241,6 +321,7 @@ const Fortune = () => {
 
             {step === 3 && activeTab === 'individual' && result && (
                 <div style={{ animation: 'fadeIn 0.8s' }}>
+                    {resultSaveStatus && <div style={{ marginBottom: '14px', padding: '12px 14px', borderRadius: '8px', background: 'rgba(16,185,129,0.12)', color: '#6ee7b7' }}>{resultSaveStatus}</div>}
                     <div style={{ background: 'var(--wgs-practice-toggle-bg)', padding: '30px', borderRadius: '12px', marginBottom: '20px' }}>
                         <h2 style={{ textAlign: 'center', color: '#fcd34d', marginTop: 0 }}>{formatSetting('result.individual_saju_title', ' {name}님의 사주 명식', { name: result.name })}</h2>
                         {renderSajuBox(result.saju, result.name)}
@@ -263,6 +344,7 @@ const Fortune = () => {
 
             {step === 3 && activeTab === 'couple' && result && (
                 <div style={{ animation: 'fadeIn 0.8s' }}>
+                    {resultSaveStatus && <div style={{ marginBottom: '14px', padding: '12px 14px', borderRadius: '8px', background: 'rgba(16,185,129,0.12)', color: '#6ee7b7' }}>{resultSaveStatus}</div>}
                     <div style={{ textAlign: 'center', marginBottom: '20px' }}>
                         <h2 style={{ color: '#f9a8d4', margin: 0 }}>{formatSetting('result.couple_score_title', ' {name1} & {name2} 궁합 지수', { name1: result.p1.name, name2: result.p2.name })}</h2>
                         <div style={{ fontSize: '50px', fontWeight: 'bold', color: result.score >= 80 ? '#10b981' : '#f59e0b', marginTop: '10px' }}>{formatSetting('result.score_value', '{score}점', { score: result.score })}</div>

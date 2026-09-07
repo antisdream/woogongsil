@@ -1,59 +1,10 @@
 // 관리자 기능 모듈입니다: adminUtils
+import {
+  fetchAdminSession,
+  getCurrentAdmin,
+  makeAdminHeaders,
+} from '../../admin/adminSession.js';
 export const API_BASE = '';
-
-
-
-export const mealMapLayoutFieldsV253 = [
-  { key: 'contentMaxWidth', label: '전체 콘텐츠 최대 폭', hint: '예: 1480px' },
-  { key: 'heroTitleSize', label: '상단 제목 크기', hint: '예: 42px' },
-  { key: 'mapMinHeight', label: '지도 최소 높이', hint: '예: 760px' },
-  { key: 'detailPanelWidth', label: '오른쪽 상세 패널 폭', hint: '예: 360px' },
-  { key: 'cardRadius', label: '카드 둥근 모서리', hint: '예: 24px' },
-  { key: 'sectionGap', label: '섹션 간격', hint: '예: 24px' },
-];
-
-export const mealMapLayoutDefaultsV253 = {
-  contentMaxWidth: '1480px',
-  heroTitleSize: '42px',
-  mapMinHeight: '760px',
-  detailPanelWidth: '360px',
-  cardRadius: '24px',
-  sectionGap: '24px',
-};
-export const MEALMAP_TEXT_FIELD_META = [
-  { key: "heroEyebrow", label: "상단 작은 제목" },
-  { key: "heroTitle", label: "대표 제목" },
-  { key: "heroSubtitle", label: "대표 설명" },
-  { key: "submitButton", label: "제보 버튼" },
-  { key: "searchPlaceholder", label: "검색창 안내문" },
-  { key: "searchButton", label: "검색 버튼" },
-  { key: "filterButton", label: "필터 버튼" },
-  { key: "mapTitle", label: "지도 제목" },
-  { key: "mapGuideTitle", label: "지도 안내 제목" },
-  { key: "mapGuideBody", label: "지도 안내 설명" },
-  { key: "emptyTitle", label: "빈 목록 제목" },
-  { key: "emptyBody", label: "빈 목록 설명" },
-  { key: "selectMarkerTitle", label: "미선택 안내 제목" },
-  { key: "selectMarkerBody", label: "미선택 안내 설명" },
-  { key: "naverButton", label: "카카오지도/후기 버튼" },
-  { key: "likeButton", label: "좋아요 버튼" },
-  { key: "editSuggestButton", label: "수정 제안 버튼" },
-  { key: "deleteSuggestButton", label: "삭제 요청 버튼" },
-  { key: "deleteRequestPrompt", label: "삭제 요청 사유 입력 안내" },
-  { key: "deleteRequestConfirm", label: "삭제 요청 확인 문구" },
-  { key: "deleteRequestSuccessMessage", label: "삭제 요청 성공 메시지" },
-  { key: "deleteRequestFailMessage", label: "삭제 요청 실패 메시지" },
-  { key: "commentTitle", label: "댓글 제목" },
-  { key: "commentPlaceholder", label: "댓글 입력 안내문" },
-  { key: "commentSubmitButton", label: "댓글 등록 버튼" },
-  { key: "editModalEyebrow", label: "수정 제안 모달 작은 제목" },
-  { key: "editModalSubtext", label: "수정 제안 모달 설명" },
-  { key: "editReasonLabel", label: "수정 이유 라벨" },
-  { key: "editReasonPlaceholder", label: "수정 이유 안내문" },
-  { key: "editSubmitButton", label: "수정 제안 제출 버튼" },
-  { key: "editCancelButton", label: "수정 제안 취소 버튼" },
-  { key: "editSuccessMessage", label: "수정 제안 성공 메시지" }
-];
 
 
 // 관리자 API 호출 시 세션 만료 안내를 구분하기 위한 기본 에러 문구입니다.
@@ -83,19 +34,18 @@ export const IPEP_GRADING_POLICY_OPTIONS = [
 export const ADMIN_TABS = [
   { id: 'dashboard', label: '대시보드', description: '관리 현황 요약' },
   { id: 'users', label: '사용자·접속 관리', description: '회원 목록과 실시간 접속자' },
+  { id: 'visitors', label: '방문 통계', description: '일간·주간·월간·연간 방문 세션' },
   { id: 'signupRequests', label: '회원가입 승인', description: '신규 가입 승인/거절' },
   { id: 'approvals', label: '결재 사항', description: '운영자 요청 승인/반려' },
   { id: 'notice', label: '공지·점검 관리', description: '전체 공지와 점검 모드' },
   { id: 'questions', label: '문제·해설 관리', description: '필기/실기 문제 데이터' },
   { id: 'display', label: '화면 설정 관리', description: '문구·디자인·이미지 CRUD' },
-  { id: 'calendar', label: '달력·일정 관리', description: '홈 달력 수업 일정 CRUD' },
-  { id: 'mealmap', label: '회식맵 관리', description: '공개 식당·수정/삭제 요청 관리' },
 ];
 
-// 관리자 내부 탭을 /admin/dashboard, /admin/users처럼 URL에 반영하기 위한 경로 매핑입니다.
+// 관리자 내부 탭을 /manage/dashboard, /manage/users처럼 URL에 반영하기 위한 경로 매핑입니다.
 // 기존 탭 렌더링 조건과 데이터 CRUD 로직은 그대로 두고, 탭 상태와 주소만 연결합니다.
 export const ADMIN_TAB_ROUTE_MAP = ADMIN_TABS.reduce((acc, tab) => {
-  acc[tab.id] = `/admin/${tab.id}`;
+  acc[tab.id] = `/manage/${tab.id}`;
   return acc;
 }, {});
 
@@ -106,57 +56,6 @@ export function getAdminTabFromPath(pathname = '') {
 
 
 //  화면 설정 관리용 페이지/타입 옵션
-
-// 홈 달력 일정 종류와 색상 옵션입니다.
-// schedule_type은 DB의 wgs_class_schedules.schedule_type 값과 1:1로 맞춥니다.
-export const CLASS_SCHEDULE_TYPE_OPTIONS = [
-  { value: 'class', label: '수업' },
-  { value: 'personal', label: '개인일정' },
-  { value: 'holiday', label: '공휴일' },
-  { value: 'application', label: '원서접수' },
-  { value: 'exam', label: '시험일' },
-  { value: 'result', label: '결과발표' },
-  { value: 'special', label: '특별한날' },
-];
-
-export const CLASS_SCHEDULE_HIGHLIGHT_OPTIONS = [
-  { value: 'none', label: '강조 없음' },
-  { value: 'outline', label: '테두리 강조' },
-  { value: 'glow', label: '빛나는 강조' },
-  { value: 'important', label: '중요 표시' },
-];
-
-export const CLASS_SCHEDULE_DEFAULT_STYLE = {
-  class: { background_color: '#1e40af', text_color: '#ffffff', border_color: '#1e40af', event_category: '수업' },
-  personal: { background_color: '#1e40af', text_color: '#ffffff', border_color: '#1e40af', event_category: '개인일정' },
-  holiday: { background_color: '#020617', text_color: '#ef4444', border_color: '#020617', event_category: '공휴일' },
-  application: { background_color: '#10b981', text_color: '#ffffff', border_color: '#10b981', event_category: '원서접수' },
-  exam: { background_color: '#7c3aed', text_color: '#ffffff', border_color: '#7c3aed', event_category: '시험일' },
-  result: { background_color: '#f97316', text_color: '#ffffff', border_color: '#f97316', event_category: '결과발표' },
-  special: { background_color: '#facc15', text_color: '#111827', border_color: '#facc15', event_category: '특별한날' },
-};
-
-// 홈 달력 일정 관리자 폼 기본값입니다.
-// 기존 화면 설정 관리와 분리해서 운영하므로 다른 관리자 기능은 유지합니다.
-export const EMPTY_CLASS_SCHEDULE_FORM = {
-  schedule_date: '',
-  day_no: '',
-  schedule_type: 'class',
-  event_category: '수업',
-  course_title: '',
-  topic_title: '',
-  event_title: '',
-  event_subtitle: '',
-  background_color: '#1e40af',
-  text_color: '#ffffff',
-  border_color: '#1e40af',
-  highlight_type: 'none',
-  memo: '',
-  admin_note: '',
-  sort_order: 0,
-  is_active: 1,
-  target_user_ids: []
-};
 
 // 기존 관리자 탭 구조는 유지하고, display 탭에서만 사용하는 상수다.
 export const SCREEN_SETTING_PAGE_OPTIONS = [
@@ -169,7 +68,6 @@ export const SCREEN_SETTING_PAGE_OPTIONS = [
   { value: 'ipep', label: '실기문제' },
   { value: 'wrong', label: '오답/마이문제' },
   { value: 'multiplayer', label: '멀티플레이' },
-  { value: 'mealmap', label: '회식맵' },
   { value: 'mypage', label: '마이페이지' },
   { value: 'board', label: '게시판' },
   { value: 'faq', label: 'FAQ' },
@@ -202,65 +100,9 @@ export const EMPTY_SCREEN_SETTING_FORM = {
   is_active: 1,
 };
 
-// sessionStorage에 저장된 로그인 사용자 정보를 안전하게 꺼내는 함수입니다.
-// JSON 파싱 실패가 나더라도 페이지 전체가 영향을 받지 않도록 null을 반환합니다.
+// 관리자 사용자 정보는 현재 관리자 번들의 메모리에서만 읽습니다.
 export function getStoredUser() {
-  // 이 프로젝트의 로그인 정보는 sessionStorage.user JSON이 아니라
-  // userId / userName / sessionToken / serverInstanceId 개별 키로 저장됩니다.
-  // 그래서 user JSON만 읽으면 최고관리자도 관리자 아님으로 오판되어 /admin에서 홈으로 튕긴다.
-  let parsedUser = null;
-
-  try {
-    const rawUser = sessionStorage.getItem('user');
-    parsedUser = rawUser ? JSON.parse(rawUser) : null;
-  } catch (error) {
-    console.warn('[admin] sessionStorage user parse failed:', error);
-    parsedUser = null;
-  }
-
-  const normalized = parsedUser && typeof parsedUser === 'object'? parsedUser : {};
-
-  return {
-    ...normalized,
-    id: String(
-      normalized.id ||
-      normalized.user_id ||
-      normalized.userId ||
-      normalized.username ||
-      sessionStorage.getItem('userId') ||
-      sessionStorage.getItem('id') ||
-      ''
-    ).trim(),
-    name: String(
-      normalized.name ||
-      normalized.user_name ||
-      normalized.userName ||
-      sessionStorage.getItem('userName') ||
-      sessionStorage.getItem('name') ||
-      sessionStorage.getItem('userId') ||
-      ''
-    ).trim(),
-    sessionToken:
-      normalized.sessionToken ||
-      normalized.session_token ||
-      sessionStorage.getItem('sessionToken') ||
-      '',
-    serverInstanceId:
-      normalized.serverInstanceId ||
-      normalized.server_instance_id ||
-      sessionStorage.getItem('wgsServerInstanceId') ||
-      sessionStorage.getItem('serverInstanceId') ||
-      '',
-    email: String(normalized.email || sessionStorage.getItem('email') || '').trim(),
-    // 로그인 성공 시 App/Login은 권한값을 개별 sessionStorage 키에 저장합니다.
-    // Admin.jsx가 이 키를 읽지 못하면 운영자 계정이 /admin 진입 직후 홈으로 튕긴다.
-    isOperator: normalized.isOperator ?? normalized.is_operator ?? sessionStorage.getItem('isOperator') ?? sessionStorage.getItem('is_operator'),
-    is_operator: normalized.is_operator ?? normalized.isOperator ?? sessionStorage.getItem('is_operator') ?? sessionStorage.getItem('isOperator'),
-    isPrimaryAdmin: normalized.isPrimaryAdmin ?? normalized.is_primary_admin ?? sessionStorage.getItem('isPrimaryAdmin'),
-    is_primary_admin: normalized.is_primary_admin ?? normalized.isPrimaryAdmin ?? sessionStorage.getItem('isPrimaryAdmin'),
-    isAdmin: normalized.isAdmin ?? normalized.is_admin ?? sessionStorage.getItem('isAdmin'),
-    is_admin: normalized.is_admin ?? normalized.isAdmin ?? sessionStorage.getItem('isAdmin')
-  };
+  return getCurrentAdmin();
 }
 
 // 로그인 사용자 객체에서 실제 계정 아이디를 안전하게 꺼내는 함수입니다.
@@ -275,37 +117,22 @@ export function getStoredUserName(user) {
   return String(user?.name || user?.user_name || user?.userName || getStoredUserId(user) || '').trim();
 }
 
-// 백엔드 재시작 감지에 사용하는 서버 인스턴스 ID를 읽습니다.
-// user 객체와 sessionStorage 양쪽을 모두 확인해 기존 로그인 유지 로직을 변경하지 않는다.
+// 관리자 세션은 서버의 유휴/절대 만료를 사용하므로 일반 회원 서버 인스턴스 ID를 요구하지 않습니다.
 export function getStoredServerInstanceId(user) {
-  return user?.serverInstanceId || user?.server_instance_id || sessionStorage.getItem('serverInstanceId') || '';
+  return user?.serverInstanceId || user?.server_instance_id || '';
 }
 
-// 로그인 시 저장된 세션 토큰을 꺼내는 함수입니다.
-// 프로젝트에 따라 user 객체 안 또는 별도 sessionToken 키에 저장될 수 있어 둘 다 확인합니다.
-export function getStoredSessionToken(user) {
-  return user?.sessionToken || user?.session_token || sessionStorage.getItem('sessionToken') || '';
+// 관리자 원문 세션 토큰은 HttpOnly 쿠키이므로 JavaScript에 노출하지 않습니다.
+export function getStoredSessionToken(_user) {
+  return '';
 }
 
 export function makeAdminHeadersFromStorage() {
-  const user = getStoredUser();
-
-  return {
-    'Content-Type': 'application/json',
-    'x-user-id': getStoredUserId(user),
-    'x-session-token': getStoredSessionToken(user),
-  };
+  return makeAdminHeaders();
 }
 
 export function makeAdminAuthBodyFromStorage() {
-  const user = getStoredUser();
-
-  return {
-    id: getStoredUserId(user),
-    name: getStoredUserName(user),
-    sessionToken: getStoredSessionToken(user),
-    serverInstanceId: getStoredServerInstanceId(user),
-  };
+  return {};
 }
 
 // 결재 상태 한글 표기와 정렬 기준을 한 곳에서 관리합니다.
@@ -451,78 +278,18 @@ export function isAdminAccessUser(user) {
   return isPrimaryAdminUser(user) || isTruthyFlag(user?.isOperator) || isTruthyFlag(user?.is_operator) || isTruthyFlag(user?.isAdmin) || isTruthyFlag(user?.is_admin);
 }
 
-// 운영자 권한은 로그인 이후 최고관리자가 부여할 수 있으므로
-// 관리자 화면 진입 시 sessionStorage보다 최신 DB 권한을 우선 확인합니다.
-// 그래서 관리자 페이지 진입 직전에 백엔드의 현재 세션 검증 API를 다시 호출해 최신 권한을 확인합니다.
-export async function verifyAdminAccessWithServer(storedUser) {
-  const fallbackUser = storedUser || getStoredUser();
-  const userId = getStoredUserId(fallbackUser);
-  const sessionToken = getStoredSessionToken(fallbackUser);
-
-  if (!userId || !sessionToken) {
-    return null;
-  }
-
+// 관리자 화면 진입 직전에 서버의 전용 관리자 쿠키와 최신 DB 권한을 다시 확인합니다.
+export async function verifyAdminAccessWithServer() {
   try {
-    // /api/check-session은 일반 세션 확인용이라 과거 응답에는 운영자 권한값이 없었다.
-    // /api/admin/check-auth는 validateAdminSession을 통해 DB의 최신 is_operator 값을 직접 확인하므로
-    // 권한을 받은 일반 사용자도 /admin 진입 여부를 정확히 판정할 수 있습니다.
-    const response = await fetch('/api/admin/check-auth', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        id: userId,
-        userId,
-        sessionToken,
-        serverInstanceId: getStoredServerInstanceId(fallbackUser),
-      }),
-    });
-
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok || !data?.valid || !data?.isAdmin) {
-      return null;
-    }
-
-    const adminInfo = data.admin || {};
-    const verifiedUser = {
-      ...fallbackUser,
-      id: adminInfo.id || data.userId || fallbackUser?.id || userId,
-      userId: adminInfo.id || data.userId || fallbackUser?.userId || userId,
-      name: adminInfo.name || data.name || fallbackUser?.name || sessionStorage.getItem('userName') || '',
-      email: adminInfo.email || data.email || fallbackUser?.email || sessionStorage.getItem('email') || '',
-      sessionToken,
-      serverInstanceId: data.serverInstanceId || getStoredServerInstanceId(fallbackUser),
-      isAdmin: data.isAdmin ?? adminInfo.isAdmin ?? true,
-      is_admin: data.is_admin ?? data.isAdmin ?? adminInfo.isAdmin ?? true,
-      isOperator: data.isOperator ?? data.is_operator ?? adminInfo.isOperator ?? adminInfo.is_operator,
-      is_operator: data.is_operator ?? data.isOperator ?? adminInfo.is_operator ?? adminInfo.isOperator,
-      isPrimaryAdmin: data.isPrimaryAdmin ?? data.is_primary_admin ?? adminInfo.isPrimaryAdmin ?? adminInfo.is_primary_admin,
-      is_primary_admin: data.is_primary_admin ?? data.isPrimaryAdmin ?? adminInfo.is_primary_admin ?? adminInfo.isPrimaryAdmin,
-    };
-
-    if (!isAdminAccessUser(verifiedUser)) {
-      return null;
-    }
-
-    // 다음 진입 때도 바로 통과할 수 있도록 최신 권한을 sessionStorage에 동기화합니다.
-    sessionStorage.setItem('user', JSON.stringify(verifiedUser));
-    sessionStorage.setItem('userId', verifiedUser.userId || verifiedUser.id || userId);
-    sessionStorage.setItem('sessionToken', sessionToken);
-    sessionStorage.setItem('userName', verifiedUser.name || '');
-    sessionStorage.setItem('email', verifiedUser.email || '');
-    if (verifiedUser.serverInstanceId) sessionStorage.setItem('wgsServerInstanceId', verifiedUser.serverInstanceId);
-    sessionStorage.setItem('isOperator', isTruthyFlag(verifiedUser.isOperator) || isTruthyFlag(verifiedUser.is_operator) ? 'true' : 'false');
-    sessionStorage.setItem('isPrimaryAdmin', isTruthyFlag(verifiedUser.isPrimaryAdmin) || isTruthyFlag(verifiedUser.is_primary_admin) ? 'true' : 'false');
-    sessionStorage.setItem('isAdmin', isTruthyFlag(verifiedUser.isAdmin) || isTruthyFlag(verifiedUser.is_admin) ? 'true' : 'false');
-
-    return verifiedUser;
+    const verifiedUser = await fetchAdminSession();
+    return verifiedUser && isAdminAccessUser(verifiedUser) ? verifiedUser : null;
   } catch (error) {
     console.error('[Admin] 관리자/운영자 권한 재검증 실패:', error);
     return null;
   }
 }
 
-// 날짜/시간 값을 화면에 보기 좋게 바꾸는 함수입니다.
+// 날짜/시간 값을 화면에 보기 좋게 바꾸는 공용 함수입니다.
 // 값이 없거나 변환할 수 없으면 '-'로 표시해 테이블 깨짐을 방지합니다.
 export function formatDateTime(value) {
   if (!value) return '-';
@@ -698,105 +465,3 @@ export const DEFAULT_MAINTENANCE_FORM = {
   updatedAtText: '',
   updatedBy: '',
 };
-
-  // 수정 제안 카드에서 실제 변경된 항목을 확실히 보여주기 위한 표시 전용 유틸입니다.
-  // 서버가 old_data/new_data 형태를 주는 경우와 current_/proposed_ 컬럼 형태를 주는 경우를 모두 처리합니다.
-export const formatMealMapAdminPlainValue = (value) => {
-    if (value === null || value === undefined) return '-';
-    const textValue = String(value).trim();
-    return textValue ? textValue : '-';
-  };
-
-  // 가격은 min/max 두 컬럼을 하나의 사람이 읽기 쉬운 문장으로 합쳐 비교합니다.
-export const formatMealMapAdminPriceValue = (minValue, maxValue) => {
-    const minNumber = Number(minValue || 0);
-    const maxNumber = Number(maxValue || 0);
-    if (!minNumber && !maxNumber) return '-';
-    if (minNumber && maxNumber) return `${minNumber.toLocaleString('ko-KR')}원 ~ ${maxNumber.toLocaleString('ko-KR')}원`;
-    if (minNumber) return `${minNumber.toLocaleString('ko-KR')}원 ~`;
-    return `~ ${maxNumber.toLocaleString('ko-KR')}원`;
-  };
-
-  // 주소는 지번/도로명 중 있는 값을 모두 보여줘 승인자가 수정 내용을 놓치지 않게 합니다.
-export const formatMealMapAdminAddressValue = (address, roadAddress) => {
-    const first = String(address || '').trim();
-    const second = String(roadAddress || '').trim();
-    if (first && second && first !== second) return `${first}
-${second}`;
-    return first || second || '-';
-  };
-
-  // 좌표는 위도와 경도를 한 줄로 묶어 비교합니다.
-export const formatMealMapAdminCoordValue = (lat, lng) => {
-    const latText = String(lat ?? '').trim();
-    const lngText = String(lng ?? '').trim();
-    if (!latText && !lngText) return '-';
-    return `${latText || '-'}, ${lngText || '-'}`;
-  };
-
-  // 실제 수정 제안 항목을 current_/proposed_ 데이터 기준으로 재구성합니다.
-  // 기존 Admin 화면은 old_data/new_data만 비교해서 현재 DB가 주는 proposed_* 컬럼을 제대로 표시하지 못했습니다.
-export const buildMealMapEditDiffRows = (request = {}) => {
-    const oldData = request.old_data || {};
-    const newData = request.new_data || {};
-    const pick = (source, keys) => {
-      for (const key of keys) {
-        const value = source?.[key];
-        if (value !== null && value !== undefined && String(value).trim() !== '') return value;
-      }
-      return '';
-    };
-
-    const rows = [
-      {
-        label: '식당명',
-        before: formatMealMapAdminPlainValue(pick(request, ['current_name', 'place_name']) || pick(oldData, ['name', 'place_name'])),
-        after: formatMealMapAdminPlainValue(pick(request, ['proposed_name']) || pick(newData, ['name', 'place_name'])),
-      },
-      {
-        label: '카테고리',
-        before: formatMealMapAdminPlainValue(pick(request, ['current_category']) || pick(oldData, ['category'])),
-        after: formatMealMapAdminPlainValue(pick(request, ['proposed_category']) || pick(newData, ['category'])),
-      },
-      {
-        label: '가격',
-        before: formatMealMapAdminPriceValue(pick(request, ['current_min_price']) || pick(oldData, ['min_price']), pick(request, ['current_max_price']) || pick(oldData, ['max_price'])),
-        after: formatMealMapAdminPriceValue(pick(request, ['proposed_min_price']) || pick(newData, ['min_price']), pick(request, ['proposed_max_price']) || pick(newData, ['max_price'])),
-      },
-      {
-        label: '주소',
-        before: formatMealMapAdminAddressValue(pick(request, ['current_address']) || pick(oldData, ['address']), pick(request, ['current_road_address']) || pick(oldData, ['road_address'])),
-        after: formatMealMapAdminAddressValue(pick(request, ['proposed_address']) || pick(newData, ['address']), pick(request, ['proposed_road_address']) || pick(newData, ['road_address'])),
-      },
-      {
-        label: '운영시간',
-        before: formatMealMapAdminPlainValue(pick(request, ['current_opening_hours']) || pick(oldData, ['opening_hours', 'open_hours'])),
-        after: formatMealMapAdminPlainValue(pick(request, ['proposed_opening_hours']) || pick(newData, ['opening_hours', 'open_hours'])),
-      },
-      {
-        label: '대표메뉴',
-        before: formatMealMapAdminPlainValue(pick(request, ['current_main_menu']) || pick(oldData, ['main_menu', 'menu'])),
-        after: formatMealMapAdminPlainValue(pick(request, ['proposed_main_menu']) || pick(newData, ['main_menu', 'menu'])),
-      },
-      {
-        label: '카카오 지도 링크',
-        before: formatMealMapAdminPlainValue(pick(request, ['current_kakao_url']) || pick(oldData, ['kakao_url'])),
-        after: formatMealMapAdminPlainValue(pick(request, ['proposed_kakao_url']) || pick(newData, ['kakao_url'])),
-      },
-      {
-        label: '지도 보조 링크',
-        before: formatMealMapAdminPlainValue(pick(request, ['current_naver_url']) || pick(oldData, ['naver_url'])),
-        after: formatMealMapAdminPlainValue(pick(request, ['proposed_naver_url']) || pick(newData, ['naver_url'])),
-      },
-      {
-        label: '좌표',
-        before: formatMealMapAdminCoordValue(pick(request, ['current_lat']) || pick(oldData, ['lat', 'x']), pick(request, ['current_lng']) || pick(oldData, ['lng', 'y'])),
-        after: formatMealMapAdminCoordValue(pick(request, ['proposed_lat']) || pick(newData, ['lat', 'x']), pick(request, ['proposed_lng']) || pick(newData, ['lng', 'y'])),
-      },
-    ];
-
-    const changedRows = rows.filter((row) => row.before !== row.after && row.after !== '-');
-    if (changedRows.length) return changedRows;
-
-    return rows.filter((row) => row.before !== '-' || row.after !== '-');
-  };

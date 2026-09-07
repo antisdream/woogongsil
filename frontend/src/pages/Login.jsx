@@ -5,8 +5,6 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import Signup from './Signup';
 import FindAuth from './FindAuth';
-import HCaptchaBox from '../components/HCaptchaBox';
-import { guardMissingHcaptcha } from '../hcaptchaGuard';
 import useScreenSettings from '../useScreenSettings';
 
 const API_BASE = '';
@@ -54,9 +52,6 @@ const Login = () => {
     const [password, setPassword] = useState('');
     const [showLoginPw, setShowLoginPw] = useState(false);
     const [isLoggingIn, setIsLoggingIn] = useState(false);
-    const [hcaptchaToken, setHcaptchaToken] = useState('');
-    const [hcaptchaEnabled, setHcaptchaEnabled] = useState(false);
-    const [hcaptchaResetKey, setHcaptchaResetKey] = useState(0);
 
     useEffect(() => {
         const alreadyLoggedIn = Boolean(sessionStorage.getItem('userId') && sessionStorage.getItem('sessionToken'));
@@ -70,12 +65,11 @@ const Login = () => {
         setSearchParams(nextTab === 'login'? {} : { tab: nextTab });
     };
 
-    const handleLogin = async (force = false) => {
+    const handleLogin = async (replaceConfirmationToken = '') => {
         const trimmedId = id.trim();
 
         if (!trimmedId) return alert(getSetting('messages.need_id', '아이디를 입력해주세요.'));
         if (!password) return alert(getSetting('messages.need_password', '비밀번호를 입력해주세요.'));
-        if (!force && !guardMissingHcaptcha('login', hcaptchaEnabled, hcaptchaToken)) return;
 
         const loginStatus = JSON.parse(localStorage.getItem('loginStatus') || '{}');
         const idStatus = loginStatus[trimmedId] || { fails: 0, lockoutUntil: null };
@@ -93,9 +87,8 @@ const Login = () => {
             const res = await axios.post(`${API_BASE}/api/login`, {
                 id: trimmedId,
                 password,
-                force,
                 clientSessionToken,
-                hcaptchaToken
+                replaceConfirmationToken,
             });
 
             if (res.data.success === false) {
@@ -107,7 +100,7 @@ const Login = () => {
                 if (res.data.requireConfirm) {
                     if (window.confirm(res.data.msg)) {
                         setIsLoggingIn(false);
-                        return handleLogin(true);
+                        return handleLogin(res.data.replaceConfirmationToken || '');
                     }
                 } else {
                     idStatus.fails += 1;
@@ -135,6 +128,8 @@ const Login = () => {
             sessionStorage.setItem('isOperator', res.data.user.isOperator ? 'true' : 'false');
             sessionStorage.setItem('isPrimaryAdmin', res.data.user.isPrimaryAdmin ? 'true' : 'false');
             sessionStorage.setItem('sessionToken', res.data.sessionToken);
+            const requiresLegalConsent = res.data.requiresLegalConsent === true;
+            sessionStorage.setItem('wgsLegalConsentRequired', requiresLegalConsent ? 'true' : 'false');
             sessionStorage.setItem(CHAT_VISIBLE_SINCE_KEY, String(getNowMs()));
             localStorage.setItem(REMEMBERED_LOGIN_KEY, 'true');
 
@@ -147,12 +142,11 @@ const Login = () => {
                 sessionStorage.setItem('dDay', res.data.user.dDay);
             }
 
-            navigate('/', { replace: true });
+            navigate(requiresLegalConsent ? '/account-consent' : '/', { replace: true });
         } catch (err) {
             alert(err.response?.data?.msg || getSetting('messages.server_failed', '서버 연결 실패'));
         } finally {
             setIsLoggingIn(false);
-            if (!force) setHcaptchaResetKey((value) => value + 1);
         }
     };
 
@@ -164,7 +158,7 @@ const Login = () => {
             <form
                 className="wgs-login-form" onSubmit={(e) => {
                     e.preventDefault();
-                    handleLogin(false);
+                    handleLogin('');
                 }}
             >
                 <input
@@ -184,12 +178,6 @@ const Login = () => {
                         {showLoginPw ? getSetting('form.hide_password_label', '숨김') : getSetting('form.show_password_label', '보기')}
                     </button>
                 </div>
-
-                <HCaptchaBox
-                    actionLabel={getSetting('form.hcaptcha_label', '로그인 보안 확인')} onTokenChange={setHcaptchaToken}
-                    onEnabledChange={setHcaptchaEnabled}
-                    resetKey={hcaptchaResetKey}
-                />
 
                 <button type="submit" className="wgs-login-submit" disabled={isLoggingIn}>
                     {isLoggingIn ? getSetting('form.submit_loading_label', '로그인 중...') : getSetting('form.submit_label', '로그인')}

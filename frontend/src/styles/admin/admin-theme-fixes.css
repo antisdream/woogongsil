@@ -104,7 +104,7 @@ body.wgs-theme-dark .admin-page {
   color: var(--admin-text) !important;
 }
 
-.admin-page :is(.admin-panel-head, .admin-card-title-row, .admin-section-title-row, .admin-question-toolbar, .admin-mealmap-toolbar) {
+.admin-page :is(.admin-panel-head, .admin-card-title-row, .admin-section-title-row, .admin-question-toolbar) {
   background: var(--admin-head-bg) !important;
   border-color: var(--admin-border) !important;
   color: var(--admin-text) !important;
@@ -213,32 +213,6 @@ body.wgs-theme-dark .admin-page {
   background: var(--admin-soft-bg) !important;
   color: var(--admin-title) !important;
   border-color: var(--admin-border) !important;
-}
-
-/* Mealmap admin status actions */
-.admin-page :is(.admin-mealmap-actions, .admin-mealmap-edit-actions) .approve {
-  background: var(--admin-success-soft) !important;
-  color: var(--admin-success-text) !important;
-}
-
-.admin-page :is(.admin-mealmap-actions, .admin-mealmap-edit-actions) .reject,
-.admin-page .admin-mealmap-actions .danger {
-  background: var(--admin-danger-soft) !important;
-  color: var(--admin-danger-text) !important;
-}
-
-/* Calendar tab stays scoped to the calendar section. */
-body.wgs-theme-light .admin-page .admin-calendar-section,
-body.wgs-theme-dark .admin-page .admin-calendar-section {
-  background: var(--admin-panel-bg) !important;
-  color: var(--admin-text) !important;
-}
-
-body.wgs-theme-light .admin-page .admin-calendar-section :is(input, select, textarea),
-body.wgs-theme-dark .admin-page .admin-calendar-section :is(input, select, textarea) {
-  background: var(--admin-input-bg) !important;
-  color: var(--admin-text) !important;
-  border-color: var(--admin-border-strong) !important;
 }
 
 /* Approval detail modal */

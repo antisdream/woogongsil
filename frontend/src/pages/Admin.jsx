@@ -15,33 +15,29 @@ import {
   isPrimaryAdminRow,
   isPrimaryAdminUser,
   isOperatorRow,
-  sortUsersByAdminRole,
   verifyAdminAccessWithServer,
 } from '../features/admin/adminUtils.js';
 import useAdminTabNavigation from '../features/admin/useAdminTabNavigation.js';
-import useAdminMealMap from '../features/admin/useAdminMealMap.js';
 import useAdminScreenSettings from '../features/admin/useAdminScreenSettings.js';
-import useAdminClassSchedules from '../features/admin/useAdminClassSchedules.js';
 import useAdminQuestions from '../features/admin/useAdminQuestions.js';
 import useAdminNoticeOperations from '../features/admin/useAdminNoticeOperations.js';
 import useAdminApprovals from '../features/admin/useAdminApprovals.js';
 import useAdminOnlineUsers from '../features/admin/useAdminOnlineUsers.js';
 import useAdminSignupRequests from '../features/admin/useAdminSignupRequests.js';
+import useAdminVisitorStats from '../features/admin/useAdminVisitorStats.js';
 import AdminNoticeTab from '../features/admin/components/AdminNoticeTab.jsx';
 import AdminPageHeader from '../features/admin/components/AdminPageHeader.jsx';
 import AdminDashboardTab from '../features/admin/components/AdminDashboardTab.jsx';
 import AdminMailModal from '../features/admin/components/AdminMailModal.jsx';
+import AdminPrivacyRevealModal from '../features/admin/components/AdminPrivacyRevealModal.jsx';
 import AdminUsersTab from '../features/admin/components/AdminUsersTab.jsx';
 import AdminSignupRequestsTab from '../features/admin/components/AdminSignupRequestsTab.jsx';
 import AdminApprovalsTab from '../features/admin/components/AdminApprovalsTab.jsx';
 import AdminApprovalDetailModal from '../features/admin/components/AdminApprovalDetailModal.jsx';
 import AdminQuestionsTab from '../features/admin/components/AdminQuestionsTab.jsx';
-import AdminCalendarTab from '../features/admin/components/AdminCalendarTab.jsx';
 import AdminDisplayTab from '../features/admin/components/AdminDisplayTab.jsx';
-import AdminMealMapTabSections from '../features/admin/components/AdminMealMapTabSections.jsx';
+import AdminVisitorStatsTab from '../features/admin/components/AdminVisitorStatsTab.jsx';
 
-// 관리자 회식맵 설정 API 호출 기본 경로입니다.
-// 같은 도메인의 Express 서버 API를 사용하므로 빈 문자열을 기본값으로 둡니다.
 function Admin() {
   const { activeAdminTab, openAdminTab } = useAdminTabNavigation();
 
@@ -59,10 +55,13 @@ function Admin() {
   const [adminError, setAdminError] = useState('');
   const [userSort, setUserSort] = useState({ key: 'id', direction: 'asc' });
   const [userPage, setUserPage] = useState(1);
+  const [userPagination, setUserPagination] = useState({ page: 1, pageSize: USER_PAGE_SIZE, total: 0, totalPages: 1 });
   // 사용자 관리 탭 안에서 회원 목록과 최근 접속 기록을 버튼으로 전환합니다.
   const [userPanelMode, setUserPanelMode] = useState('members');
   const [recentLogPage, setRecentLogPage] = useState(1); // 최근 접속 기록 탭 페이지 상태를 별도로 관리합니다.
   const [mailModal, setMailModal] = useState({ open: false, targetUser: null, subject: '', message: '', sending: false, error: '' });
+  const [privacyModal, setPrivacyModal] = useState({ open: false, targetUser: null, password: '', reason: '', loading: false, error: '', revealed: null });
+  const privacyRevealTimerRef = useRef(null);
 
 
   //  전체 공지 발송 데이터 상태입니다.
@@ -70,17 +69,15 @@ function Admin() {
 
   //  문제/해설 관리 상태입니다.
   // 문제 목록과 선택된 상세 폼을 분리해두면 목록 새로고침이 되어도 입력 중인 상세 폼이 갑자기 사라지지 않는다.
-  // 홈 달력 일정 관리 상태입니다.
 
   // 현재 로그인한 사용자와 세션 토큰을 컴포넌트 내부에서 계속 재사용합니다.
-  const currentUser = useMemo(() => getStoredUser(), []);
+  const [currentUser, setCurrentUser] = useState(() => getStoredUser());
   // 초기 데이터 로딩은 검색어 입력이나 페이지 이동 때문에 useCallback 참조가 바뀌어도 한 번만 실행합니다.
   const didInitialAdminLoadRef = useRef(false);
 
-  // 검색/정렬 기준이 바뀌면 빈 페이지에 남지 않도록 첫 페이지로 되돌린다.
-  useEffect(() => {
-    setUserPage(1);
-  }, [appliedKeyword, userSort.key, userSort.direction]);
+  useEffect(() => () => {
+    if (privacyRevealTimerRef.current) window.clearTimeout(privacyRevealTimerRef.current);
+  }, []);
 
   // 페이지 진입 시 최고관리자 또는 운영자 권한 계정인지 1차 확인합니다.
   // 비로그인 또는 일반 계정이면 기존 홈으로 돌려보낸다.
@@ -94,10 +91,11 @@ function Admin() {
       if (cancelled) return;
 
       if (!verifiedUser) {
-        window.location.replace('/');
+        window.location.replace('/manage/login');
         return;
       }
 
+      setCurrentUser(verifiedUser);
       setCanOpenAdmin(true);
       setCheckedAdmin(true);
     }
@@ -112,42 +110,9 @@ return () => {
   // 관리자 전용 API에 공통으로 들어갈 인증 헤더를 생성합니다.
   const makeAdminHeaders = useCallback(() => makeAdminHeadersFromStorage(), []);
 
-  const {
-    mealMapPlaces,
-    mealMapStats,
-    mealMapStatusFilter,
-    setMealMapStatusFilter,
-    mealMapKeyword,
-    setMealMapKeyword,
-    mealMapLoading,
-    mealMapSavingId,
-    mealMapError,
-    mealMapSuccess,
-    mealMapEditRequests,
-    mealMapEditStats,
-    mealMapEditStatusFilter,
-    setMealMapEditStatusFilter,
-    mealMapEditKeyword,
-    setMealMapEditKeyword,
-    mealMapEditLoading,
-    mealMapEditError,
-    mealMapTextSettings,
-    mealMapLayoutsV253,
-    setMealMapLayoutsV253,
-    mealMapTextLoading,
-    mealMapTextSaving,
-    loadMealMapLayoutsV253,
-    saveMealMapLayoutSettingsV253,
-    fetchMealMapAdminPlaces,
-    runMealMapAdminAction,
-    loadMealMapTextSettings,
-    updateMealMapTextSetting,
-    saveMealMapTextSettings,
-    fetchMealMapEditRequests,
-    runMealMapEditAction,
-  } = useAdminMealMap({
-    activeAdminTab,
-    canOpenAdmin,
+  const visitorStats = useAdminVisitorStats({
+    enabled: canOpenAdmin && (activeAdminTab === 'dashboard' || activeAdminTab === 'visitors'),
+    detailsEnabled: canOpenAdmin && activeAdminTab === 'visitors',
     makeAdminHeaders,
   });
 
@@ -164,13 +129,19 @@ return () => {
   // 회원 목록, 최근 로그인/로그아웃 기록, 회원 요약 통계를 불러온다.
   // 백엔드에서 관리자 세션을 한 번 더 검증하므로 일반 계정은 이 데이터를 받을 수 없습니다.
   const fetchAdminUsers = useCallback(
-    async (keyword = appliedKeyword) => {
+    async (keyword = appliedKeyword, requestedPage = userPage, requestedSort = userSort) => {
       setLoadingUsers(true);
       setAdminError('');
 
       try {
-        const query = keyword ? `?search=${encodeURIComponent(keyword)}` : '';
-        const response = await fetch(`/api/admin/users${query}`, {
+        const query = new URLSearchParams({
+          page: String(requestedPage || 1),
+          pageSize: String(USER_PAGE_SIZE),
+          sortKey: requestedSort?.key || 'id',
+          sortDirection: requestedSort?.direction || 'asc',
+        });
+        if (keyword) query.set('search', keyword);
+        const response = await fetch(`/api/admin/users?${query.toString()}`, {
           method: 'GET',
           headers: makeAdminHeaders(),
         });
@@ -184,12 +155,22 @@ return () => {
         setUsers(Array.isArray(data.users) ? data.users : []);
         setRecentLogs(Array.isArray(data.recentLogs) ? data.recentLogs : Array.isArray(data.recentLoginLogs) ? data.recentLoginLogs : []);
 
+        const rawPagination = data.pagination || {};
+        const nextPagination = {
+          page: Number(rawPagination.page || requestedPage || 1),
+          pageSize: Number(rawPagination.pageSize || USER_PAGE_SIZE),
+          total: Number(rawPagination.total || 0),
+          totalPages: Math.max(1, Number(rawPagination.totalPages || 1)),
+        };
+        setUserPagination(nextPagination);
+        setUserPage(nextPagination.page);
+
         const rawSummary = data.summary || {};
         setSummary({
-          totalUsers: rawSummary.totalUsers || 0,
-          activeUsers: rawSummary.activeUsers || 0,
-          loggedInUsers: rawSummary.loggedInUsers || rawSummary.sessionKeepingUsers || 0,
-          todayLogs: rawSummary.todayLogs || rawSummary.todayLoginCount || 0,
+          totalUsers: rawSummary.totalUsers ?? 0,
+          activeUsers: rawSummary.activeUsers ?? rawSummary.onlineUsers ?? 0,
+          loggedInUsers: rawSummary.loggedInUsers ?? rawSummary.sessionKeepingUsers ?? rawSummary.loginKeepUsers ?? 0,
+          todayLogs: rawSummary.todayLogs ?? rawSummary.todayLoginCount ?? 0,
         });
       } catch (error) {
         console.error('[admin] users fetch failed:', error);
@@ -198,7 +179,7 @@ return () => {
         setLoadingUsers(false);
       }
     },
-    [appliedKeyword, makeAdminHeaders]
+    [appliedKeyword, makeAdminHeaders, userPage, userSort]
   );
 
 
@@ -330,31 +311,6 @@ return () => {
   });
 
   const {
-    classSchedules,
-    classScheduleSummary,
-    classScheduleFilters,
-    classScheduleForm,
-    editingClassScheduleId,
-    loadingClassSchedules,
-    savingClassSchedule,
-    classScheduleError,
-    classScheduleSuccess,
-    fetchClassSchedules,
-    resetClassScheduleForm,
-    handleClassScheduleFormChange,
-    handleClassScheduleSubmit,
-    startEditClassSchedule,
-    handleToggleClassSchedule,
-    handleDeleteClassSchedule,
-    handleClassScheduleFilterChange,
-    updateClassScheduleFilterUserIds,
-    handleClassScheduleFilterSubmit,
-  } = useAdminClassSchedules({
-    activeAdminTab,
-    makeAdminHeaders,
-  });
-
-  const {
     screenSettings,
     screenSummary,
     screenFilters,
@@ -420,15 +376,22 @@ return () => {
     event.preventDefault();
     const nextKeyword = searchKeyword.trim();
 
+    if (nextKeyword && nextKeyword.length < 2) {
+      setAdminError('검색어는 2자 이상 입력해주세요.');
+      return;
+    }
+
     setAppliedKeyword(nextKeyword);
-    fetchAdminUsers(nextKeyword);
+    setUserPage(1);
+    fetchAdminUsers(nextKeyword, 1, userSort);
   };
 
   // 전체보기 버튼은 검색어를 비우고 전체 회원 목록을 다시 조회합니다.
   const handleResetSearch = () => {
     setSearchKeyword('');
     setAppliedKeyword('');
-    fetchAdminUsers('');
+    setUserPage(1);
+    fetchAdminUsers('', 1, userSort);
   };
 
   const refreshUserAndApprovals = () => {
@@ -528,7 +491,7 @@ return () => {
   };
 
   const openUserEmailModal = (targetUser) => {
-    if (!targetUser?.email) return;
+    if (!targetUser?.hasEmail) return;
     setMailModal({ open: true, targetUser, subject: '', message: '', sending: false, error: '' });
   };
 
@@ -540,7 +503,7 @@ return () => {
   const handleSendUserEmail = async (event) => {
     event.preventDefault();
     const targetUser = mailModal.targetUser;
-    if (!targetUser?.email) return;
+    if (!targetUser?.hasEmail) return;
 
     const subject = mailModal.subject.trim();
     const message = mailModal.message.trim();
@@ -570,9 +533,73 @@ return () => {
     }
   };
 
+  const openPrivacyRevealModal = (targetUser) => {
+    if (!isPrimaryAdminViewer || !targetUser?.id) return;
+    if (privacyRevealTimerRef.current) window.clearTimeout(privacyRevealTimerRef.current);
+    privacyRevealTimerRef.current = null;
+    setPrivacyModal({ open: true, targetUser, password: '', reason: '', loading: false, error: '', revealed: null });
+  };
+
+  const closePrivacyRevealModal = () => {
+    if (privacyModal.loading) return;
+    if (privacyRevealTimerRef.current) window.clearTimeout(privacyRevealTimerRef.current);
+    privacyRevealTimerRef.current = null;
+    setPrivacyModal({ open: false, targetUser: null, password: '', reason: '', loading: false, error: '', revealed: null });
+  };
+
+  const handlePrivacyReveal = async (event) => {
+    event.preventDefault();
+    const targetUser = privacyModal.targetUser;
+    if (!isPrimaryAdminViewer || !targetUser?.id || privacyModal.revealed) return;
+
+    const password = privacyModal.password;
+    const reason = privacyModal.reason.replace(/\s+/g, ' ').trim();
+    if (!password) {
+      setPrivacyModal((prev) => ({ ...prev, error: '현재 관리자 비밀번호를 입력해주세요.' }));
+      return;
+    }
+    if (reason.length < 5) {
+      setPrivacyModal((prev) => ({ ...prev, error: '열람 사유는 5자 이상 입력해주세요.' }));
+      return;
+    }
+
+    setPrivacyModal((prev) => ({ ...prev, loading: true, error: '' }));
+    try {
+      const response = await fetch(`/api/admin/users/${encodeURIComponent(targetUser.id)}/privacy-reveal`, {
+        method: 'POST',
+        headers: makeAdminHeaders(),
+        body: JSON.stringify({ password, reason }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || data.success === false || !data.target) {
+        throw new Error(data.message || '개인정보 원문 열람에 실패했습니다.');
+      }
+
+      const ttlSeconds = Math.min(300, Math.max(5, Number(data.expiresInSeconds || 60)));
+      setPrivacyModal((prev) => ({
+        ...prev,
+        password: '',
+        loading: false,
+        error: '',
+        revealed: {
+          id: data.target.id,
+          name: data.target.name || '',
+          email: data.target.email || '',
+        },
+      }));
+      if (privacyRevealTimerRef.current) window.clearTimeout(privacyRevealTimerRef.current);
+      privacyRevealTimerRef.current = window.setTimeout(() => {
+        privacyRevealTimerRef.current = null;
+        setPrivacyModal({ open: false, targetUser: null, password: '', reason: '', loading: false, error: '', revealed: null });
+      }, ttlSeconds * 1000);
+    } catch (error) {
+      setPrivacyModal((prev) => ({ ...prev, password: '', loading: false, error: error.message || '개인정보 원문 열람에 실패했습니다.' }));
+    }
+  };
+
   const handleOpenUserRanking = (targetUser) => {
     if (!targetUser?.id) return;
-    window.open(`/admin/user-ranking/${encodeURIComponent(targetUser.id)}`, '_blank', 'noopener,noreferrer,width=1280,height=900');
+    window.open(`/manage/user-ranking/${encodeURIComponent(targetUser.id)}`, '_blank', 'noopener,noreferrer,width=1280,height=900');
   };
 
   //  필터 입력 영역을 문제 타입에 따라 다르게 렌더링합니다.
@@ -584,6 +611,12 @@ return () => {
 
   const viewerId = getStoredUserId(currentUser);
   const isPrimaryAdminViewer = isPrimaryAdminUser(currentUser);
+  useEffect(() => {
+    if (checkedAdmin && !isPrimaryAdminViewer && activeAdminTab === 'signupRequests') {
+      openAdminTab('dashboard', { replace: true });
+    }
+  }, [activeAdminTab, checkedAdmin, isPrimaryAdminViewer, openAdminTab]);
+
   const isSelfUserRow = (item) => viewerId && getUserIdText(item) === viewerId;
   const isUserActionProtectedRow = (item) => {
     if (!item) return true;
@@ -592,21 +625,25 @@ return () => {
   };
 
   const handleUserSort = (key) => {
-    setUserSort((prev) => ({
+    const nextSort = {
       key,
-      direction: prev.key === key && prev.direction === 'asc'? 'desc' : 'asc',
-    }));
+      direction: userSort.key === key && userSort.direction === 'asc' ? 'desc' : 'asc',
+    };
+    setUserSort(nextSort);
+    setUserPage(1);
+    fetchAdminUsers(appliedKeyword, 1, nextSort);
   };
 
-  const sortedUserGroups = useMemo(() => sortUsersByAdminRole(users, userSort), [users, userSort]);
+  const userTotalPages = Math.max(1, Number(userPagination.totalPages || 1));
+  const safeUserPage = Math.min(Math.max(1, Number(userPage || 1)), userTotalPages);
+  const displayedUsers = users;
 
-  const userTotalPages = Math.max(1, Math.ceil(sortedUserGroups.normalUsers.length / USER_PAGE_SIZE));
-  const safeUserPage = Math.min(userPage, userTotalPages);
-  const displayedUsers = useMemo(() => {
-    const startIndex = (safeUserPage - 1) * USER_PAGE_SIZE;
-    const pagedNormalUsers = sortedUserGroups.normalUsers.slice(startIndex, startIndex + USER_PAGE_SIZE);
-    return [...sortedUserGroups.primaryAdmins, ...sortedUserGroups.operators, ...pagedNormalUsers];
-  }, [safeUserPage, sortedUserGroups]);
+  const handleUserPageMove = (nextPage) => {
+    const safeNextPage = Math.min(Math.max(1, Number(nextPage || 1)), userTotalPages);
+    if (safeNextPage === safeUserPage || loadingUsers) return;
+    setUserPage(safeNextPage);
+    fetchAdminUsers(appliedKeyword, safeNextPage, userSort);
+  };
 
   function handleUserPanelToggle() {
     // 사용자 관리/최근 접속 기록 전환 시 최근 접속 기록은 항상 첫 페이지부터 보여줍니다.
@@ -639,6 +676,11 @@ return () => {
         desc: '실시간 접속 유지 사용자',
       },
       {
+        label: '오늘 방문',
+        value: visitorStats.data ? `${visitorStats.data.summary?.today || 0}회` : '—',
+        desc: visitorStats.error ? '방문 통계 확인 필요' : 'KST 기준 오늘 방문 세션',
+      },
+      {
         label: '공지 이력',
         value: `${noticeHistory.length}건`,
         desc: '서버에 보관 중인 최근 공지',
@@ -654,7 +696,7 @@ return () => {
         desc: '필기·실기 문제 전체',
       },
     ],
-    [adminApprovals, noticeHistory.length, onlineUsers.length, questionMeta.summary, summary.totalUsers, users.length]
+    [adminApprovals, noticeHistory.length, onlineUsers.length, questionMeta.summary, summary.totalUsers, users.length, visitorStats.data, visitorStats.error]
   );
 
 
@@ -662,8 +704,8 @@ return () => {
   // 관리자 인증 확인 중/실패 상태를 빈 화면 대신 표시합니다.
   if (!checkedAdmin) {
     return (
-      <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', background: 'var(--page-bg, #eef5ff)', color: 'var(--text-main, #111827)' }}>
-        <div style={{ padding: '28px 32px', borderRadius: 20, background: 'var(--card-bg, #fff)', boxShadow: '0 18px 45px rgba(15, 23, 42, 0.12)', fontWeight: 800 }}>
+      <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', background: 'var(--wgs-page-bg, #eef5ff)', color: 'var(--wgs-text, #111827)' }}>
+        <div style={{ padding: '28px 32px', borderRadius: 20, background: 'var(--wgs-card, #fff)', border: '1px solid var(--wgs-border, rgba(148, 163, 184, 0.3))', boxShadow: 'var(--wgs-shadow, 0 18px 45px rgba(15, 23, 42, 0.12))', fontWeight: 800 }}>
           관리자 페이지를 확인하는 중입니다.
         </div>
       </div>
@@ -672,10 +714,10 @@ return () => {
 
   if (!canOpenAdmin) {
     return (
-      <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', background: 'var(--page-bg, #eef5ff)', color: 'var(--text-main, #111827)' }}>
-        <div style={{ maxWidth: 620, padding: '28px 32px', borderRadius: 20, background: 'var(--card-bg, #fff)', boxShadow: '0 18px 45px rgba(15, 23, 42, 0.12)' }}>
+      <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', background: 'var(--wgs-page-bg, #eef5ff)', color: 'var(--wgs-text, #111827)' }}>
+        <div style={{ maxWidth: 620, padding: '28px 32px', borderRadius: 20, background: 'var(--wgs-card, #fff)', border: '1px solid var(--wgs-border, rgba(148, 163, 184, 0.3))', boxShadow: 'var(--wgs-shadow, 0 18px 45px rgba(15, 23, 42, 0.12))' }}>
           <h2 style={{ margin: '0 0 10px', fontSize: 24 }}>관리자 권한을 확인할 수 없습니다.</h2>
-          <p style={{ margin: 0, lineHeight: 1.7, color: 'var(--text-sub, #64748b)', fontWeight: 700 }}>
+          <p style={{ margin: 0, lineHeight: 1.7, color: 'var(--wgs-muted, #64748b)', fontWeight: 700 }}>
             서버 재시작 후 세션이 만료되었거나 관리자 권한 확인 요청이 실패했습니다. 로그아웃 후 관리자 계정으로 다시 로그인해 주세요.
           </p>
         </div>
@@ -691,6 +733,7 @@ return () => {
         adminStats={adminStats}
         activeAdminTab={activeAdminTab}
         openAdminTab={openAdminTab}
+        isPrimaryAdminViewer={isPrimaryAdminViewer}
       />
 
       {/* 대시보드 탭: 운영자가 자주 확인하는 핵심 상태를 한 화면에 요약합니다. */}
@@ -704,8 +747,13 @@ return () => {
           noticeHistory={noticeHistory}
           maintenanceForm={maintenanceForm}
           questionMeta={questionMeta}
-          mealMapStats={mealMapStats}
+          visitorSummary={visitorStats.data?.summary}
+          visitorError={visitorStats.error}
         />
+      )}
+
+      {activeAdminTab === 'visitors' && (
+        <AdminVisitorStatsTab {...visitorStats} />
       )}
 
 
@@ -740,9 +788,11 @@ return () => {
           handleSuspendUser={handleSuspendUser}
           handleDeleteUser={handleDeleteUser}
           handleToggleOperator={handleToggleOperator}
+          isPrimaryAdminViewer={isPrimaryAdminViewer}
+          openPrivacyRevealModal={openPrivacyRevealModal}
           safeUserPage={safeUserPage}
           userTotalPages={userTotalPages}
-          setUserPage={setUserPage}
+          handleUserPageMove={handleUserPageMove}
           displayedRecentLogs={displayedRecentLogs}
           safeRecentLogPage={safeRecentLogPage}
           recentLogTotalPages={recentLogTotalPages}
@@ -864,31 +914,6 @@ return () => {
         />
       )}
 
-      {activeAdminTab === 'calendar' && (
-        <AdminCalendarTab
-          fetchClassSchedules={fetchClassSchedules}
-          loadingClassSchedules={loadingClassSchedules}
-          classScheduleSummary={classScheduleSummary}
-          classSchedules={classSchedules}
-          classScheduleError={classScheduleError}
-          classScheduleSuccess={classScheduleSuccess}
-          handleClassScheduleSubmit={handleClassScheduleSubmit}
-          editingClassScheduleId={editingClassScheduleId}
-          resetClassScheduleForm={resetClassScheduleForm}
-          classScheduleForm={classScheduleForm}
-          handleClassScheduleFormChange={handleClassScheduleFormChange}
-          savingClassSchedule={savingClassSchedule}
-          classScheduleFilters={classScheduleFilters}
-          handleClassScheduleFilterSubmit={handleClassScheduleFilterSubmit}
-          handleClassScheduleFilterChange={handleClassScheduleFilterChange}
-          updateClassScheduleFilterUserIds={updateClassScheduleFilterUserIds}
-          startEditClassSchedule={startEditClassSchedule}
-          handleToggleClassSchedule={handleToggleClassSchedule}
-          handleDeleteClassSchedule={handleDeleteClassSchedule}
-          users={users}
-        />
-      )}
-
       {/* 화면 설정 탭 */}
       {activeAdminTab === 'display' && (
         <AdminDisplayTab
@@ -914,20 +939,18 @@ return () => {
         />
       )}
 
-
-      {activeAdminTab === 'mealmap' && (
-        <AdminMealMapTabSections
-          places={{ fetchMealMapAdminPlaces, mealMapLoading, mealMapStats, mealMapStatusFilter, setMealMapStatusFilter, mealMapKeyword, setMealMapKeyword, mealMapError, mealMapSuccess, mealMapPlaces, mealMapSavingId, runMealMapAdminAction }}
-          edits={{ fetchMealMapEditRequests, mealMapEditLoading, mealMapEditStats, mealMapEditStatusFilter, setMealMapEditStatusFilter, mealMapEditKeyword, setMealMapEditKeyword, mealMapEditError, mealMapEditRequests, runMealMapEditAction }}
-          settings={{ loadMealMapLayoutsV253, saveMealMapLayoutSettingsV253, mealMapLayoutsV253, setMealMapLayoutsV253, loadMealMapTextSettings, saveMealMapTextSettings, mealMapTextLoading, mealMapTextSaving, mealMapTextSettings, updateMealMapTextSetting }}
-        />
-      )}
-
       <AdminMailModal
         mailModal={mailModal}
         closeUserEmailModal={closeUserEmailModal}
         handleSendUserEmail={handleSendUserEmail}
         setMailModal={setMailModal}
+      />
+
+      <AdminPrivacyRevealModal
+        privacyModal={privacyModal}
+        setPrivacyModal={setPrivacyModal}
+        closePrivacyRevealModal={closePrivacyRevealModal}
+        handlePrivacyReveal={handlePrivacyReveal}
       />
 
 

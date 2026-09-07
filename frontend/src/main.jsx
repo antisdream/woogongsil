@@ -1,4 +1,4 @@
-/* rollback_check 우회 링크가 남아있어도 게이트키퍼를 건너뛰지 않도록 URL만 정리 */
+/* 과거 점검 링크에 남아 있는 rollback_check 쿼리만 정리합니다. */
 try {
   const __wgsUrl = new URL(window.location.href);
   if (__wgsUrl.searchParams.has("rollback_check")) {
@@ -17,7 +17,6 @@ import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 
 import App from './App.jsx';
-import GatekeeperGuard from './components/GatekeeperGuard.jsx';
 
 import './index.css';
 
@@ -27,9 +26,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
 
   <BrowserRouter>
 
-    <GatekeeperGuard>
-      <App />
-    </GatekeeperGuard>
+    <App />
 
   </BrowserRouter>
 

@@ -5,6 +5,7 @@ import MyRankingHistoryChart from '../components/MyRankingHistoryChart';
 
 export default function AdminUserRanking() {
   const { targetUserId } = useParams();
+  const endpoint = `/api/admin/users/${encodeURIComponent(targetUserId || '')}/ranking-history`;
 
   return (
     <div className="admin-user-ranking-page">
@@ -12,7 +13,11 @@ export default function AdminUserRanking() {
         <h1>사용자 성적 조회</h1>
         <p>관리자 페이지에서 선택한 사용자의 개인 랭킹 히스토리입니다.</p>
       </div>
-      <MyRankingHistoryChart targetUserId={targetUserId} titlePrefix={`${targetUserId || ''} 사용자`} />
+      <MyRankingHistoryChart
+        targetUserId={targetUserId}
+        titlePrefix={`${targetUserId || ''} 사용자`}
+        apiEndpoints={[endpoint]}
+      />
     </div>
   );
 }

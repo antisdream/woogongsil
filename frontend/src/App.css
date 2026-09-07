@@ -172,7 +172,6 @@
   --wgs-wrong-text: var(--wgs-text);
   --wgs-wrong-muted: var(--wgs-muted);
   --wgs-wrong-subtle: var(--wgs-subtle);
-  --wgs-calendar-day-color: #1f2937; /* 달력 일반 날짜 숫자 색상: 라이트모드 흰 배경에서도 보이도록 지정 */
 }
 
 body.wgs-theme-dark {
@@ -260,7 +259,6 @@ body.wgs-theme-dark {
   --wgs-chat-media-bg-end: rgba(15, 23, 42, 0.86);
   --wgs-chat-media-title: #ffffff;
   --wgs-chat-media-sub: #cbd5e1;
-  --wgs-calendar-day-color: #e5e7eb; /* 달력 일반 날짜 숫자 색상: 다크모드 기존 시인성 유지 */
 }
 
 body.wgs-theme-light {
@@ -516,8 +514,7 @@ caption {
 .mypage,
 .random-practice-page,
 .past-exam-page,
-.home-login-card,
-.home-calendar-card {
+.home-login-card {
   background: var(--wgs-panel) !important;
   border: 1px solid var(--wgs-border) !important;
   border-radius: 22px !important;

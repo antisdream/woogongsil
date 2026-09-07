@@ -3,7 +3,6 @@ import React, { useCallback, useEffect, useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
-import UserCalendarManager from '../features/calendar/UserCalendarManager.jsx';
 import useScreenSettings from '../useScreenSettings';
 
 const YEARS = Array.from({ length: 2026 - 2024 + 1 }, (_, i) => 2026 - i);
@@ -122,6 +121,34 @@ const MyPage = () => {
         }
     };
 
+    const handleDeleteFortuneHistory = async (historyId) => {
+        if (!window.confirm('이 저장 결과를 삭제하시겠습니까? 삭제 후 복구할 수 없습니다.')) return;
+        try {
+            await axios.delete(`${API_BASE}/api/user/fortune-history/${encodeURIComponent(historyId)}`, {
+                data: { ...getSessionAuth(), id: userId },
+            });
+            setUser((current) => ({
+                ...current,
+                fortuneHistory: (Array.isArray(current?.fortuneHistory) ? current.fortuneHistory : [])
+                    .filter((item) => Number(item.id) !== Number(historyId)),
+            }));
+        } catch (error) {
+            alert(error.response?.data?.msg || '운세 결과 삭제에 실패했습니다.');
+        }
+    };
+
+    const handleDeleteAllFortuneHistory = async () => {
+        if (!window.confirm('저장된 운세 결과를 모두 삭제하시겠습니까? 삭제 후 복구할 수 없습니다.')) return;
+        try {
+            await axios.delete(`${API_BASE}/api/user/fortune-history`, {
+                data: { ...getSessionAuth(), id: userId },
+            });
+            setUser((current) => ({ ...current, fortuneHistory: [] }));
+        } catch (error) {
+            alert(error.response?.data?.msg || '운세 결과 전체 삭제에 실패했습니다.');
+        }
+    };
+
     if (isLoading) {
         return (
             <div className="mypage wrong-note-page wgs-typography-scope" style={{ color: 'var(--wgs-wrong-text)', textAlign: 'center', marginTop: '50px', fontSize: '20px' }}>
@@ -154,6 +181,7 @@ const MyPage = () => {
     }
 
     const loginHistoryArray = Array.isArray(user.loginHistory) ? user.loginHistory : [];
+    const fortuneHistoryArray = Array.isArray(user.fortuneHistory) ? user.fortuneHistory : [];
     const safeWrongNotes = Array.isArray(user.wrongNotes) ? user.wrongNotes : [];
     const randomWrongCount = safeWrongNotes.filter((q) => !q.source || q.source === 'random').length;
     const pastWrongCount = safeWrongNotes.filter((q) => q.source === 'past').length;
@@ -206,7 +234,7 @@ const MyPage = () => {
 
     return (
         <div
-            className="mypage wrong-note-page wgs-typography-scope" style={{ width: '100%', maxWidth: activeMyPageTab === 'calendar' ? '1200px' : '600px', margin: '40px auto', background: 'var(--wgs-button-muted)', padding: '30px', borderRadius: '12px', color: 'var(--wgs-wrong-text)', position: 'relative', boxSizing: 'border-box' }}
+            className="mypage wrong-note-page wgs-typography-scope" style={{ width: '100%', maxWidth: '600px', margin: '40px auto', background: 'var(--wgs-button-muted)', padding: '30px', borderRadius: '12px', color: 'var(--wgs-wrong-text)', position: 'relative', boxSizing: 'border-box' }}
         >
             <h2 className="wgs-page-title" style={{ color: 'var(--wgs-title)', borderBottom: '2px solid var(--wgs-border)', paddingBottom: '10px' }}>{t('page.title', '마이페이지')}</h2>
             <div className="mypage-header-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '20px 0', gap: '12px' }}>
@@ -224,18 +252,11 @@ const MyPage = () => {
                 >
                     내 정보
                 </button>
-                <button
-                    type="button"
-                    onClick={() => setActiveMyPageTab('calendar')}
-                    style={{ padding: '10px 16px', borderRadius: '999px', border: activeMyPageTab === 'calendar' ? '1px solid #3b82f6' : '1px solid #d8e5f7', background: activeMyPageTab === 'calendar' ? '#3b82f6' : '#ffffff', color: activeMyPageTab === 'calendar' ? '#ffffff' : '#111827', cursor: 'pointer', fontWeight: 800 }}
-                >
-                    달력 일정 관리
-                </button>
             </div>
 
             {activeMyPageTab === 'profile' && (
                 <>
-            <div style={{ background: 'var(--wgs-practice-toggle-bg)', padding: '20px', borderRadius: '8px', marginBottom: '20px' }}>
+            <div className="mobile-profile-panel" style={{ background: 'var(--wgs-practice-toggle-bg)', padding: '20px', borderRadius: '8px', marginBottom: '20px' }}>
                 <h3 style={{ color: '#fcd34d', marginTop: 0 }}>{t('dday.title', '목표 시험일 설정')}</h3>
                 <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#ef4444', marginBottom: '15px' }}>{dDayText}</div>
                 <div className="mypage-dday-selects" style={{ display: 'flex', gap: '5px', marginBottom: '15px' }}>
@@ -255,7 +276,7 @@ const MyPage = () => {
                 <button type="button" onClick={handleUpdateDDay} style={{ width: '100%', padding: '12px', background: '#3b82f6', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>{t('dday.save_button', 'D-Day 저장하기')}</button>
             </div>
 
-            <div style={{ background: 'var(--wgs-practice-toggle-bg)', padding: '20px', borderRadius: '8px', marginBottom: '20px' }}>
+            <div className="mobile-review-panel" style={{ background: 'var(--wgs-practice-toggle-bg)', padding: '20px', borderRadius: '8px', marginBottom: '20px' }}>
                 <h3 style={{ color: 'var(--wgs-blue)', marginTop: 0 }}>{t('wrong_notes.title', '오답노트 관리')}</h3>
                 <p className="wrong-note-muted" style={{ color: 'var(--wgs-wrong-muted)', marginTop: 0, fontSize: '13px' }}>
                     {t('wrong_notes.desc', '필기/실기와 문제은행/기출문제를 구분해서 원하는 오답만 복습할 수 있습니다.')}
@@ -275,6 +296,36 @@ const MyPage = () => {
                             </button>
                         </div>
                     ))}
+                </div>
+            </div>
+
+            <div style={{ background: 'var(--wgs-practice-toggle-bg)', padding: '20px', borderRadius: '8px', marginBottom: '20px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+                    <div>
+                        <h3 style={{ color: '#f9a8d4', margin: 0 }}>저장한 운세 결과</h3>
+                        <p style={{ color: 'var(--wgs-wrong-muted)', fontSize: '13px', margin: '6px 0 0' }}>이름·생년월일 등 입력 원본은 표시하거나 저장하지 않습니다.</p>
+                    </div>
+                    {fortuneHistoryArray.length > 0 && (
+                        <button type="button" onClick={handleDeleteAllFortuneHistory} style={{ padding: '7px 11px', borderRadius: '6px', border: '1px solid #ef4444', background: 'transparent', color: '#fca5a5', cursor: 'pointer' }}>전체 삭제</button>
+                    )}
+                </div>
+                <div style={{ marginTop: '14px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    {fortuneHistoryArray.length > 0 ? fortuneHistoryArray.map((history) => {
+                        const storedData = typeof history.data === 'string'
+                            ? (() => { try { return JSON.parse(history.data); } catch { return {}; } })()
+                            : (history.data || {});
+                        const score = storedData?.result?.score;
+                        return (
+                            <div key={history.id} style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', alignItems: 'center', padding: '12px', borderRadius: '8px', border: '1px solid var(--wgs-border)', background: 'var(--wgs-input-bg)' }}>
+                                <div>
+                                    <strong style={{ color: 'var(--wgs-title)' }}>{history.type === 'couple' ? '궁합 결과' : '개인 운세 결과'}</strong>
+                                    <div style={{ marginTop: '4px', color: 'var(--wgs-subtle)', fontSize: '12px' }}>{history.time || '-'}</div>
+                                    {Number.isFinite(Number(score)) && <div style={{ marginTop: '4px', color: '#fcd34d' }}>점수 {Number(score)}점</div>}
+                                </div>
+                                <button type="button" onClick={() => handleDeleteFortuneHistory(history.id)} style={{ padding: '7px 10px', borderRadius: '6px', border: '1px solid #ef4444', background: 'transparent', color: '#fca5a5', cursor: 'pointer' }}>삭제</button>
+                            </div>
+                        );
+                    }) : <p style={{ margin: 0, color: 'var(--wgs-subtle)' }}>사용자가 저장을 선택한 결과가 없습니다.</p>}
                 </div>
             </div>
 
@@ -313,10 +364,6 @@ const MyPage = () => {
                 <button type="button" onClick={handleDeleteAccount} style={{ background: 'transparent', color: '#ff4d4d', border: '1px solid #ff4d4d', padding: '8px 15px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>{t('delete.button', '회원 탈퇴')}</button>
             </div>
                 </>
-            )}
-
-            {activeMyPageTab === 'calendar' && (
-                <UserCalendarManager getSessionAuth={getSessionAuth} />
             )}
         </div>
     );

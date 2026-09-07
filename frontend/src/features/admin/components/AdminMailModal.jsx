@@ -23,6 +23,7 @@ export default function AdminMailModal({
           <span>받는 사람</span>
           <input value={mailModal.targetUser?.email || ''} readOnly />
         </label>
+        <p className="admin-row-note">화면에는 마스킹된 주소만 표시되며, 실제 수신 주소는 전송 시 서버가 회원 ID로 조회합니다.</p>
         <label>
           <span>메일 제목</span>
           <input value={mailModal.subject} onChange={(event) => setMailModal((prev) => ({ ...prev, subject: event.target.value, error: '' }))} placeholder="관리자가 보낼 이메일 제목을 입력해 주세요." autoFocus />
