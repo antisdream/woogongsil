@@ -10,17 +10,17 @@ const THEME_TONE_STORAGE_KEYS = {
 // 밝기 조절은 전체 filter 대신 주요 배경/UI 토큰만 다시 계산합니다.
 const THEME_TONE_BASE_TOKENS = {
     light: {
-        '--wgs-page-bg': '#f7fbff',
+        '--wgs-page-bg': '#f6f8fc',
         '--wgs-panel': '#ffffff',
         '--wgs-card': '#ffffff',
         '--wgs-card-soft': '#f8fafc',
         '--wgs-surface': '#ffffff',
-        '--wgs-surface-2': '#f3f7ff',
-        '--wgs-deep-bg': '#eaf3ff',
+        '--wgs-surface-2': '#f0f3fa',
+        '--wgs-deep-bg': '#edf1fa',
         '--wgs-neutral-bg': '#f8fafc',
-        '--wgs-panel-soft': '#f0f7ff',
+        '--wgs-panel-soft': '#eef2fc',
         '--wgs-panel-strong': '#ffffff',
-        '--wgs-button-muted': '#ebf4ff',
+        '--wgs-button-muted': '#eef2fc',
         '--wgs-input-bg': '#ffffff',
         '--wgs-choice-bg': '#ffffff',
         '--wgs-question-bg': '#ffffff',

@@ -2,8 +2,23 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { fileURLToPath } from 'node:url'
 import { resolve } from 'node:path'
+import { realpathSync } from 'node:fs'
 
 const frontendRoot = fileURLToPath(new URL('.', import.meta.url))
+
+// Match the production nginx history fallback for the separate administrator app.
+const manageHistoryFallback = () => {
+    const attach = (server) => { server.middlewares.use((request, _response, next) => {
+        const [pathname, query] = (request.url || '').split('?')
+        if (request.headers.accept?.includes('text/html')
+            && (pathname === '/manage' || pathname.startsWith('/manage/'))
+            && !pathname.includes('.')) {
+            request.url = '/manage/index.html' + (query ? `?${query}` : '')
+        }
+        next()
+    }) }
+    return { name: 'wgs-manage-history-fallback', configureServer: attach, configurePreviewServer: attach }
+}
 
 // ============================================================
 // 개발 서버 프록시
@@ -14,9 +29,10 @@ const frontendRoot = fileURLToPath(new URL('.', import.meta.url))
 // 백엔드 로직 변경 없이 Vite 개발 서버에서 동작하게 합니다.
 // ============================================================
 export default defineConfig({
-    plugins: [react()],
+    plugins: [manageHistoryFallback(), react()],
 
     server: {
+        fs: { allow: [frontendRoot, realpathSync(resolve(frontendRoot, 'node_modules'))] },
         proxy: {
             '/api': {
                 target: 'http://localhost:5000',

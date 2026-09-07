@@ -15,10 +15,11 @@ import './styles/global/auth.css';
 import './styles/global/legal-consent.css';
 import './styles/global/visitor-counter.css';
 import './styles/app/mobile-layout.css';
+import './styles/app/design-system.css';
 
 import useScreenSettings from './useScreenSettings';
 import RealTimeClock from './components/app/RealTimeClock';
-import ThemeModeToggle from './components/app/ThemeModeToggle';
+import AppNavigation from './components/app/AppNavigation';
 import VisitorCounter from './features/visitor/VisitorCounter.jsx';
 import { getOrCreateWgsClientId } from './features/visitor/visitorClient.js';
 import {
@@ -642,38 +643,7 @@ function App() {
         window.scrollTo(0, 0);
     };
 
-    const appMaxWidth = isExamActive ? '1500px' : '1480px';
-
-    const NavItem = ({ path, color = 'white', activePaths = [], children }) => {
-        // activePaths를 추가한 이유:
-        // /written 메뉴는 /practice와 /exam으로 들어가도 같은 필기 영역으로 강조되게 하기 위한 처리입니다.
-        const isActive = location.pathname === path || activePaths.includes(location.pathname) || activePaths.some((activePath) => activePath.endsWith('/*') && location.pathname.startsWith(activePath.slice(0, -2)));
-
-        return (
-            <a
-                className="wgs-nav-item wgs-type-nav" href={path}
-                aria-current={isActive ? 'page' : undefined}
-                onClick={(e) => handleNavigation(e, path)}
-                style={{
-                    color,
-                    textDecoration: 'none',
-                    fontWeight: 'bold',
-                    padding: '10px 15px',
-                    borderRadius: '8px',
-                    background: isActive ? `linear-gradient(180deg, ${color}22, ${color}12)` : 'transparent',
-                    border: isActive ? `1px solid ${color}66` : '1px solid transparent',
-                    borderBottom: isActive ? `3px solid ${color}` : '3px solid transparent',
-                    boxShadow: isActive ? `0 8px 20px ${color}22` : 'none',
-                    transition: 'all 0.2s ease-in-out',
-                    whiteSpace: 'nowrap',
-                    fontSize: '15px'
-                }}
-            >
-                {children}
-            </a>
-        );
-    };
-
+    const appMaxWidth = isExamActive ? '1440px' : '1280px';
 
     // 일반 회원 SPA는 브라우저 저장소의 역할 플래그로 점검 모드를 우회하지 않습니다.
     // 운영 작업은 일반 회원 세션과 분리된 /manage 관리자 화면에서만 계속할 수 있습니다.
@@ -716,8 +686,9 @@ function App() {
 
     return (
         <div
-            className="wgs-app-shell" style={{ minHeight: '100vh', padding: '20px 10px', width: '100%', boxSizing: 'border-box', overflowX: 'hidden' }}
+            className="wgs-app-shell ui-shell" style={{ minHeight: '100vh', padding: '20px 10px', width: '100%', boxSizing: 'border-box', overflowX: 'hidden' }}
         >
+            <a className="ui-skip-link" href="#main-content">본문으로 건너뛰기</a>
             <ToastContainer theme={themeMode} />
 
             {adminNoticePopup && (
@@ -735,81 +706,20 @@ function App() {
             )}
 
             <div
-                className="wgs-layout" style={{ width: '100%', maxWidth: appMaxWidth, margin: '0 auto', transition: 'max-width 0.2s ease', boxSizing: 'border-box' }}
+                className="wgs-layout" style={{ width: '100%', maxWidth: appMaxWidth, '--ui-content-width': appMaxWidth, margin: '0 auto', transition: 'max-width 0.2s ease', boxSizing: 'border-box' }}
             >
                 <header className="wgs-header">
-                    {/* 사이트 로고성 제목은 공통 로고 폰트 토큰을 사용하는 .wgs-site-logo 클래스로 통일합니다.
-                        기존 제목 문구와 라우팅/로그인 로직은 유지합니다. */}
-                    <h1 className="wgs-site-logo wgs-type-logo" style={{ color: 'var(--wgs-title)', padding: '10px 0', margin: '0 0 15px 0', fontSize: '26px', textAlign: 'center', fontWeight: '900', letterSpacing: '1px' }}>{getGlobalScreenSetting('global.site_title', 'SKN_우공실')}</h1>
-
-                    <ThemeModeToggle
-                        themeMode={themeMode}
-                        themeTone={themeTone}
-                        onChangeTheme={handleThemeChange}
-                        onChangeThemeTone={handleThemeToneChange}
+                    <AppNavigation
+                        siteTitle={getGlobalScreenSetting('global.site_title', '우공실')}
+                        labels={{ home: navHomeLabel, certIpe: navCertIpeLabel, multiplayer: navMultiplayerLabel, mypage: navMyPageLabel, study: navStudyLabel, board: navBoardLabel, faq: navFaqLabel, fortune: navFortuneLabel, login: navLoginLabel, logout: navLogoutLabel }}
+                        loggedInUser={loggedInUser} onNavigate={handleNavigation} onLogout={handleLogout}
+                        themeMode={themeMode} themeTone={themeTone} onChangeTheme={handleThemeChange} onChangeThemeTone={handleThemeToneChange}
                     />
-
                     <RealTimeClock loggedInUser={loggedInUser} handleLogout={handleLogout} isExamActive={isExamActive} examWarningCount={examWarningCount} />
-
-                    <nav className="wgs-main-nav" style={{
-                        display: 'flex',
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                        padding: '10px',
-                        background: 'var(--wgs-card-bg)',
-                        borderRadius: '12px',
-                        boxShadow: '0 4px 15px var(--wgs-shadow)',
-                        flexWrap: 'nowrap',
-                        overflowX: 'auto',
-                        gap: '8px',
-                        border: '1px solid var(--wgs-border)'
-                    }}>
-                        {/*  우공실의 핵심 흐름에 맞춰 메뉴 순서를 재정렬했습니다.
-                            메뉴 순서는 홈, 필기, 실기, 마이페이지, 게시판, FAQ, 운세입니다.
-                            학습 기능을 먼저 배치하고, 커뮤니티/안내/부가기능은 뒤로 배치했습니다. */}
-                        <NavItem path="/" color="#2dd4bf">{navHomeLabel}</NavItem>
-                        {/*  [멀티플레이 1단계 분리]
-                        필기문제 메뉴는 이제 문제은행(/practice)과 기출문제(/exam)만 같은 영역으로 강조합니다.
-                        멀티플레이(/multiplayer)는 별도 메뉴로 분리해 필기문제 페이지와 시각적으로 구분합니다. */}
-                        <NavItem
-                            path="/cert/ipe" color="#60a5fa" activePaths={['/cert/ipe/*', '/written', '/practice', '/exam', '/ipep']}
-                        >
-                            {navCertIpeLabel}
-                        </NavItem>
-                        {/*  [멀티플레이 1단계 분리]
-                        기존 /multiplayer 라우트와 기능은 그대로 두고, 상단 메뉴에서 바로 들어갈 수 있는 독립 입구만 추가합니다.
-                        백엔드 멀티플레이 로직은 유지합니다. */}
-                        <NavItem path="/multiplayer" color="#8b5cf6">{navMultiplayerLabel}</NavItem>
-                        {loggedInUser && <NavItem path="/mypage" color="#a78bfa">{navMyPageLabel}</NavItem>}
-                        {loggedInUser && <NavItem path="/study" color="#14b8a6" activePaths={['/study/*']}>{navStudyLabel}</NavItem>}
-                        <NavItem path="/board" color="#f97316">{navBoardLabel}</NavItem>
-                        <NavItem path="/faq" color="#facc15">{navFaqLabel}</NavItem>
-                        <NavItem path="/fortune" color="#fb7185">{navFortuneLabel}</NavItem>
-                        {!loggedInUser ? (
-                            <NavItem path="/login" color="#f8fafc">{navLoginLabel}</NavItem>
-                        ) : (
-                            <button
-                                className="wgs-nav-item wgs-type-nav wgs-logout-nav-item" onClick={() => handleLogout(false)}
-                                style={{
-                                    background: 'transparent',
-                                    border: 'none',
-                                    color: '#ef4444',
-                                    cursor: 'pointer',
-                                    fontSize: '15px',
-                                    fontWeight: 'bold',
-                                    padding: '10px 15px',
-                                    whiteSpace: 'nowrap',
-                                    borderBottom: '3px solid transparent'
-                                }}
-                            >
-                                 {navLogoutLabel}
-                            </button>
-                        )}
-                    </nav>
                 </header>
 
                 <main
-                    className="wgs-main-content" style={{ width: '100%', minWidth: 0, boxSizing: 'border-box', marginTop: '30px', paddingBottom: '50px' }}
+                    id="main-content" tabIndex={-1} className="wgs-main-content" style={{ width: '100%', minWidth: 0, boxSizing: 'border-box', marginTop: '30px', paddingBottom: '50px' }}
                 >
                     <Suspense fallback={<RouteLoadingFallback />}>
                         <Routes>
@@ -844,13 +754,14 @@ function App() {
                             <Route path="/terms" element={<LegalPolicyPage mode="terms" />} />
                             <Route path="/privacy" element={<LegalPolicyPage mode="privacy" />} />
                             <Route path="/account-consent" element={<Navigate to="/" replace />} />
+                            <Route path="*" element={<section className="ui-empty"><p className="ui-eyebrow">페이지를 찾을 수 없어요</p><h1>공부를 이어갈 곳으로 돌아가요.</h1><p>주소를 확인하거나 학습 선택 화면에서 다시 시작해 주세요.</p><a className="ui-primary" href="/cert/ipe">학습 선택으로</a></section>} />
                         </Routes>
                     </Suspense>
                 </main>
                 <VisitorCounter />
-                <footer style={{ display: 'flex', justifyContent: 'center', gap: '18px', flexWrap: 'wrap', padding: '18px 12px 28px', color: 'var(--wgs-subtle)', fontSize: '13px' }}>
-                    <a href="/terms" style={{ color: 'inherit' }}>이용약관</a>
-                    <a href="/privacy" style={{ color: 'inherit' }}>개인정보 처리 안내</a>
+                <footer className="ui-footer">
+                    <div><strong>우공실</strong><span>한 문제씩 쌓아가는 나의 공부실</span></div>
+                    <div className="ui-footer-links"><a href="/faq" onClick={(event) => handleNavigation(event, '/faq')}>이용 안내</a><a href="/fortune" onClick={(event) => handleNavigation(event, '/fortune')}>오늘의 운세</a><a href="/terms" onClick={(event) => handleNavigation(event, '/terms')}>이용약관</a><a href="/privacy" onClick={(event) => handleNavigation(event, '/privacy')}>개인정보 처리 안내</a></div>
                 </footer>
             </div>
         </div>
