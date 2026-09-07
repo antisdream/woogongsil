@@ -64,9 +64,9 @@ export default function IpepSpecialSymbolPad({
 
     return (
         <div style={{ marginTop: '10px' }}>
-            <button
+            <button className="learning-secondary"
                 type="button"
-                onClick={() => setIsOpen((prev) => !prev)}
+                aria-expanded={isOpen} onClick={() => setIsOpen((prev) => !prev)}
                 style={{ ...baseButtonStyle, width: '100%', background: 'var(--wgs-button-muted)', border: '1px solid #3b82f6' }}
             >
                 {isOpen ? toggleCloseLabel : toggleOpenLabel}
@@ -75,10 +75,10 @@ export default function IpepSpecialSymbolPad({
             {isOpen && (
                 <div style={panelStyle}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginBottom: '10px' }}>
-                        <button
+                        <button className="learning-secondary"
                             type="button"
                             onClick={() => setPageIndex((prev) => clampPage(prev - 1, pageCount))}
-                            disabled={safePageIndex === 0}
+                            aria-label="이전 특수기호" disabled={safePageIndex === 0}
                             style={{ ...baseButtonStyle, minWidth: '52px', padding: '10px 12px', background: 'var(--wgs-button-muted)', opacity: safePageIndex === 0 ? 0.5 : 1 }}
                         >
                             &lt;
@@ -86,10 +86,10 @@ export default function IpepSpecialSymbolPad({
                         <strong style={{ color: 'var(--wgs-text)', fontSize: '16px', minWidth: '64px', textAlign: 'center' }}>
                             {safePageIndex + 1} / {pageCount}
                         </strong>
-                        <button
+                        <button className="learning-secondary"
                             type="button"
                             onClick={() => setPageIndex((prev) => clampPage(prev + 1, pageCount))}
-                            disabled={safePageIndex === pageCount - 1}
+                            aria-label="다음 특수기호" disabled={safePageIndex === pageCount - 1}
                             style={{ ...baseButtonStyle, minWidth: '52px', padding: '10px 12px', background: 'var(--wgs-button-muted)', opacity: safePageIndex === pageCount - 1 ? 0.5 : 1 }}
                         >
                             &gt;
@@ -107,7 +107,7 @@ export default function IpepSpecialSymbolPad({
                             <button
                                 key={symbol}
                                 type="button"
-                                aria-label={`insert ${symbol}`}
+                                aria-label={`${symbol} 입력`}
                                 onClick={() => insertSymbol(symbol)}
                                 style={symbolButtonStyle}
                             >

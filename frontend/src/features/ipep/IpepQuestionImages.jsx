@@ -34,7 +34,7 @@ export function IpepQuestionImages({
                     onError={(e) => { e.currentTarget.style.display = 'none'; }}
                 />
                 <div style={{ marginTop: '8px' }}>
-                    <button
+                    <button className="learning-secondary"
                         type="button" onClick={() => openImageViewer(choiceImgPath, choiceViewerTitle)}
                         style={{ ...baseButtonStyle, padding: '8px 12px', background: 'var(--wgs-button-muted)', fontSize: '13px' }}
                     >
@@ -78,7 +78,7 @@ export function IpepExplanationImage({
                         onError={(e) => { e.currentTarget.style.display = 'none'; }}
                     />
                 </div>
-                <button
+                <button className="learning-secondary"
                     type="button" onClick={() => openImageViewer(explanationImgPath, explanationViewerTitle)}
                     style={{ ...baseButtonStyle, width: '100%', marginTop: '10px', background: '#8b5cf6' }}
                 >

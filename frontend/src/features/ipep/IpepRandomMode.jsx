@@ -40,8 +40,8 @@ export default function IpepRandomMode({
         : subjects.find((subject) => subject.subjectCode === selectedSubject)?.subjectName || selectedSubject;
 
     return (
-        <section style={compactPanelStyle}>
-            <div style={studyHeaderStyle}>
+        <section className="learning-study-panel" style={compactPanelStyle}>
+            <div className="learning-study-head" style={studyHeaderStyle}>
                 <div>
                     <h3 style={studyTitleStyle}>{getText('random.title', ' 실기 문제은행')}</h3>
                     <p style={{ ...mutedTextStyle, fontSize: '14px' }}>
@@ -51,18 +51,18 @@ export default function IpepRandomMode({
             </div>
 
             <div className="ipep-filter-strip" style={horizontalFilterBarStyle}>
-                <button
+                <button className="learning-secondary"
                     type="button"
-                    onClick={() => setSelectedSubject('ALL')}
+                    aria-pressed={selectedSubject === 'ALL'} onClick={() => setSelectedSubject('ALL')}
                     style={{ ...baseButtonStyle, flex: '0 0 auto', minHeight: '40px', padding: '10px 14px', background: selectedSubject === 'ALL' ? '#3b82f6' : 'var(--wgs-button-muted)' }}
                 >
                     {getText('random.all_subject_label', '전체 과목 섞기')}
                 </button>
                 {subjects.map((subject) => (
-                    <button
+                    <button className="learning-secondary"
                         key={subject.subjectCode}
                         type="button"
-                        onClick={() => setSelectedSubject(subject.subjectCode)}
+                        aria-pressed={selectedSubject === subject.subjectCode} onClick={() => setSelectedSubject(subject.subjectCode)}
                         style={{ ...baseButtonStyle, flex: '0 0 auto', minHeight: '40px', padding: '10px 14px', background: selectedSubject === subject.subjectCode ? '#3b82f6' : 'var(--wgs-button-muted)' }}
                     >
                         {subject.subjectCode}. {subject.subjectName} ({subject.questionCount})
@@ -70,7 +70,7 @@ export default function IpepRandomMode({
                 ))}
             </div>
 
-            <div style={questionCardStyle}>
+            <div className="learning-question-card" style={questionCardStyle}>
                 {randomLoading ? (
                     <p style={{ color: 'var(--wgs-muted)' }}>{getText('random.loading', '문제를 불러오는 중입니다...')}</p>
                 ) : randomQuestion ? (
@@ -103,7 +103,9 @@ export default function IpepRandomMode({
                             choiceButtonLabel={getText('image.choice_button', ' 보기 이미지 크게 보기')}
                         />
 
+                        <label className="learning-answer-label" htmlFor="ipep-random-answer">내 답안</label>
                         <textarea
+                            id="ipep-random-answer"
                             ref={randomAnswerRef}
                             value={randomAnswer}
                             onChange={(event) => setRandomAnswer(event.target.value)}
@@ -117,7 +119,7 @@ export default function IpepRandomMode({
                             onChange={setRandomAnswer}
                         />
 
-                        <button
+                        <button className="learning-secondary"
                             type="button"
                             onClick={() => setIsDrawingOpen((prev) => !prev)}
                             style={{ ...baseButtonStyle, width: '100%', marginTop: '10px', background: 'var(--wgs-practice-toggle-bg)', border: '1px solid #3b82f6' }}
@@ -127,12 +129,12 @@ export default function IpepRandomMode({
                         {isDrawingOpen && <DrawingBoard />}
 
                         <div className="ipep-action-row" style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginTop: '14px' }}>
-                            <button type="button" onClick={checkRandomAnswer} style={{ ...baseButtonStyle, flex: '1 1 180px', background: '#3b82f6' }}>{getText('buttons.submit_answer', ' 정답 제출')}</button>
-                            <button type="button" onClick={() => fetchRandomQuestion(selectedSubject)} style={{ ...baseButtonStyle, flex: '1 1 140px', background: 'var(--wgs-button-muted)' }}>{getText('buttons.next_random', ' 다른 문제')}</button>
+                            <button type="button" className="learning-primary" onClick={checkRandomAnswer} style={{ ...baseButtonStyle, flex: '1 1 180px', background: '#3b82f6' }}>{getText('buttons.submit_answer', ' 정답 제출')}</button>
+                            <button className="learning-secondary" type="button" onClick={() => fetchRandomQuestion(selectedSubject)} style={{ ...baseButtonStyle, flex: '1 1 140px', background: 'var(--wgs-button-muted)' }}>{getText('buttons.next_random', ' 다른 문제')}</button>
                         </div>
 
                         {randomResult && (
-                            <div style={{ marginTop: '16px', padding: '18px', borderRadius: '10px', background: randomResult.isCorrect ? 'rgba(16,185,129,0.16)' : 'rgba(239,68,68,0.16)', border: `1px solid ${randomResult.isCorrect ? '#10b981' : '#ef4444'}` }}>
+                            <div role="status" className="learning-feedback" style={{ marginTop: '16px', padding: '18px', borderRadius: '10px', background: randomResult.isCorrect ? 'rgba(16,185,129,0.16)' : 'rgba(239,68,68,0.16)', border: `1px solid ${randomResult.isCorrect ? '#10b981' : '#ef4444'}` }}>
                                 <h4 style={{ margin: '0 0 12px 0', color: randomResult.isCorrect ? '#10b981' : '#ef4444' }}>
                                     {randomResult.requiresSelfCheck
                                         ? getText('result.self_check_needed', '정답 예시 확인이 필요합니다.')

@@ -2,6 +2,8 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import useScreenSettings from '../useScreenSettings';
+import { FiArrowRight, FiBookOpen, FiEdit3 } from 'react-icons/fi';
+import '../styles/app/learning-redesign.css';
 
 // 정보처리기사 입구 화면 구성
 // 역할:
@@ -42,20 +44,20 @@ function CertificateIpeHome() {
     const pageTitle = getSetting('hero.page_title', '정보처리기사');
     const pageDesc = getSetting(
         'hero.page_desc',
-        '필기와 실기 학습 메뉴를 하나의 정보처리기사 페이지에서 선택합니다.\n각 버튼을 누르면 필기 학습 로비와 실기 학습 로비로 이동합니다.'
+        '지금 필요한 연습부터 시작하세요.\n필기는 선택형 문제로 개념을 확인하고, 실기는 직접 답안을 쓰며 준비합니다.'
     );
     const writtenTitle = getSetting('cards.written_title', '필기 학습');
     const writtenDesc = getSetting(
         'cards.written_desc',
-        '필기 학습 로비로 이동합니다.\n필기 문제은행과 필기 기출문제를 한 화면에서 선택할 수 있습니다.'
+        '한 문제씩 개념을 익히거나, 회차를 골라 시험처럼 풀어보세요.\n선택형 답안과 해설로 학습 내용을 확인합니다.'
     );
-    const writtenButton = getSetting('cards.written_button_label', '필기 로비로 이동');
+    const writtenButton = getSetting('cards.written_button_label', '필기 학습 시작');
     const practicalTitle = getSetting('cards.practical_title', '실기 학습');
     const practicalDesc = getSetting(
         'cards.practical_desc',
-        '실기 학습 로비로 이동합니다.\n실기 문제은행과 실기 기출문제를 한 화면에서 선택할 수 있습니다.'
+        '용어와 SQL, 코드 출력 문제의 답안을 직접 작성하세요.\n문제은행, 기출문제, 3주 공략 중 학습 방식을 고를 수 있습니다.'
     );
-    const practicalButton = getSetting('cards.practical_button_label', '실기 로비로 이동');
+    const practicalButton = getSetting('cards.practical_button_label', '실기 학습 시작');
     const bottomNotice = getSetting(
         'notice.bottom_notice',
         '정보처리기사 메뉴에서 필기와 실기 학습을 한 번에 선택할 수 있으며,\n실제 문제풀이·기출응시·채점·오답 저장 기능은 동일하게 이용할 수 있습니다.'
@@ -63,7 +65,7 @@ function CertificateIpeHome() {
 
     return (
         <div
-            className="cert-ipe-home-page exam-page wgs-typography-scope" style={{
+            className="cert-ipe-home-page exam-page wgs-typography-scope learning-page learning-lobby" style={{
                 width: '100%',
                 boxSizing: 'border-box',
                 background: 'var(--wgs-card)',
@@ -75,8 +77,8 @@ function CertificateIpeHome() {
         >
             <div className="mobile-lobby-intro" style={{ marginBottom: '26px' }}>
                 <p style={{ color: 'var(--wgs-muted)', fontWeight: '800', margin: '0 0 8px 0' }}>{eyebrow}</p>
-                <h2
-                    className="wgs-page-title" style={{
+                <h1
+                    className="wgs-page-title learning-page-title" style={{
                         color: 'var(--wgs-title)',
                         fontSize: '34px',
                         fontWeight: '900',
@@ -85,47 +87,49 @@ function CertificateIpeHome() {
                     }}
                 >
                      {pageTitle}
-                </h2>
+                </h1>
                 <p style={{ color: 'var(--wgs-muted)', lineHeight: 1.7, margin: '14px 0 0 0', whiteSpace: 'pre-line' }}>
                     {pageDesc}
                 </p>
             </div>
 
             <div
-                className="mobile-lobby-grid"
+                className="mobile-lobby-grid learning-mode-grid"
                 style={{
                     display: 'grid',
                     gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
                     gap: '18px'
                 }}
             >
-                <section className="mobile-lobby-card" style={cardStyle}>
+                <section className="mobile-lobby-card learning-mode-card" style={cardStyle}>
                     <div>
+                        <span className="learning-mode-icon" aria-hidden="true"><FiBookOpen /></span>
                         <h3 style={{ color: '#60a5fa', fontSize: '24px', margin: '0 0 14px 0', fontWeight: '900' }}>{writtenTitle}</h3>
                         <p style={{ color: 'var(--wgs-muted)', lineHeight: 1.75, margin: 0, whiteSpace: 'pre-line' }}>
                             {writtenDesc}
                         </p>
                     </div>
                     <button
-                        type="button" onClick={() => navigate('/cert/ipe/written')}
+                        className="learning-primary" type="button" onClick={() => navigate('/cert/ipe/written')}
                         style={{ ...buttonStyle, background: '#3b82f6', marginTop: '20px' }}
                     >
-                        {writtenButton}
+                        {writtenButton}<FiArrowRight aria-hidden="true" />
                     </button>
                 </section>
 
-                <section className="mobile-lobby-card" style={cardStyle}>
+                <section className="mobile-lobby-card learning-mode-card" style={cardStyle}>
                     <div>
+                        <span className="learning-mode-icon" aria-hidden="true"><FiEdit3 /></span>
                         <h3 style={{ color: '#34d399', fontSize: '24px', margin: '0 0 14px 0', fontWeight: '900' }}>{practicalTitle}</h3>
                         <p style={{ color: 'var(--wgs-muted)', lineHeight: 1.75, margin: 0, whiteSpace: 'pre-line' }}>
                             {practicalDesc}
                         </p>
                     </div>
                     <button
-                        type="button" onClick={() => navigate('/cert/ipe/practical')}
+                        className="learning-primary" type="button" onClick={() => navigate('/cert/ipe/practical')}
                         style={{ ...buttonStyle, background: '#10b981', marginTop: '20px' }}
                     >
-                        {practicalButton}
+                        {practicalButton}<FiArrowRight aria-hidden="true" />
                     </button>
                 </section>
             </div>

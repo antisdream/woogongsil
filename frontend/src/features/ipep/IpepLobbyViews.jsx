@@ -1,5 +1,6 @@
 // Practical-exam feature module for IpepLobbyViews.
 import React from 'react';
+import { FiBookOpen, FiClipboard, FiCalendar, FiArrowRight } from 'react-icons/fi';
 import WgsIpepSettingLines from './IpepSettingLines.jsx';
 import {
     baseButtonStyle,
@@ -47,58 +48,61 @@ export function IpepLobby({
         return (
             <>
                 <div
-                    className="ipep-lobby-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '18px' }}
+                    className="ipep-lobby-grid learning-mode-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '18px' }}
                 >
-                    <article style={ipepLobbyCardStyle}>
+                    <article className="learning-mode-card" style={ipepLobbyCardStyle}>
                         <div>
                             {/* 필기 로비와 동일한 제목 크기/색상 기준을 적용하되, 실기 로비 문구는 그대로 유지합니다. */}
+                            <span className="learning-mode-icon" aria-hidden="true"><FiBookOpen /></span>
                             <h3 style={ipepLobbyTitleStyle}>{ipepRandomCardTitle}</h3>
                             <p style={ipepLobbyTextStyle}>
                                 <WgsIpepSettingLines text={ipepRandomCardDesc} />
                             </p>
                         </div>
-                        <button
+                        <button className="learning-primary"
                             onClick={() => goIpepMode('random')}
                             style={{ ...ipepLobbyButtonStyle, background: '#3b82f6' }}
                         >
-                            {ipepRandomButtonLabel}
+                            {ipepRandomButtonLabel}<FiArrowRight aria-hidden="true" />
                         </button>
                     </article>
 
-                    <article style={ipepLobbyCardStyle}>
+                    <article className="learning-mode-card" style={ipepLobbyCardStyle}>
                         <div>
                             {/* 필기 로비와 동일한 제목 크기/색상 기준을 적용하되, 실기 로비 문구는 그대로 유지합니다. */}
+                            <span className="learning-mode-icon" aria-hidden="true"><FiClipboard /></span>
                             <h3 style={ipepLobbyTitleStyle}>{ipepPastCardTitle}</h3>
                             <p style={ipepLobbyTextStyle}>
                                 <WgsIpepSettingLines text={ipepPastCardDesc} />
                             </p>
                         </div>
-                        <button
+                        <button className="learning-primary"
                             onClick={() => goIpepMode('past')}
                             style={{ ...ipepLobbyButtonStyle, background: '#10b981' }}
                         >
-                            {ipepPastButtonLabel}
+                            {ipepPastButtonLabel}<FiArrowRight aria-hidden="true" />
                         </button>
                     </article>
 
-                    <article style={ipepLobbyCardStyle}>
+                    <article className="learning-mode-card" style={ipepLobbyCardStyle}>
                         <div>
+                            <span className="learning-mode-icon" aria-hidden="true"><FiCalendar /></span>
                             <h3 style={ipepLobbyTitleStyle}>{ipepThreeWeekCardTitle}</h3>
                             <p style={ipepLobbyTextStyle}>
                                 <WgsIpepSettingLines text={ipepThreeWeekCardDesc} />
                             </p>
                         </div>
-                        <button
+                        <button className="learning-primary"
                             onClick={() => goIpepMode('threeWeek')}
                             style={{ ...ipepLobbyButtonStyle, background: '#f59e0b' }}
                         >
-                            {ipepThreeWeekButtonLabel}
+                            {ipepThreeWeekButtonLabel}<FiArrowRight aria-hidden="true" />
                         </button>
                     </article>
                 </div>
 
                 {/* 안내 박스도 필기 로비의 가독성 기준과 맞춰 모드 전환 시 색/줄간격이 흔들리지 않도록 고정합니다. */}
-                <div style={ipepLobbyNoticeStyle}>
+                <div className="learning-note" style={ipepLobbyNoticeStyle}>
                     <WgsIpepSettingLines text={ipepGuideText} />
                 </div>
             </>
@@ -118,30 +122,33 @@ export function IpepModeButtons({
             <div
                 className="ipep-mode-switcher" style={{ display: 'flex', gap: '8px', flexWrap: 'nowrap', overflowX: 'auto', marginBottom: '14px', paddingBottom: '2px' }}
             >
-                <button
+                <button className="learning-secondary"
                     type="button"
                     onClick={() => goIpepMode('lobby')}
                     style={{ ...baseButtonStyle, flex: '0 0 auto', minHeight: '40px', padding: '10px 14px', background: 'var(--wgs-button-muted)' }}
                 >
                     {lobbyButtonLabel}
                 </button>
-                <button
+                <button className="learning-secondary"
                     type="button"
                     onClick={() => goIpepMode('random')}
+                    aria-pressed={mode === 'random'}
                     style={{ ...baseButtonStyle, flex: '0 0 auto', minHeight: '40px', padding: '10px 14px', background: mode === 'random'? '#3b82f6' : 'var(--wgs-button-muted)' }}
                 >
                      {randomButtonLabel}
                 </button>
-                <button
+                <button className="learning-secondary"
                     type="button"
                     onClick={() => goIpepMode('past')}
+                    aria-pressed={mode === 'past'}
                     style={{ ...baseButtonStyle, flex: '0 0 auto', minHeight: '40px', padding: '10px 14px', background: mode === 'past'? '#3b82f6' : 'var(--wgs-button-muted)' }}
                 >
                      {pastButtonLabel}
                 </button>
-                <button
+                <button className="learning-secondary"
                     type="button"
                     onClick={() => goIpepMode('threeWeek')}
+                    aria-pressed={mode === 'threeWeek'}
                     style={{ ...baseButtonStyle, flex: '0 0 auto', minHeight: '40px', padding: '10px 14px', background: mode === 'threeWeek'? '#3b82f6' : 'var(--wgs-button-muted)' }}
                 >
                      {threeWeekButtonLabel}

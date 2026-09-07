@@ -200,8 +200,8 @@ export default function IpepThreeWeekPanel({
     const choiceLines = splitChoiceText(currentQuestion?.choiceText);
 
     return (
-        <section style={compactPanelStyle}>
-            <div style={studyHeaderStyle}>
+        <section className="learning-study-panel" style={compactPanelStyle}>
+            <div className="learning-study-head" style={studyHeaderStyle}>
                 <div>
                     <h3 style={studyTitleStyle}>
                         {getText('three_week_title', '3주 공략')}
@@ -228,10 +228,10 @@ export default function IpepThreeWeekPanel({
                             const week = overview.weeks?.find((row) => Number(row.weekNo) === weekNo);
                             const questionCount = Number(week?.questionCount || 0);
                             return (
-                                <button
+                                <button className="learning-secondary"
                                     key={weekNo}
                                     type="button"
-                                    onClick={() => setSelectedWeek(weekNo)}
+                                    aria-pressed={selectedWeek === weekNo} onClick={() => setSelectedWeek(weekNo)}
                                     title={`${weekNo}주차 ${questionCount}문제`}
                                     style={{
                                         ...baseButtonStyle,
@@ -252,11 +252,11 @@ export default function IpepThreeWeekPanel({
                     정렬
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '8px' }}>
                         {orderOptions.map((option) => (
-                            <button
+                            <button className="learning-secondary"
                                 key={option.value}
                                 type="button"
                                 title={option.description}
-                                onClick={() => setOrder(option.value)}
+                                aria-pressed={order === option.value} onClick={() => setOrder(option.value)}
                                 style={{
                                     ...baseButtonStyle,
                                     minHeight: '42px',
@@ -290,7 +290,7 @@ export default function IpepThreeWeekPanel({
                 </label>
             </div>
 
-            <div style={questionCardStyle}>
+            <div className="learning-question-card" style={questionCardStyle}>
                 {loadingOverview || loadingQuestions ? (
                     <p style={{ color: 'var(--wgs-muted)', margin: 0 }}>문제를 불러오는 중입니다...</p>
                 ) : !currentQuestion ? (
@@ -342,7 +342,9 @@ export default function IpepThreeWeekPanel({
                             choiceButtonLabel="보기 이미지 크게 보기"
                         />
 
+                        <label className="learning-answer-label" htmlFor="ipep-three-week-answer">내 답안</label>
                         <textarea
+                            id="ipep-three-week-answer"
                             ref={answerRef}
                             value={currentAnswer}
                             onChange={(event) => setAnswers((prev) => ({
@@ -362,7 +364,7 @@ export default function IpepThreeWeekPanel({
                             }))}
                         />
 
-                        <button
+                        <button className="learning-secondary"
                             type="button"
                             onClick={() => setIsDrawingOpen((prev) => !prev)}
                             style={{ ...baseButtonStyle, width: '100%', marginTop: '10px', background: 'var(--wgs-practice-toggle-bg)', border: '1px solid #3b82f6' }}
@@ -372,7 +374,7 @@ export default function IpepThreeWeekPanel({
                         {isDrawingOpen && <DrawingBoard />}
 
                         <div className="ipep-action-row" style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginTop: '14px' }}>
-                            <button
+                            <button className="learning-secondary"
                                 type="button"
                                 onClick={() => setCurrentIndex(Math.max(0, currentIndex - 1))}
                                 disabled={currentIndex === 0}
@@ -382,13 +384,13 @@ export default function IpepThreeWeekPanel({
                             </button>
                             <button
                                 type="button"
-                                onClick={checkCurrentAnswer}
+                                className="learning-primary" onClick={checkCurrentAnswer}
                                 disabled={checking}
                                 style={{ ...baseButtonStyle, background: '#3b82f6', flex: '2 1 180px' }}
                             >
                                 {checking ? '채점 중...' : '정답 제출'}
                             </button>
-                            <button
+                            <button className="learning-secondary"
                                 type="button"
                                 onClick={() => setCurrentIndex(Math.min(questions.length - 1, currentIndex + 1))}
                                 disabled={currentIndex === questions.length - 1}
@@ -399,7 +401,7 @@ export default function IpepThreeWeekPanel({
                         </div>
 
                         {currentResult && (
-                            <div style={{ marginTop: '16px', padding: '18px', borderRadius: '10px', background: currentResult.isCorrect ? 'rgba(16,185,129,0.16)' : 'rgba(239,68,68,0.16)', border: `1px solid ${currentResult.isCorrect ? '#10b981' : '#ef4444'}` }}>
+                            <div role="status" className="learning-feedback" style={{ marginTop: '16px', padding: '18px', borderRadius: '10px', background: currentResult.isCorrect ? 'rgba(16,185,129,0.16)' : 'rgba(239,68,68,0.16)', border: `1px solid ${currentResult.isCorrect ? '#10b981' : '#ef4444'}` }}>
                                 <h4 style={{ margin: '0 0 12px 0', color: currentResult.isCorrect ? '#10b981' : '#ef4444' }}>
                                     {currentResult.requiresSelfCheck && currentResult.isCorrect === null
                                         ? '정답 예시를 보고 직접 판단해 주세요.'
@@ -458,9 +460,9 @@ export default function IpepThreeWeekPanel({
                                     style={{
                                         minHeight: '38px',
                                         borderRadius: '7px',
-                                        border: active ? '2px solid #fcd34d' : '1px solid var(--wgs-border)',
-                                        background: solved ? '#10b981' : 'var(--wgs-input-bg)',
-                                        color: 'var(--wgs-text)',
+                                        border: active ? '2px solid var(--wgs-blue)' : '1px solid var(--wgs-border)',
+                                        background: solved ? 'var(--wgs-blue)' : 'var(--wgs-input-bg)',
+                                        color: solved ? '#fff' : 'var(--wgs-text)',
                                         fontWeight: 900,
                                         cursor: 'pointer',
                                     }}

@@ -3,6 +3,8 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import useScreenSettings from '../useScreenSettings';
+import { FiArrowRight, FiBookOpen, FiEdit3 } from 'react-icons/fi';
+import '../styles/app/learning-redesign.css';
 
 // 필기 로비 화면 구성
 // 역할:
@@ -68,7 +70,7 @@ function WrittenLobby() {
 
     return (
         <div
-            className="written-lobby-page exam-page wgs-typography-scope" style={{
+            className="written-lobby-page exam-page wgs-typography-scope learning-page learning-lobby" style={{
                 width: '100%',
                 boxSizing: 'border-box',
                 background: 'var(--wgs-card)',
@@ -77,15 +79,16 @@ function WrittenLobby() {
                 padding: '30px'
             }}
         >
-            <h2
-                className="wgs-page-title" style={{
+            <p className="learning-eyebrow">정보처리기사 · 필기</p>
+            <h1
+                className="wgs-page-title learning-page-title" style={{
                     color: 'var(--wgs-title)',
                     fontSize: '28px',
                     margin: '0 0 12px 0'
                 }}
             >
                  {writtenLobbyTitle}
-            </h2>
+            </h1>
 
             <p
                 style={{
@@ -100,7 +103,7 @@ function WrittenLobby() {
             </p>
 
             <div
-                className="written-lobby-grid" style={{
+                className="written-lobby-grid learning-mode-grid" style={{
                     display: 'grid',
                     gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
                     gap: '18px'
@@ -109,8 +112,9 @@ function WrittenLobby() {
                 {/*  필기 문제은행 카드
                     기존 RandomPractice 화면을 /cert/ipe/written-bank 주소에서 그대로 사용합니다.
                     랜덤 문제 풀이 기능 자체는 수정하지 않습니다. */}
-                <section className="mobile-lobby-card" style={cardStyle}>
+                <section className="mobile-lobby-card learning-mode-card" style={cardStyle}>
                     <div>
+                        <span className="learning-mode-icon" aria-hidden="true"><FiBookOpen /></span>
                         <h3
                             style={{
                                 color: '#fcd34d',
@@ -134,22 +138,23 @@ function WrittenLobby() {
                     </div>
 
                     <button
-                        type="button" onClick={() => navigate('/cert/ipe/written-bank')}
+                        className="learning-primary" type="button" onClick={() => navigate('/cert/ipe/written-bank')}
                         style={{
                             ...buttonStyle,
                             background: '#3b82f6',
                             marginTop: '20px'
                         }}
                     >
-                        {writtenRandomButtonLabel}
+                        {writtenRandomButtonLabel}<FiArrowRight aria-hidden="true" />
                     </button>
                 </section>
 
                 {/*  필기 기출문제 카드
                     기존 PastExam 화면을 /cert/ipe/written-past 주소에서 그대로 사용합니다.
                     제한시간, OMR, 결과표, PDF 출력 로직은 수정하지 않습니다. */}
-                <section className="mobile-lobby-card" style={cardStyle}>
+                <section className="mobile-lobby-card learning-mode-card" style={cardStyle}>
                     <div>
+                        <span className="learning-mode-icon" aria-hidden="true"><FiEdit3 /></span>
                         <h3
                             style={{
                                 color: '#fcd34d',
@@ -173,14 +178,14 @@ function WrittenLobby() {
                     </div>
 
                     <button
-                        type="button" onClick={() => navigate('/cert/ipe/written-past')}
+                        className="learning-primary" type="button" onClick={() => navigate('/cert/ipe/written-past')}
                         style={{
                             ...buttonStyle,
                             background: '#10b981',
                             marginTop: '20px'
                         }}
                     >
-                        {writtenPastButtonLabel}
+                        {writtenPastButtonLabel}<FiArrowRight aria-hidden="true" />
                     </button>
                 </section>
             </div>

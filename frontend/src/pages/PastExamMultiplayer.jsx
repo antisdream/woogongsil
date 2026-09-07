@@ -1,3 +1,4 @@
+import '../styles/app/learning-redesign.css';
 // 멀티플레이 라우트 페이지 컴포넌트입니다.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -663,7 +664,7 @@ function PastExamMultiplayerInner({ setIsExamActive, initialTab = 'play' }) {
       return (
         <div style={pageStyle}>
           <div style={headerRowStyle}>
-            <h1 style={titleStyle}> {activeExamMeta.label} 랜덤 CBT 멀티플레이</h1>
+            <h2 style={titleStyle}> {activeExamMeta.label} 랜덤 CBT 멀티플레이</h2>
             <button type="button" style={smallBtnStyle} onClick={() => { setScreen('lobby'); setNotice('문제 목록을 아직 불러오지 못했습니다. 대기방으로 이동했습니다.'); }}>{activeExamMeta.shortLabel} 로비</button>
           </div>
           <div style={{ ...noticeStyle, ...errorNoticeStyle }}>
@@ -675,11 +676,11 @@ function PastExamMultiplayerInner({ setIsExamActive, initialTab = 'play' }) {
         // 실제 시험 화면의 사지선다형 보기가 option_1~option_4, options 배열 어느 형태든 정상 표시되도록 수정했습니다.
         const opts = getOptionList(currentQuestion);
         return (
-            <div style={examGridStyle}>
+            <div className="learning-multiplayer-workspace" style={examGridStyle}>
                 {/* 왼쪽 상단: 문제, 보기, 이전/다음 버튼을 크게 보여주는 영역 */}
-                <section style={{ ...cardStyle, ...questionPanelStyle }}>
+                <section className="learning-question-card learning-multiplayer-question" style={{ ...cardStyle, ...questionPanelStyle }}>
                     <div style={{ ...betweenStyle, alignItems: 'flex-start', gap: 12 }}>
-                        <h2 style={sectionTitleStyle}>{isPracticalQuestion(currentQuestion) ? '실기 기출문제' : '랜덤 CBT 문제'}</h2>
+                        <h2 className="learning-section-title" style={sectionTitleStyle}>{isPracticalQuestion(currentQuestion) ? '실기 기출문제' : '랜덤 CBT 문제'}</h2>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 12, flexWrap: 'wrap' }}>
                             <strong style={timerStyle}>남은 시간: {formatRemainTime(timeLeft)}</strong>
                             {currentQuestion?.question_id && (
@@ -731,6 +732,8 @@ function PastExamMultiplayerInner({ setIsExamActive, initialTab = 'play' }) {
                                 return (
                                     <button
                                         key={label}
+                                        className="learning-choice"
+                                        aria-pressed={selected}
                                         style={{ ...examOptionBtnStyle, ...(selected ? selectedOptionStyle : {}) }}
                                         onClick={() => selectAnswer(currentQuestion.question_id, label)}
                                     >
@@ -742,17 +745,17 @@ function PastExamMultiplayerInner({ setIsExamActive, initialTab = 'play' }) {
                     )}
 
                     <div style={betweenStyle}>
-                        <button style={secondaryBtn} disabled={currentIndex === 0} onClick={() => setCurrentIndex((v) => Math.max(0, v - 1))}>이전</button>
-                        <button style={secondaryBtn} disabled={currentIndex >= questions.length - 1} onClick={() => setCurrentIndex((v) => Math.min(questions.length - 1, v + 1))}>다음</button>
+                        <button className="learning-secondary" style={secondaryBtn} disabled={currentIndex === 0} onClick={() => setCurrentIndex((v) => Math.max(0, v - 1))}>이전</button>
+                        <button className="learning-secondary" style={secondaryBtn} disabled={currentIndex >= questions.length - 1} onClick={() => setCurrentIndex((v) => Math.min(questions.length - 1, v + 1))}>다음</button>
                     </div>
                 </section>
 
                 {/* 오른쪽 상단: 기존 연습장 기능을 복원한 캔버스 영역 */}
-                <aside style={{ ...cardStyle, ...scratchPanelStyle }}>
+                <aside className="learning-multiplayer-scratch" style={{ ...cardStyle, ...scratchPanelStyle }}>
                     <div style={betweenStyle}>
-                        <h2 style={sectionTitleStyle}>문제 풀이 연습장</h2>
+                        <h2 className="learning-section-title" style={sectionTitleStyle}>문제 풀이 연습장</h2>
                         <button
-                            type="button" style={secondaryBtn}
+                            type="button" className="learning-secondary" style={secondaryBtn}
                             onClick={() => setScratchModalOpen(true)}
                         >
                             크게 보기
@@ -767,17 +770,20 @@ function PastExamMultiplayerInner({ setIsExamActive, initialTab = 'play' }) {
                 </aside>
 
                 {/* 하단: OMR 답안지는 20칸 x 5줄로 맞춰 기본 화면에서 스크롤 없이 확인하도록 분리 */}
-                <section style={{ ...cardStyle, ...omrPanelStyle }}>
+                <section className="learning-multiplayer-omr" style={{ ...cardStyle, ...omrPanelStyle }}>
                     <div style={betweenStyle}>
-                        <h2 style={sectionTitleStyle}>OMR 답안지</h2>
+                        <h2 className="learning-section-title" style={sectionTitleStyle}>OMR 답안지</h2>
                         <span>응답 {answeredCount} / {questions.length}</span>
                     </div>
                     <p style={{ ...descStyle, marginTop: 0 }}>버튼을 누르면 해당 문제로 이동합니다. 필기는 보기를 선택하고, 실기는 답안을 입력하면 응답으로 표시됩니다.</p>
                     <div style={omrScrollStyle}>
-                        <div style={omrGridStyle}>
+                        <div className="learning-multiplayer-omr-grid" style={omrGridStyle}>
                             {questions.map((q, idx) => (
                                 <button
                                     key={q.question_id}
+                                    aria-current={idx === currentIndex ? "step" : undefined}
+                                    data-answered={Boolean(answers[q.question_id])}
+                                    aria-label={`${idx + 1}번 문제, ${answers[q.question_id] ? "응답함" : "미응답"}`}
                                     style={{ ...omrBtnStyle, ...(answers[q.question_id] ? omrAnsweredStyle : {}), ...(idx === currentIndex ? omrCurrentStyle : {}) }}
                                     onClick={() => setCurrentIndex(idx)}
                                 >
@@ -786,7 +792,7 @@ function PastExamMultiplayerInner({ setIsExamActive, initialTab = 'play' }) {
                             ))}
                         </div>
                     </div>
-                    <button style={primaryBtn} onClick={() => setSubmitConfirmOpen(true)}>제출하기</button>
+                    <button className="learning-primary" style={primaryBtn} onClick={() => setSubmitConfirmOpen(true)}>제출하기</button>
                 </section>
 
                 {/* 연습장 크게 보기 팝업: 같은 storageKey를 사용하므로 작성 내용이 기본 연습장과 연동됩니다. */}
@@ -794,9 +800,9 @@ function PastExamMultiplayerInner({ setIsExamActive, initialTab = 'play' }) {
                     <div style={modalBackdropStyle}>
                         <section style={modalCardStyle}>
                             <div style={betweenStyle}>
-                                <h2 style={sectionTitleStyle}>문제 풀이 연습장 크게 보기</h2>
+                                <h2 className="learning-section-title" style={sectionTitleStyle}>문제 풀이 연습장 크게 보기</h2>
                                 <button
-                                    type="button" style={secondaryBtn}
+                                    type="button" className="learning-secondary" style={secondaryBtn}
                                     onClick={() => {
                                         setScratchModalOpen(false);
                                         setScratchVersion((value) => value + 1);
@@ -820,7 +826,7 @@ function PastExamMultiplayerInner({ setIsExamActive, initialTab = 'play' }) {
 
 
     return (
-        <div id="wgs-multiplayer-page" style={pageStyle}>
+        <div id="wgs-multiplayer-page" className="learning-page learning-multiplayer" style={pageStyle}>
             <style>{multiplayerThemeCss}</style>
             {imagePreview && (
                 <div
@@ -852,15 +858,16 @@ function PastExamMultiplayerInner({ setIsExamActive, initialTab = 'play' }) {
                     </div>
                 </div>
             )}
-            {leaveConfirmOpen && <div style={modalOverlayStyle}><div style={modalBoxStyle}><h2>시험을 진행하지 않으시겠습니까?</h2><p style={descStyle}>네를 누르면 로비로 이동하고, 아니오를 누르면 현재 화면을 유지합니다.</p><div style={buttonRowStyle}><button style={dangerBtn} onClick={confirmMoveToWrittenLobby}>네</button><button style={secondaryBtn} onClick={() => setLeaveConfirmOpen(false)}>아니오</button></div></div></div>}
-            {submitConfirmOpen && <div style={modalOverlayStyle}><div style={modalBoxStyle}><h2>답안을 제출하시겠습니까?</h2><p style={descStyle}>제출 후에는 답안을 수정할 수 없습니다.</p><div style={buttonRowStyle}><button style={primaryBtn} onClick={submitExam}>제출</button><button style={secondaryBtn} onClick={() => setSubmitConfirmOpen(false)}>취소</button></div></div></div>}
-            <header style={headerStyle}>
+            {leaveConfirmOpen && <div style={modalOverlayStyle}><div style={modalBoxStyle}><h2>시험을 진행하지 않으시겠습니까?</h2><p style={descStyle}>네를 누르면 로비로 이동하고, 아니오를 누르면 현재 화면을 유지합니다.</p><div style={buttonRowStyle}><button style={dangerBtn} onClick={confirmMoveToWrittenLobby}>네</button><button className="learning-secondary" style={secondaryBtn} onClick={() => setLeaveConfirmOpen(false)}>아니오</button></div></div></div>}
+            {submitConfirmOpen && <div style={modalOverlayStyle}><div style={modalBoxStyle}><h2>답안을 제출하시겠습니까?</h2><p style={descStyle}>제출 후에는 답안을 수정할 수 없습니다.</p><div style={buttonRowStyle}><button className="learning-primary" style={primaryBtn} onClick={submitExam}>제출</button><button className="learning-secondary" style={secondaryBtn} onClick={() => setSubmitConfirmOpen(false)}>취소</button></div></div></div>}
+            <header className="learning-multiplayer-head" style={headerStyle}>
                 <div>
-                    <h1 style={titleStyle}> {activeExamMeta.title}</h1>
+                    <p className="learning-eyebrow">함께 푸는 정보처리기사</p>
+                    <h1 className="learning-page-title" style={titleStyle}> {activeExamMeta.title}</h1>
                     {/* 방 생성 설명은 방 만들기/입장하기 탭에서만 보여주고, 대기방·가이드·시험 진행 화면에서는 숨깁니다. */}
                     {screen === 'home' && activeTab === 'play' && <p style={descStyle}>{activeExamMeta.desc}</p>}
                 </div>
-                {screen !== 'home' && screen !== 'guide' && screen !== 'exam' && <button style={secondaryBtn} onClick={leaveWaitingRoom}>{activeExamMeta.lobbyText}</button>}
+                {screen !== 'home' && screen !== 'guide' && screen !== 'exam' && <button className="learning-secondary" style={secondaryBtn} onClick={leaveWaitingRoom}>{activeExamMeta.lobbyText}</button>}
             </header>
             {notice && screen !== 'exam' && <div style={{ ...noticeStyle, ...(notice.type === 'error'? errorNoticeStyle : successNoticeStyle) }}>{notice.message}</div>}
             {screen === 'home' && (

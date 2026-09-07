@@ -1,3 +1,4 @@
+import '../styles/app/learning-redesign.css';
 // 정보처리기사 실기 라우트 페이지 컴포넌트입니다.
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -687,7 +688,7 @@ function IpepPractice({ setIsExamActive, initialMode = 'lobby' }) {
             <div
                 className="ipep-past-exam-workspace" style={{ display: 'flex', gap: '20px', alignItems: 'flex-start' }}
             >
-                <section style={{ ...panelStyle, flex: '1 1 680px', minWidth: 0 }}>
+                <section className="learning-question-card" style={{ ...panelStyle, flex: '1 1 680px', minWidth: 0 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', borderBottom: '1px solid var(--wgs-border)', paddingBottom: '12px', marginBottom: '18px' }}>
                         <strong style={{ color: 'var(--wgs-blue-soft)', fontSize: '18px' }}>{formatIpepSetting('past.exam_badge', '{year}년 {session}회차', { year: selectedExam?.examYear, session: selectedExam?.examSession })}</strong>
                         <span style={{ color: 'var(--wgs-muted)' }}>{currentIndex + 1} / {pastQuestions.length}</span>
@@ -721,7 +722,9 @@ function IpepPractice({ setIsExamActive, initialMode = 'lobby' }) {
                         choiceButtonLabel={getIpepScreenSetting('image.choice_button', ' 보기 이미지 크게 보기')}
                     />
 
+                    <label className="learning-answer-label" htmlFor="ipep-past-answer">내 답안</label>
                     <textarea
+                        id="ipep-past-answer"
                         ref={pastAnswerRef}
                         value={pastAnswers[currentQuestion.questionId] || ''}
                         onChange={(e) => updatePastAnswer(currentQuestion.questionId, e.target.value)}
@@ -735,7 +738,7 @@ function IpepPractice({ setIsExamActive, initialMode = 'lobby' }) {
                     />
 
                     {/* 실기 기출문제 응시 중에도 풀이 과정을 적을 수 있도록 연습장을 추가합니다. */}
-                    <button
+                    <button className="learning-secondary"
                         type="button" onClick={() => setIsDrawingOpen(prev => !prev)}
                         style={{ ...baseButtonStyle, width: '100%', marginTop: '10px', background: 'var(--wgs-practice-toggle-bg)', border: '1px solid #3b82f6' }}
                     >
@@ -744,21 +747,21 @@ function IpepPractice({ setIsExamActive, initialMode = 'lobby' }) {
                     {isDrawingOpen && <DrawingBoard />}
 
                     <div className="ipep-action-row" style={{ display: 'flex', gap: '12px', marginTop: '18px' }}>
-                        <button
+                        <button className="learning-secondary"
                             onClick={() => setCurrentIndex(Math.max(0, currentIndex - 1))}
                             disabled={currentIndex === 0 || isSubmittingPast}
                             style={{ ...baseButtonStyle, background: currentIndex === 0 ? 'var(--wgs-button-muted)' : 'var(--wgs-button-muted)', cursor: currentIndex === 0 ? 'not-allowed' : 'pointer' }}
                         >
                             {getIpepScreenSetting('buttons.prev', '이전')}
                         </button>
-                        <button
+                        <button className="learning-primary"
                             onClick={() => submitPastExam(false)}
                             disabled={isSubmittingPast}
-                            style={{ ...baseButtonStyle, background: '#ef4444', flex: 1, cursor: isSubmittingPast ? 'wait' : 'pointer' }}
+                            style={{ ...baseButtonStyle, background: 'var(--wgs-blue)', flex: 1, cursor: isSubmittingPast ? 'wait' : 'pointer' }}
                         >
                             {isSubmittingPast ? getIpepScreenSetting('buttons.checking', '채점 중...') : getIpepScreenSetting('buttons.submit_grade', '제출 및 채점하기')}
                         </button>
-                        <button
+                        <button className="learning-secondary"
                             onClick={() => setCurrentIndex(Math.min(pastQuestions.length - 1, currentIndex + 1))}
                             disabled={currentIndex === pastQuestions.length - 1 || isSubmittingPast}
                             style={{ ...baseButtonStyle, background: currentIndex === pastQuestions.length - 1 ? 'var(--wgs-button-muted)' : '#3b82f6', cursor: currentIndex === pastQuestions.length - 1 ? 'not-allowed' : 'pointer' }}
@@ -787,13 +790,15 @@ function IpepPractice({ setIsExamActive, initialMode = 'lobby' }) {
                                 return (
                                     <button
                                         key={question.questionId}
+                                        aria-current={active ? "step" : undefined}
+                                        aria-label={`${getQuestionNo(question, index)}번 문제, ${answered ? "답안 입력됨" : "미입력"}`}
                                         onClick={() => setCurrentIndex(index)}
                                         style={{
                                             height: '42px',
                                             borderRadius: '7px',
-                                            border: active ? '2px solid #fcd34d' : '1px solid var(--wgs-border)',
-                                            background: answered ? '#10b981' : 'var(--wgs-input-bg)',
-                                            color: 'var(--wgs-text)',
+                                            border: active ? '2px solid var(--wgs-blue)' : '1px solid var(--wgs-border)',
+                                            background: answered ? 'var(--wgs-blue)' : 'var(--wgs-input-bg)',
+                                            color: answered ? '#fff' : 'var(--wgs-text)',
                                             fontWeight: '900',
                                             cursor: 'pointer'
                                         }}
@@ -812,7 +817,7 @@ function IpepPractice({ setIsExamActive, initialMode = 'lobby' }) {
 
 
     return (
-        <div className="ipep-page exam-page wgs-typography-scope" style={pageBoxStyle}>
+        <div className="ipep-page exam-page wgs-typography-scope learning-page" style={pageBoxStyle}>
             <IpepImageViewer
                 imageViewer={imageViewer}
                 imageZoom={imageZoom}
@@ -825,7 +830,8 @@ function IpepPractice({ setIsExamActive, initialMode = 'lobby' }) {
             />
             {/* 필기 로비와 같은 제목 크기/색상 기준으로 통일하고, 제목 내용은 실기 페이지용으로 유지합니다. */}
             {/* 실기 페이지 제목은 필기 로비와 같은 공통 페이지 제목 클래스를 사용합니다. */}
-            <h2 className="wgs-page-title" style={{ color: 'var(--wgs-title)', fontSize: '28px', fontWeight: '900', lineHeight: 1.35, margin: '0 0 12px 0' }}>{ipepPageTitle}</h2>
+            <p className="learning-eyebrow">정보처리기사 · 실기</p>
+            <h1 className="wgs-page-title learning-page-title" style={{ color: 'var(--wgs-title)', fontSize: '28px', fontWeight: '900', lineHeight: 1.35, margin: '0 0 12px 0' }}>{ipepPageTitle}</h1>
             {mode === 'lobby' && pastStep === 'lobby' && (
                 <p style={{ color: 'var(--wgs-text)', fontSize: '16px', fontWeight: '500', lineHeight: 1.7, margin: '0 0 24px 0' }}>
                     {ipepPageDesc.split('\n').map((line, index) => (
