@@ -7,7 +7,7 @@ export const buildIpepSessionAuth = (userId = '') => ({
     serverInstanceId: sessionStorage.getItem('wgsServerInstanceId') || localStorage.getItem('wgsServerInstanceId') || '',
 });
 
-export async function saveIpepRankingRecord({
+export async function saveIpepPracticeResultRecord({
     apiBase,
     getSessionAuth,
     userId,
@@ -21,22 +21,22 @@ export async function saveIpepRankingRecord({
     session = null,
 }) {
     if (!userId) return;
-    try {
-        await axios.post(`${apiBase}/api/ipep-ranking`, {
-            ...getSessionAuth(),
-            id: userId,
-            userName,
-            mode,
-            totalCount,
-            correctCount,
-            totalScore,
-            maxScore,
-            year,
-            session
-        });
-    } catch (err) {
-        console.warn('실기 랭킹 저장 실패:', err);
+    const response = await axios.post(`${apiBase}/api/practical-results`, {
+        ...getSessionAuth(),
+        id: userId,
+        userName,
+        mode,
+        totalCount,
+        correctCount,
+        totalScore,
+        maxScore,
+        year,
+        session
+    });
+    if (response.data?.success === false) {
+        throw new Error(response.data.msg || '실기 결과 저장 실패');
     }
+    return response.data;
 }
 
 export async function saveIpepWrongNotesRecord({

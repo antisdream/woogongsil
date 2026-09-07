@@ -3,26 +3,25 @@ import React from 'react';
 
 export default function HomeRealtimePanel({
     loggedInUser,
-    liveChatSectionTitle,
-    liveChatSectionDesc,
-    liveChatCurrentVisitorPrefix,
-    liveChatCurrentVisitorSuffix,
+    onlineSectionTitle,
+    onlineSectionDesc,
+    onlineCurrentVisitorPrefix,
+    onlineCurrentVisitorSuffix,
     onlineUsers,
-    liveChatVisitorsTitle,
+    onlineVisitorsTitle,
     isOnlineUsersLoading,
     refreshOnlineUsers,
-    liveChatRefreshLoadingLabel,
-    liveChatRefreshButtonLabel,
+    onlineRefreshLoadingLabel,
+    onlineRefreshButtonLabel,
     onlineUsersLastRefreshedAt,
-    liveChatRequestTimeLabel,
-    liveChatVisitorsRequestEmpty,
-    liveChatVisitorsRecentDesc,
+    onlineRequestTimeLabel,
+    onlineVisitorsRequestEmpty,
+    onlineVisitorsRecentDesc,
     onlineUsersError,
-    liveChatVisitorsEmptyBox,
-    liveChatMeLabel,
-    liveChatRecentActivityLabel,
+    onlineVisitorsEmptyBox,
+    onlineMeLabel,
+    onlineRecentActivityLabel,
     formatOnlineTime,
-    renderChatPanel,
 }) {
     if (!loggedInUser) return null;
 
@@ -43,13 +42,13 @@ export default function HomeRealtimePanel({
         >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px', flexWrap: 'wrap' }}>
                 <div>
-                    <h3 className="home-realtime-title" style={{ margin: 0, color: 'var(--wgs-realtime-title)', fontSize: '20px' }}>{liveChatSectionTitle}</h3>
+                    <h3 className="home-realtime-title" style={{ margin: 0, color: 'var(--wgs-realtime-title)', fontSize: '20px' }}>{onlineSectionTitle}</h3>
                     <p className="home-realtime-desc" style={{ margin: '7px 0 0 0', color: 'var(--wgs-realtime-muted)', fontSize: '12px', lineHeight: 1.5 }}>
-                        {liveChatSectionDesc}
+                        {onlineSectionDesc}
                     </p>
                 </div>
                 <div className="home-realtime-count" style={{ background: 'var(--wgs-realtime-count-bg)', color: 'var(--wgs-realtime-count-text)', padding: '8px 14px', borderRadius: '999px', fontWeight: 'bold', border: '1px solid var(--wgs-realtime-count-border)', whiteSpace: 'nowrap' }}>
-                    {liveChatCurrentVisitorPrefix} {onlineUsers.length}{liveChatCurrentVisitorSuffix}
+                    {onlineCurrentVisitorPrefix} {onlineUsers.length}{onlineCurrentVisitorSuffix}
                 </div>
             </div>
 
@@ -60,14 +59,14 @@ export default function HomeRealtimePanel({
                         border: '1px solid var(--wgs-realtime-card-border)',
                         borderRadius: '12px',
                         padding: '15px',
-                        minHeight: '290px',
+                        minHeight: '180px',
                         boxSizing: 'border-box',
                         display: 'flex',
                         flexDirection: 'column'
                     }}
                 >
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', flexWrap: 'wrap', marginBottom: '12px' }}>
-                        <strong className="wgs-online-title" style={{ color: 'var(--wgs-realtime-heading)', fontSize: '15px' }}>{liveChatVisitorsTitle}</strong>
+                        <strong className="wgs-online-title" style={{ color: 'var(--wgs-realtime-heading)', fontSize: '15px' }}>{onlineVisitorsTitle}</strong>
                         <button
                             type="button" onClick={refreshOnlineUsers}
                             disabled={isOnlineUsersLoading}
@@ -83,22 +82,22 @@ export default function HomeRealtimePanel({
                                 boxShadow: '0 3px 8px rgba(0,0,0,0.18)'
                             }}
                         >
-                            {isOnlineUsersLoading ? liveChatRefreshLoadingLabel : liveChatRefreshButtonLabel}
+                            {isOnlineUsersLoading ? onlineRefreshLoadingLabel : onlineRefreshButtonLabel}
                         </button>
                     </div>
 
                     <div className="wgs-online-meta" style={{ color: 'var(--wgs-realtime-muted)', fontSize: '12px', marginBottom: '10px', lineHeight: 1.5 }}>
-                        {onlineUsersLastRefreshedAt ? `${liveChatRequestTimeLabel} ${onlineUsersLastRefreshedAt}` : liveChatVisitorsRequestEmpty}<br />
-                        {liveChatVisitorsRecentDesc}
+                        {onlineUsersLastRefreshedAt ? `${onlineRequestTimeLabel} ${onlineUsersLastRefreshedAt}` : onlineVisitorsRequestEmpty}<br />
+                        {onlineVisitorsRecentDesc}
                     </div>
 
                     {onlineUsersError ? (
-                        <div className="wgs-online-error" style={{ background: 'rgba(239,68,68,0.10)', color: 'var(--wgs-chat-error)', borderRadius: '10px', padding: '12px', textAlign: 'center', fontSize: '13px', border: '1px dashed rgba(239,68,68,0.45)' }}>
+                        <div className="wgs-online-error" style={{ background: 'rgba(239,68,68,0.10)', color: 'var(--wgs-online-error)', borderRadius: '10px', padding: '12px', textAlign: 'center', fontSize: '13px', border: '1px dashed rgba(239,68,68,0.45)' }}>
                             {onlineUsersError}
                         </div>
                     ) : onlineUsers.length === 0 ? (
-                        <div className="wgs-online-empty" style={{ background: 'var(--wgs-chat-list-bg)', color: 'var(--wgs-realtime-muted)', borderRadius: '10px', padding: '12px', textAlign: 'center', fontSize: '13px', border: '1px dashed var(--wgs-chat-border)' }}>
-                            {liveChatVisitorsEmptyBox}
+                        <div className="wgs-online-empty" style={{ background: 'var(--wgs-online-list-bg)', color: 'var(--wgs-realtime-muted)', borderRadius: '10px', padding: '12px', textAlign: 'center', fontSize: '13px', border: '1px dashed var(--wgs-online-border)' }}>
+                            {onlineVisitorsEmptyBox}
                         </div>
                     ) : (
                         <ul className="wgs-online-user-list" style={{ maxHeight: '190px', overflowY: 'auto', margin: 0, padding: 0, listStyle: 'none' }}>
@@ -109,10 +108,10 @@ export default function HomeRealtimePanel({
                                         <div className="wgs-online-user-main">
                                             <span className="wgs-online-user-icon"></span>
                                             <span className="wgs-online-user-name">{user.name || user.id}</span>
-                                            {isMe && <span className="wgs-online-user-me">{liveChatMeLabel}</span>}
+                                            {isMe && <span className="wgs-online-user-me">{onlineMeLabel}</span>}
                                         </div>
                                         <time className="wgs-online-user-time">
-                                            {liveChatRecentActivityLabel} {formatOnlineTime(user.lastSeenAt)}
+                                            {onlineRecentActivityLabel} {formatOnlineTime(user.lastSeenAt)}
                                         </time>
                                     </li>
                                 );
@@ -121,7 +120,6 @@ export default function HomeRealtimePanel({
                     )}
                 </section>
 
-                {renderChatPanel()}
             </div>
         </div>
     );

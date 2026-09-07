@@ -161,28 +161,6 @@ body.wgs-theme-dark .admin-user-table th {
   color: #ffffff !important;
 }
 
-.admin-user-ranking-page {
-  min-height: 100vh;
-  padding: 36px 24px;
-  background: #f8fafc;
-  color: #0f172a;
-}
-
-body.wgs-theme-dark .admin-user-ranking-page {
-  background: #020817;
-  color: #ffffff;
-}
-
-.admin-user-ranking-head {
-  max-width: 1280px;
-  margin: 0 auto 18px;
-}
-
-.admin-user-ranking-head h1 {
-  margin: 0 0 8px;
-  font-size: 32px;
-}
-
 /* 관리자 사용자 관리 탭 보정 - 정렬/페이지/큰 메일 팝업/테마 대비 */
 .admin-sort-btn {
   appearance: none;

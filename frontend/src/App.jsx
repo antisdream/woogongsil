@@ -7,7 +7,7 @@ import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import './App.css';
 import './styles/app/home.css';
-import './styles/app/realtime-chat.css';
+import './styles/app/online-users.css';
 import './styles/app/page-adjustments.css';
 import './styles/app/responsive.css';
 import './styles/global/app-overrides.css';

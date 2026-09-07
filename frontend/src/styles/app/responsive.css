@@ -3,7 +3,7 @@
   .wgs-header { grid-template-columns: 1fr; justify-items: center; text-align: center; }
   .theme-switch-wrap { justify-self: center; }
   .wgs-site-logo { text-align: center !important; }
-  .home-realtime-grid { grid-template-columns: 1fr !important; }
+  .home-realtime-grid { grid-template-columns: minmax(0, 1fr) !important; }
   .home-quick-links { grid-template-columns: repeat(2, minmax(130px, 1fr)) !important; }
 }
 
@@ -19,7 +19,6 @@
   .faq-table { min-width: 720px !important; }
   .board-tab-grid,
   .wrong-note-tabs,
-  .home-ranking-tabs,
   .mypage-summary-grid,
   .ipep-lobby-grid,
   .written-lobby-grid { grid-template-columns: 1fr !important; }
@@ -29,9 +28,6 @@
   :root { --wgs-type-body: 15px; }
   .wgs-online-user-row { grid-template-columns: 1fr !important; gap: 4px !important; }
   .wgs-online-user-time { padding-left: 25px; white-space: normal !important; }
-  .wgs-chat-composer { gap: 6px !important; }
-  .wgs-chat-tool-btn { width: 48px !important; min-width: 48px !important; }
-  .wgs-chat-send-btn { min-width: 58px !important; padding: 0 12px !important; }
 }
 
 /* 헤더 내부에서 시계/네비게이션은 로고+테마 토글 아래 전체 폭을 사용합니다. */

@@ -2,6 +2,7 @@ import '../styles/app/learning-redesign.css';
 // 필기 기출문제 라우트 페이지 컴포넌트입니다.
 import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
+import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
 import DrawingBoard from './DrawingBoard';
 import ErrorReportButton from "../components/ErrorReportButton";
@@ -34,10 +35,9 @@ const PastExam = ({ isExamActive, setIsExamActive }) => {
     const [userAnswers, setUserAnswers] = useState({});
     const [isSubmitted, setIsSubmitted] = useState(false);
     
-    const [myRankData, setMyRankData] = useState(null);
     const [showConfirmModal, setShowConfirmModal] = useState(false);
     const [subjectScores, setSubjectScores] = useState([0, 0, 0, 0, 0]);
-    const [examResult, setExamResult] = useState({ isPass: false, average: 0, failReason: '' });
+    const [examResult, setExamResult] = useState({ isPass: false, average: 0, failReason: '', accuracy: 0, correctCount: 0, totalCount: 0 });
 
     const [timeLeft, setTimeLeft] = useState(9000);
     
@@ -179,7 +179,6 @@ const PastExam = ({ isExamActive, setIsExamActive }) => {
                 setUserAnswers({});
                 setIsSubmitted(false);
                 setCurrentIndex(0);
-                setMyRankData(null); 
                 setSubjectScores([0, 0, 0, 0, 0]);
                 setTimeLeft(9000);
                 setShowDrawing(false);
@@ -275,10 +274,9 @@ const PastExam = ({ isExamActive, setIsExamActive }) => {
         }
 
         setSubjectScores(subScores);
-        setExamResult({ isPass, average: avgScore, failReason });
+        setExamResult({ isPass, average: avgScore, failReason, accuracy: localAccuracy, correctCount: cCount, totalCount: totalQ });
         setIsSubmitted(true);
         setStep(3); 
-        setMyRankData({ rank: t('ranking.loading', '집계중...'), score: avgScore, accuracy: localAccuracy });
         
         if (userId) {
             try {
@@ -289,54 +287,17 @@ const PastExam = ({ isExamActive, setIsExamActive }) => {
                     }).catch(e => console.error("오답노트 저장 실패", e));
                 }
 
-                let prevTotal = 0, prevCorrect = 0, prevScore = 0;
-                try {
-                    const preRankRes = await axios.get(`${API_BASE}/api/rankings?type=past&year=${selectedYear}&session=${selectedSession}`);
-                    if (preRankRes.data && Array.isArray(preRankRes.data.rankings)) {
-                        const me = preRankRes.data.rankings.find(u => String(u.userId || u.id) === String(userId) || String(u.name) === String(userName));
-                        if (me) {
-                            prevTotal = Number(me.total || me.solved_count || me.total_count || 0);
-                            prevCorrect = Number(me.correct || me.correct_count || 0);
-                            prevScore = Number(me.score || me.points || me.total_score || 0);
-                        }
-                    }
-                } catch (e) { console.error("이전 랭킹 조회 실패", e); }
-
-                const deltaTotal = totalQ - prevTotal;
-                const deltaCorrect = cCount - prevCorrect;
-                const deltaScore = avgScore - prevScore;
-
                 const resultData = {
                     ...getSessionAuth(),
                     userId, userName, examYear: selectedYear, examSession: selectedSession,
-                    score: deltaScore, correctCount: deltaCorrect, totalCount: deltaTotal, answers: userAnswers
+                    score: avgScore, correctCount: cCount, totalCount: totalQ, answers: userAnswers, resultMode: 'replace'
                 };
                 
                 await axios.post(`${API_BASE}/api/exam-results`, resultData);
                 
-                const rankRes = await axios.get(`${API_BASE}/api/rankings?type=past&year=${selectedYear}&session=${selectedSession}`);
-                if (rankRes.data && Array.isArray(rankRes.data.rankings)) {
-                    const rawRankings = rankRes.data.rankings;
-                    
-                    const processed = rawRankings.map(user => {
-                        const c = Number(user.correct || user.correct_count || 0);
-                        const t = Number(user.total || user.solved_count || user.total_count || 0);
-                        return { ...user, score: c, accuracy: t >0 ? Math.round((c / t) * 100) : 0, correct: c };
-                    });
-                    
-                    processed.sort((a, b) => b.score - a.score || b.accuracy - a.accuracy || b.correct - a.correct);
-                    
-                    const meIndex = processed.findIndex(u => String(u.userId || u.id) === String(userId) || String(u.name) === String(userName));
-                    
-                    if (meIndex !== -1) {
-                        setMyRankData({ rank: formatSetting('ranking.rank_value', '{rank}등', { rank: meIndex + 1 }), score: processed[meIndex].score, accuracy: processed[meIndex].accuracy });
-                    } else {
-                        setMyRankData({ rank: t('ranking.out_of_rank', '순위권 밖'), score: avgScore, accuracy: localAccuracy });
-                    }
-                }
             } catch (e) { 
-                console.error("랭킹 집계 오류:", e);
-                setMyRankData({ rank: t('ranking.delayed', '갱신 지연'), score: avgScore, accuracy: localAccuracy });
+                console.error("개인 결과 저장 실패:", e);
+                toast.error("결과 저장에 실패했습니다. 현재 채점 결과와 PDF는 계속 확인할 수 있습니다.");
             }
         }
     }
@@ -657,14 +618,9 @@ const PastExam = ({ isExamActive, setIsExamActive }) => {
                     })}
                 </div>
 
-                {myRankData && (
-                    <div className="past-exam-my-ranking-row" style={{ background: 'var(--wgs-practice-toggle-bg)', border: '1px solid #3b82f6', padding: '15px', borderRadius: '8px', marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px' }}>
-                        <span style={{ color: 'var(--wgs-title)', fontWeight: 'bold' }}>{formatSetting('ranking.current_title', ' 현재 나의 랭킹 ({year}년 {session}회차)', { year: selectedYear, session: selectedSession })}</span>
-                        <span style={{ color: 'var(--wgs-text)', fontSize: '16px' }}>
-                            <strong style={{ color: 'var(--wgs-blue)' }}>{myRankData.rank || t('ranking.out_of_rank', '순위권 밖')}</strong> {formatSetting('ranking.summary', '({score}점, 정답률 {accuracy}%)', { score: myRankData.score ?? 0, accuracy: myRankData.accuracy ?? 0 })}
-                        </span>
-                    </div>
-                )}
+                <p className="past-exam-personal-result" style={{ color: 'var(--wgs-text)', textAlign: 'center', marginBottom: '20px' }}>
+                    {formatSetting('result.accuracy_summary', '정답률 {accuracy}% ({correct}/{total})', { accuracy: examResult.accuracy, correct: examResult.correctCount, total: examResult.totalCount })}
+                </p>
 
                 <div className="past-exam-result-table-wrap" style={{ background: 'var(--wgs-card)', padding: '20px', borderRadius: '8px', border: '1px solid var(--wgs-border)', marginBottom: '20px', maxHeight: '400px', overflowY: 'auto', overflowX: 'auto' }}>
                     <h4 style={{ color: 'var(--wgs-muted)', marginTop: 0, marginBottom: '15px', textAlign: 'left', borderBottom: '1px solid var(--wgs-border)', paddingBottom: '10px' }}>{t('result.detail_table_title', ' 제출한 문제 상세 채점표')}</h4>

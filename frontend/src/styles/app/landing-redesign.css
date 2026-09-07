@@ -1,13 +1,5 @@
 .ui-sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
 .ui-home-intro { width:100%; min-width:0; }
-.ui-home-page .mobile-ranking-history { background:var(--wgs-card) !important; border-color:var(--wgs-border) !important; }
-.ui-home-page .mobile-ranking-title,.ui-home-page .mobile-ranking-field { color:var(--wgs-title) !important; }
-.ui-home-page .mobile-ranking-description { color:var(--wgs-muted) !important; }
-.ui-home-page .mobile-ranking-query { background:var(--wgs-action-blue) !important; box-shadow:none !important; border-radius:10px !important; }
-.ui-home-page .mobile-ranking-control { background:var(--wgs-card) !important; color:var(--wgs-text) !important; border-color:var(--wgs-border) !important; }
-.ui-home-page .mobile-ranking-summary-card { background:var(--wgs-card-soft) !important; color:var(--wgs-title) !important; border:1px solid var(--wgs-border); box-shadow:none !important; }
-.ui-home-page .mobile-ranking-option { background:var(--wgs-card-soft) !important; color:var(--wgs-text) !important; box-shadow:none !important; }
-.ui-home-page .mobile-ranking-option[aria-pressed="true"] { background:var(--wgs-action-blue) !important; color:white !important; }
 .ui-qr-backdrop { position:fixed; inset:0; z-index:12000; background:#0c172ab3; display:flex; align-items:center; justify-content:center; padding:20px; }
 .ui-qr-dialog { position:relative; width:min(100%,460px); max-height:calc(100dvh - 40px); overflow:auto; box-sizing:border-box; padding:28px; border:1px solid var(--wgs-border); border-radius:18px; background:var(--wgs-card); color:var(--wgs-text); text-align:center; box-shadow:var(--ui-shadow); }
 body .ui-qr-close { display:block; margin-left:auto; margin-bottom:12px; min-height:44px; }
@@ -77,26 +69,16 @@ body .ui-preview-submit { margin-top:18px; width:100%; min-height:46px; font-siz
 .ui-home-resources a:hover,.ui-home-resources button:hover { color:var(--wgs-primary); }
 body .ui-home-page { padding:0 !important; margin:0 auto !important; max-width:none !important; }
 body .ui-home-page .home-lower-grid { gap:24px !important; align-items:start; }
-.ui-ranking-title { font-size:20px; color:var(--wgs-title); margin:0; }
-.ui-ranking-mode-label { color:var(--wgs-subtle); font-size:11px; font-weight:500; }
-.ui-home-ranking { min-width:0; }
 .ui-home-record-invite { display:flex; justify-content:space-between; align-items:center; gap:24px; margin-bottom:10px; }
 .ui-home-record-invite h2 { font-size:21px; color:var(--wgs-title); margin:0 0 8px; }
 .ui-home-record-invite p { font-size:14px; color:var(--wgs-muted); margin:0; }
 .ui-home-record-invite a { flex-shrink:0; }
 @media(max-width:767px) { .ui-home-record-invite { align-items:stretch; flex-direction:column; gap:18px; } }
-.ui-home-ranking h3 { font-size:17px; line-height:1.6; }
-.ui-home-ranking .home-ranking-tabs button { min-height:44px; font-size:13px; }
-.ui-home-ranking label { min-height:44px; }
-.ui-ranking-row > div:first-child { gap:18px; }
-.ui-ranking-row > div:first-child > span:first-child { min-width:0; overflow-wrap:anywhere; }
-.ui-ranking-row > div:first-child > span:last-child { white-space:nowrap; flex-shrink:0; }
 body .ui-home-page .home-realtime-panel {
   --wgs-realtime-panel-bg:var(--wgs-card); --wgs-realtime-panel-border:var(--wgs-border); --wgs-realtime-title:var(--wgs-title);
   --wgs-realtime-card-bg:var(--wgs-card-soft); --wgs-realtime-card-border:var(--wgs-border); --wgs-realtime-count-text:var(--wgs-primary);
   --wgs-realtime-count-bg:var(--wgs-active-bg); --wgs-realtime-count-border:var(--wgs-border); box-shadow:none !important;
 }
-@media(max-width:767px) { .ui-home-ranking > div > div { padding:16px !important; } .ui-home-ranking .home-ranking-tabs { grid-template-columns:repeat(2,minmax(0,1fr)) !important; } .ui-ranking-mode-label { display:none; } }
 @media(max-width:1024px) { .ui-home-hero { gap:30px; padding-inline:0; } .ui-preview-body { padding:22px; } .ui-learning-journey { grid-template-columns:1fr; gap:24px; } .ui-journey-intro h2 br { display:none; } }
 @media(max-width:767px) {
   .ui-home-hero { grid-template-columns:1fr; gap:30px; padding:14px 0 36px; }

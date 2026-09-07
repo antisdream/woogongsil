@@ -16,11 +16,10 @@ const API_BASE = '';
 // 1. 기존 Home.jsx 안에 있던 로그인 박스를 /login 전용 페이지로 분리합니다.
 // 2. 기존 로그인 API, 중복 로그인 확인, 5회 실패 잠금, 세션 저장 로직은 그대로 사용합니다.
 // 3. 회원가입과 ID/PW 찾기는 기존 컴포넌트를 탭 안에서 재사용해 기능 로직을 보존합니다.
-// 4. 로그인 성공 후에는 홈(/)으로 이동해 기존 홈/랭킹/실시간 패널 흐름을 그대로 이어간다.
+// 4. 로그인 성공 후에는 홈(/)으로 이동해 기존 홈과 접속자 패널 흐름을 그대로 이어간다.
 
 const REMEMBERED_LOGIN_KEY = 'wgsRememberedLoggedIn';
 const SERVER_INSTANCE_ID_KEY = 'wgsServerInstanceId';
-const CHAT_VISIBLE_SINCE_KEY = 'wgsChatVisibleSince';
 const getNowMs = () => Date.now();
 
 const LOGIN_TAB_KEYS = ['login', 'signup', 'find'];
@@ -132,7 +131,6 @@ const Login = () => {
             sessionStorage.setItem('sessionToken', res.data.sessionToken);
             const requiresLegalConsent = res.data.requiresLegalConsent === true;
             sessionStorage.setItem('wgsLegalConsentRequired', requiresLegalConsent ? 'true' : 'false');
-            sessionStorage.setItem(CHAT_VISIBLE_SINCE_KEY, String(getNowMs()));
             localStorage.setItem(REMEMBERED_LOGIN_KEY, 'true');
 
             if (res.data.serverInstanceId) {

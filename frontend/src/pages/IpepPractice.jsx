@@ -3,6 +3,7 @@ import '../styles/app/learning-redesign.css';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { toast } from 'react-toastify';
 import ErrorReportButton from "../components/ErrorReportButton";
 import useScreenSettings from '../useScreenSettings';
 import IpepRandomMode from '../features/ipep/IpepRandomMode.jsx';
@@ -27,7 +28,7 @@ import IpepThreeWeekPanel from '../features/ipep/IpepThreeWeekPanel.jsx';
 import {
     buildIpepSessionAuth,
     normalizeIpepWrongQuestionForSave,
-    saveIpepRankingRecord,
+    saveIpepPracticeResultRecord,
     saveIpepWrongNotesRecord,
 } from '../features/ipep/ipepPracticePersistence.js';
 import {
@@ -116,13 +117,16 @@ function IpepPractice({ setIsExamActive, initialMode = 'lobby' }) {
     const userId = sessionStorage.getItem('userId') || '';
     const getSessionAuth = useCallback(() => buildIpepSessionAuth(userId), [userId]);
 
-    // 실기 채점 결과를 랭킹에 반영합니다. 실패해도 문제 풀이 흐름은 막지 않습니다.
-    const saveIpepRanking = (payload) => saveIpepRankingRecord({
+    // 실기 개인 채점 결과를 저장하고, 저장 실패를 안내해도 오답 저장은 계속합니다.
+    const saveIpepPracticeResult = (payload) => saveIpepPracticeResultRecord({
         apiBase: API_BASE,
         getSessionAuth,
         userId,
         userName,
         ...payload
+    }).catch((error) => {
+        console.warn('실기 결과 저장 실패:', error);
+        toast.error('결과 저장에 실패했습니다. 현재 채점 결과는 화면에서 확인할 수 있습니다.');
     });
 
     // 실기 오답노트는 필기 오답노트와 충돌하지 않도록 별도 API에 저장합니다.
@@ -279,17 +283,17 @@ function IpepPractice({ setIsExamActive, initialMode = 'lobby' }) {
 
             // 백엔드 채점 결과를 우선 받되, 사용자가 입력하기 어려운 주관식 예외는 프론트에서 한 번 더 보정합니다.
             // - Class/class/클래스, ㉡/ㄴ, ÷//, 원자성|Atomicity 조합 등을 처리합니다.
-            // - 기존 API, 랭킹, 오답노트 저장 흐름은 그대로 유지합니다.
+            // - 기존 채점 API, 개인 결과, 오답노트 저장 흐름은 그대로 유지합니다.
             const gradedResult = mergeClientIpepGrade(randomQuestion, res.data || {}, randomAnswer);
             setRandomResult(gradedResult);
 
-            // 실기 문제은행 1문제 채점 결과를 랭킹/오답노트에 반영합니다.
+            // 실기 문제은행 1문제 채점 결과를 개인 결과/오답노트에 반영합니다.
             const maxScore = Number(gradedResult?.maxScore || randomQuestion?.score || 5);
             const earnedScore = Number(gradedResult?.score ?? (gradedResult?.isCorrect ? maxScore : 0));
-            await saveIpepRanking({
+            await saveIpepPracticeResult({
                 mode: 'random',
                 totalCount: 1,
-                // 부분점수라도 점수가 있으면 홈 랭킹 정답 수에 1문제로 반영합니다.
+                // 부분점수라도 점수가 있으면 개인 학습 기록의 정답 수에 1문제로 반영합니다.
                 correctCount: earnedScore >0 ? 1 : 0,
                 totalScore: earnedScore,
                 maxScore
@@ -469,16 +473,16 @@ function IpepPractice({ setIsExamActive, initialMode = 'lobby' }) {
 
             setPastResults(results);
 
-            // 실기 기출문제 최종 채점 결과를 랭킹/오답노트에 반영합니다.
+            // 실기 기출문제 최종 채점 결과를 개인 결과/오답노트에 반영합니다.
             // - 점수는 부분점수까지 누적합니다.
             // - 정답률 표기용 correctCount는 1점 이상 받은 문제 수로 계산합니다.
-            // - 20문제를 전부 공백 제출한 경우에는 랭킹에 반영하지 않습니다.
+            // - 20문제를 전부 공백 제출한 경우에는 개인 결과에 반영하지 않습니다.
             const totalScore = results.reduce((sum, row) => sum + Number(row.score || 0), 0);
             const maxScore = results.reduce((sum, row) => sum + Number(row.maxScore || 5), 0);
-            const answeredCountForRanking = results.filter(row => !row.isBlank).length;
+            const answeredCount = results.filter(row => !row.isBlank).length;
             const correctCount = results.filter(row => Number(row.score || 0) >0).length;
-            if (answeredCountForRanking >0) {
-                await saveIpepRanking({
+            if (answeredCount >0) {
+                await saveIpepPracticeResult({
                     mode: 'past',
                     totalCount: results.length,
                     correctCount,

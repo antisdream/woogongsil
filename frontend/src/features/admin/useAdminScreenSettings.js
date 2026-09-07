@@ -1,6 +1,7 @@
 // 관리자 기능 모듈입니다: useAdminScreenSettings
 import { useCallback, useState } from 'react';
 import { EMPTY_SCREEN_SETTING_FORM } from './adminUtils.js';
+import { isRetiredScreenSection } from '../screenSettingsPolicy.js';
 
 export default function useAdminScreenSettings({
   currentUser,
@@ -38,7 +39,7 @@ export default function useAdminScreenSettings({
         throw new Error(data.message || '화면 설정 목록을 불러오지 못했습니다.');
       }
 
-      setScreenSettings(Array.isArray(data.settings) ? data.settings : []);
+      setScreenSettings(Array.isArray(data.settings) ? data.settings.filter((setting) => !isRetiredScreenSection(setting.section_key)) : []);
       setScreenSummary(data.summary || {});
     } catch (error) {
       console.error('[admin] screen settings fetch failed:', error);
@@ -60,6 +61,7 @@ export default function useAdminScreenSettings({
   }, []);
 
   const startEditScreenSetting = useCallback((setting) => {
+    if (isRetiredScreenSection(setting.section_key)) return;
     setEditingScreenSettingId(setting.id);
     setScreenForm({
       page_key: setting.page_key || 'all',
@@ -77,6 +79,7 @@ export default function useAdminScreenSettings({
   }, []);
 
   const validateScreenForm = useCallback(() => {
+    if (isRetiredScreenSection(screenForm.section_key)) return '종료된 기능의 화면 설정은 사용할 수 없습니다.';
     if (!screenForm.setting_key.trim()) return '설정 키를 입력해주세요.';
     if (!/^[a-zA-Z0-9_.-]{2,100}$/.test(screenForm.setting_key.trim())) {
       return '설정 키는 영문, 숫자, _, -, . 조합 2~100자로 입력해주세요.';

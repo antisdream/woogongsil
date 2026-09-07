@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import { io } from 'socket.io-client';
+import { isRetiredScreenSettingPath } from '../features/screenSettingsPolicy.js';
 
 const API_BASE = '';
 
 // ✅ [Step3 Fix]
-// 기존 캐시가 잘못된 settingsMap 구조를 들고 있을 수 있으므로 v2 캐시 키를 사용합니다.
-const SCREEN_SETTINGS_CACHE_PREFIX = 'wgsScreenSettingsCache:v2:';
+// 종료된 화면 설정의 이전 캐시를 다시 사용하지 않습니다.
+const SCREEN_SETTINGS_CACHE_PREFIX = 'wgsScreenSettingsCache:v3:';
 
 // ✅ 관리자 API가 내려주는 설정값을 프론트에서 쉽게 찾을 수 있도록 평평한 구조로 정리합니다.
 // 지원하는 형태:
@@ -18,7 +19,7 @@ const buildFlatSettings = (settingsMap = {}) => {
     const flat = {};
 
     Object.entries(settingsMap || {}).forEach(([rawKey, rawValue]) => {
-        if (!rawKey) return;
+        if (!rawKey || isRetiredScreenSettingPath(rawKey)) return;
 
         // 중첩 객체 형태 처리: { global: { site_title: '...' } }
         if (
@@ -28,6 +29,7 @@ const buildFlatSettings = (settingsMap = {}) => {
         ) {
             Object.entries(rawValue).forEach(([childKey, childValue]) => {
                 const fullKey = `${rawKey}.${childKey}`;
+                if (isRetiredScreenSettingPath(fullKey)) return;
                 flat[fullKey] = childValue;
                 flat[childKey] = childValue;
             });
@@ -163,7 +165,7 @@ function useScreenSettings(pageKey = 'all') {
     const flatSettings = useMemo(() => buildFlatSettings(settingsMap), [settingsMap]);
 
     const getSetting = useCallback((path, fallback = '') => {
-        if (!path) return fallback;
+        if (!path || isRetiredScreenSettingPath(path)) return fallback;
 
         const key = String(path);
 

@@ -597,11 +597,6 @@ return () => {
     }
   };
 
-  const handleOpenUserRanking = (targetUser) => {
-    if (!targetUser?.id) return;
-    window.open(`/manage/user-ranking/${encodeURIComponent(targetUser.id)}`, '_blank', 'noopener,noreferrer,width=1280,height=900');
-  };
-
   //  필터 입력 영역을 문제 타입에 따라 다르게 렌더링합니다.
 
 
@@ -787,7 +782,6 @@ return () => {
           handleUserSort={handleUserSort}
           openUserEmailModal={openUserEmailModal}
           isUserActionProtectedRow={isUserActionProtectedRow}
-          handleOpenUserRanking={handleOpenUserRanking}
           handleSuspendUser={handleSuspendUser}
           handleDeleteUser={handleDeleteUser}
           handleToggleOperator={handleToggleOperator}

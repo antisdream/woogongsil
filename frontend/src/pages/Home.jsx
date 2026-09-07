@@ -2,15 +2,10 @@
 import React, { useCallback, useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import useScreenSettings, { resolveWgsAssetUrl } from '../useScreenSettings';
-import HomeChatPanel from '../features/home/HomeChatPanel.jsx';
 import HomeHero from '../features/home/HomeHero.jsx';
 import HomeQrModal from '../features/home/HomeQrModal.jsx';
-import HomeRankingSection from '../features/home/HomeRankingSection.jsx';
 import HomeRealtimePanel from '../features/home/HomeRealtimePanel.jsx';
 import { buildMobileAccessUrl, buildQrImageUrls, normalizeQuickLinkUrl } from '../features/home/homeLinks.js';
-import { getHomeRankingLabel, normalizeExamCatalogList } from '../features/home/homeRankingUtils.js';
-import { openChatPopupWindow as openHomeChatPopupWindow } from '../features/home/openChatPopupWindow.js';
-import '../styles/global/home-realtime.css';
 
 const API_BASE = "";
 const DEFAULT_NOTION_URL = 'https://app.notion.com/p/SKN-29th-328031734e3e805ba1a8d60026dcaf94?source=copy_link';
@@ -21,14 +16,7 @@ const DEFAULT_DEVELOPER_URL = 'https://blog.naver.com/andisdream';
 // Home.jsx에서는 ToastContainer를 직접 갖고 있지 않으므로,
 // 필요한 안내 문구를 localStorage에 저장하고 App.jsx가 새로고침 후 표시합니다.
 const PENDING_LOGOUT_TOAST_KEY = 'wgsPendingLogoutToast';
-const REMEMBERED_LOGIN_KEY = 'wgsRememberedLoggedIn';
 const SERVER_INSTANCE_ID_KEY = 'wgsServerInstanceId';
-// 현재 로그인에서 채팅을 보여주기 시작할 기준 시각입니다.
-// 로그아웃하면 App.jsx의 sessionStorage.clear()로 같이 지워져서,
-// 다음 로그인 때 내 화면의 채팅창만 빈 상태로 시작됩니다.
-const CHAT_VISIBLE_SINCE_KEY = 'wgsChatVisibleSince';
-
-
 const LOGOUT_NOTICE_MESSAGES = {
     duplicate_login: '다른 기기에서 로그인하여 현재 기기에서는 로그아웃이 되었습니다.',
     session_expired: '세션시간이 만료되어 로그아웃되었습니다, 다시 로그인해주세요.',
@@ -48,7 +36,7 @@ const Home = () => {
 
     // 관리자페이지 > 화면 설정 관리에서 저장한 홈 화면 문구/배너 값을 실제 홈 화면에 반영합니다.
     const { getSetting: getHomeScreenSetting } = useScreenSettings('home');
-    // 관리자 화면 설정값을 홈 실시간 영역 문구에만 연결합니다.
+    // 관리자 화면 설정값을 홈 접속자 영역 문구에만 연결합니다.
     const homeHeroTitle = getHomeScreenSetting('hero.hero_title', '정보처리기사 필기 · 실기');
     const homeHeroDesc = getHomeScreenSetting('hero.hero_desc', '무엇부터 풀지 막막한 날에도, 한 문제부터 시작해 보세요. 문제 풀이와 해설 확인, 오답 복습을 한곳에서 이어갈 수 있어요.');
     const homeHeroLayout = {
@@ -73,58 +61,25 @@ const Home = () => {
         getHomeScreenSetting('quick_links.developer_button_url', DEFAULT_DEVELOPER_URL),
         DEFAULT_DEVELOPER_URL
     );
-    const liveChatSectionTitle = getHomeScreenSetting('live_chat.section_title', '실시간 접속자 & 채팅');
-    const liveChatSectionDesc = getHomeScreenSetting('live_chat.section_desc', '접속자 목록은 새로고침 버튼을 눌렀을 때 갱신되고, 채팅은 실시간으로 로그인 중인 사용자들끼리 채팅 할 수 있습니다.');
-    const liveChatVisitorsTitle = getHomeScreenSetting('live_chat.visitors_title', '접속자 목록');
-    const liveChatRefreshButtonLabel = getHomeScreenSetting('live_chat.refresh_button_label', '새로고침');
-    const liveChatVisitorsRequestEmpty = getHomeScreenSetting('live_chat.visitors_request_empty', '요청 시간: 아직 없음');
-    const liveChatVisitorsRecentDesc = getHomeScreenSetting('live_chat.visitors_recent_desc', '최근 1분 이내 접속이 확인된 사용자만 표시됩니다.');
-    const liveChatVisitorsEmptyBox = getHomeScreenSetting('live_chat.visitors_empty_box', '새로고침 버튼을 누르면 현재 접속자를 확인할 수 있습니다.');
-    const liveChatChatTitle = getHomeScreenSetting('live_chat.chat_title', '실시간 채팅');
-    const liveChatPopupButtonLabel = getHomeScreenSetting('live_chat.popup_button_label', '팝업창');
-    const liveChatAutoLabel = getHomeScreenSetting('live_chat.chat_auto_label', '자동 갱신 시간:');
-    const liveChatResetNotice = getHomeScreenSetting('live_chat.chat_reset_notice', '로그아웃 후 다시 로그인하면 내 화면의 채팅창만 빈 상태로 시작됩니다.');
-    const liveChatEmptyMessage = getHomeScreenSetting('live_chat.chat_empty_message', '아직 표시할 채팅이 없습니다.');
-    const liveChatInputPlaceholder = getHomeScreenSetting('live_chat.chat_input_placeholder', '채팅 내용을 입력하세요.');
-    const liveChatSendButtonLabel = getHomeScreenSetting('live_chat.chat_send_button_label', '전송');
+    const onlineSectionTitle = getHomeScreenSetting('online_users.section_title', '함께 공부하는 사람들');
+    const onlineSectionDesc = getHomeScreenSetting('online_users.section_desc', '새로고침을 눌러 지금 함께 공부하는 접속자를 확인해 보세요.');
+    const onlineVisitorsTitle = getHomeScreenSetting('online_users.visitors_title', '접속자 목록');
+    const onlineRefreshButtonLabel = getHomeScreenSetting('online_users.refresh_button_label', '새로고침');
+    const onlineVisitorsRequestEmpty = getHomeScreenSetting('online_users.visitors_request_empty', '요청 시간: 아직 없음');
+    const onlineVisitorsRecentDesc = getHomeScreenSetting('online_users.visitors_recent_desc', '최근 1분 이내 접속이 확인된 사용자만 표시됩니다.');
+    const onlineVisitorsEmptyBox = getHomeScreenSetting('online_users.visitors_empty_box', '새로고침 버튼을 누르면 현재 접속자를 확인할 수 있습니다.');
 
-    // 홈 화면 점수/랭킹 영역 문구를 관리자페이지 화면 설정 관리에서 수정할 수 있도록 DB 설정값으로 연결합니다.
-    const scoreRankingTitle = getHomeScreenSetting('score_ranking.section_title', '나의 점수는?');
-    const scoreRankingAlwaysOpenLabel = getHomeScreenSetting('score_ranking.always_open_label', '항상 펼침');
-    const rankingRandomTabLabel = getHomeScreenSetting('score_ranking.tab_random_label', '필기 문제은행');
-    const rankingPastTabLabel = getHomeScreenSetting('score_ranking.tab_past_label', '필기 기출문제');
-    const rankingIpepRandomTabLabel = getHomeScreenSetting('score_ranking.tab_ipep_random_label', '실기 문제은행');
-    const rankingIpepPastTabLabel = getHomeScreenSetting('score_ranking.tab_ipep_past_label', '실기 기출문제');
-    const scoreRankingYearSelectTitle = getHomeScreenSetting('score_ranking.year_select_title', '연도 선택');
-    const scoreRankingSessionSelectTitle = getHomeScreenSetting('score_ranking.session_select_title', '회차 선택');
-    const scoreRankingNeedSelectMessage = getHomeScreenSetting('score_ranking.need_select_message', '연도와 회차를 선택해 주세요.');
-    const scoreRankingTopPrefix = getHomeScreenSetting('score_ranking.top_title_prefix', '오늘의');
-    const scoreRankingTopSuffix = getHomeScreenSetting('score_ranking.top_title_suffix', 'Top 3');
-    const scoreRankingSeasonText = getHomeScreenSetting('score_ranking.season_text', '24시간 랭킹 (00:00 ~ 23:59)');
-    const scoreRankingNoDataMessage = getHomeScreenSetting('score_ranking.no_data_message', '등록된 랭킹 데이터가 없습니다. 순위권에 도전해보세요!');
-    const scoreRankingMyRankTitle = getHomeScreenSetting('score_ranking.my_ranking_title', '나의 실시간 랭킹');
     const homeWelcomePrefix = getHomeScreenSetting('hero.welcome_prefix', '');
     const homeWelcomeSuffix = getHomeScreenSetting('hero.welcome_suffix', '님, 환영합니다!');
     const homeDdayPrefix = getHomeScreenSetting('hero.dday_prefix', '시험일까지');
     const homeDdaySuffix = getHomeScreenSetting('hero.dday_suffix', '!');
-    const liveChatCurrentVisitorPrefix = getHomeScreenSetting('live_chat.current_visitor_prefix', '현재');
-    const liveChatCurrentVisitorSuffix = getHomeScreenSetting('live_chat.current_visitor_suffix', '명');
-    const liveChatRefreshLoadingLabel = getHomeScreenSetting('live_chat.refresh_loading_label', '새로고침 중...');
-    const liveChatRequestTimeLabel = getHomeScreenSetting('live_chat.request_time_label', '요청 시간:');
-    const liveChatMeLabel = getHomeScreenSetting('live_chat.me_label', '(나)');
-    const liveChatRecentActivityLabel = getHomeScreenSetting('live_chat.recent_activity_label', '최근 활동');
-    const liveChatJustNowLabel = getHomeScreenSetting('live_chat.just_now_label', '방금 전');
-    const scoreRankingAccuracyLabel = getHomeScreenSetting('score_ranking.accuracy_label', '정답률');
-    const scoreRankingRankSuffix = getHomeScreenSetting('score_ranking.rank_suffix', '등');
-    const scoreRankingScoreSuffix = getHomeScreenSetting('score_ranking.score_suffix', '점');
-    const scoreRankingNoPersonalMessage = getHomeScreenSetting('score_ranking.no_personal_ranking_message', '아직 응시 기록이 없습니다. 문제를 풀고 랭킹에 도전해보세요!');
-    const chatPopupWindowTitle = getHomeScreenSetting('chat_popup.window_title', '우공실 실시간 채팅');
-    const chatPopupHeadingTitle = getHomeScreenSetting('chat_popup.heading_title', '우공실 실시간 채팅');
-    const chatPopupCloseButtonLabel = getHomeScreenSetting('chat_popup.close_button_label', '닫기');
-    const chatPopupNotRefreshedLabel = getHomeScreenSetting('chat_popup.not_refreshed_label', '아직 없음');
-    const chatPopupKeepNotice = getHomeScreenSetting('chat_popup.keep_notice', '이 팝업창은 사이트의 다른 페이지로 이동해도 유지됩니다. 브라우저 창처럼 위치와 크기를 조절할 수 있습니다.');
-    const chatPopupLoadingMessage = getHomeScreenSetting('chat_popup.loading_message', '채팅을 불러오는 중입니다.');
-    const chatPopupToolTitle = getHomeScreenSetting('chat_popup.tool_title', '이모지/스티커/GIF 열기');
+    const onlineCurrentVisitorPrefix = getHomeScreenSetting('online_users.current_visitor_prefix', '현재');
+    const onlineCurrentVisitorSuffix = getHomeScreenSetting('online_users.current_visitor_suffix', '명');
+    const onlineRefreshLoadingLabel = getHomeScreenSetting('online_users.refresh_loading_label', '새로고침 중...');
+    const onlineRequestTimeLabel = getHomeScreenSetting('online_users.request_time_label', '요청 시간:');
+    const onlineMeLabel = getHomeScreenSetting('online_users.me_label', '(나)');
+    const onlineRecentActivityLabel = getHomeScreenSetting('online_users.recent_activity_label', '최근 활동');
+    const onlineJustNowLabel = getHomeScreenSetting('online_users.just_now_label', '방금 전');
     const mobileQrTitle = getHomeScreenSetting('mobile_qr.title', '모바일에서 접속하기');
     const mobileQrDesc = getHomeScreenSetting('mobile_qr.desc', 'PC와 동일한 네트워크 환경에 연결되어 있어야 합니다.');
     const mobileQrUrlLabel = getHomeScreenSetting('mobile_qr.url_label', '접속 주소:');
@@ -133,9 +88,6 @@ const Home = () => {
     const mobileQrWifiHint = getHomeScreenSetting('mobile_qr.wifi_hint', '같은 와이파이에 연결된 휴대폰에서만 접속할 수 있습니다.');
     const mobileQrChangeLabel = getHomeScreenSetting('mobile_qr.change_label', '주소 변경:');
     const mobileQrPlaceholder = getHomeScreenSetting('mobile_qr.placeholder', '자동 감지 중');
-    // 팝업창은 React JSX가 아니라 문자열 HTML이므로,
-    // DB에서 가져온 문구를 HTML에 안전하게 넣기 위해 이스케이프 처리합니다.
-
     const homeDefaultBanner = resolveWgsAssetUrl(getHomeScreenSetting('image.default_banner', ''));
 
     const loggedInUser = sessionStorage.getItem('userName');
@@ -162,50 +114,6 @@ const Home = () => {
     // 서버에서 자동 감지한 LAN IP를 표시용으로 보관합니다.
     const [detectedServerIp, setDetectedServerIp] = useState('');
 
-    // 홈 로그인 박스를 /login 페이지로 이사했기 때문에 랭킹 영역은 항상 펼쳐 둡니다.
-    // 접기/펼치기 버튼 상태값은 더 이상 필요하지 않지만, 아래 렌더링 구조는 기존 랭킹 로직을 그대로 사용합니다.
-    const isRankingOpen = true;
-    const [rankingTab, setRankingTab] = useState('random'); 
-    const [pastYear, setPastYear] = useState(null);
-    const [pastSession, setPastSession] = useState(null);
-    const [rankingData, setRankingData] = useState([]);
-
-    const [examCatalogs, setExamCatalogs] = useState({
-        written: [],
-        ipep_past: [],
-    });
-
-    useEffect(() => {
-        let isMounted = true;
-
-        const fetchExamCatalogs = async () => {
-            try {
-                const res = await axios.get(`${API_BASE}/api/exam-catalogs`);
-
-                if (!isMounted) return;
-
-                setExamCatalogs({
-                    written: normalizeExamCatalogList(res.data?.data?.written || res.data?.written || []),
-                    ipep_past: normalizeExamCatalogList(res.data?.data?.ipep_past || res.data?.ipep_past || []),
-                });
-            } catch (error) {
-                console.error('홈 랭킹 기출 연도/회차 카탈로그 불러오기 실패:', error);
-                if (!isMounted) return;
-                setExamCatalogs({ written: [], ipep_past: [] });
-            }
-        };
-
-        fetchExamCatalogs();
-
-        return () => {
-            isMounted = false;
-        };
-    }, []);
-
-    
-    const [myRankingData, setMyRankingData] = useState(null);
-    // 랭킹 시즌제가 폐지되어 홈 랭킹은 서버 기준 날짜로 24시간 항상 표시합니다.
-
     // 홈 화면에 표시할 실시간 접속자 목록입니다.
     // 기존에는 10초마다 자동으로 새로고침했지만,
     // 이제는 사용자가 [새로고침] 버튼을 눌렀을 때만 서버에 현재 접속자 정보를 요청합니다.
@@ -214,19 +122,6 @@ const Home = () => {
     const [isOnlineUsersLoading, setIsOnlineUsersLoading] = useState(false);
     const [onlineUsersLastRefreshedAt, setOnlineUsersLastRefreshedAt] = useState('');
     const [onlineUsersError, setOnlineUsersError] = useState('');
-
-    // 실시간 채팅 화면 상태입니다.
-    // 채팅은 로그인한 사용자에게만 보이며, 서버에는 메모리 기반 채팅으로 저장됩니다.
-    // 내 로그아웃/재로그인 시 채팅창이 비어 보이도록 CHAT_VISIBLE_SINCE_KEY 기준 이후 메시지만 요청합니다.
-    const [chatMessages, setChatMessages] = useState([]);
-    const [chatInput, setChatInput] = useState('');
-    const [isChatLoading, setIsChatLoading] = useState(false);
-    const [chatError, setChatError] = useState('');
-    const [chatLastRefreshedAt, setChatLastRefreshedAt] = useState('');
-    // 이모지/스티커/GIF 문구 선택창 상태입니다.
-    // 외부 API 없이도 채팅 입력창에 빠르게 넣을 수 있는 보조 도구입니다.
-    const [chatPickerOpen, setChatPickerOpen] = useState(false);
-    const [chatPickerTab, setChatPickerTab] = useState('emoji');
 
     useEffect(() => {
         const checkSession = async () => {
@@ -357,7 +252,7 @@ const Home = () => {
             }
         } catch (err) {
             // 실시간 접속자 패널은 부가 기능입니다.
-            // 그래서 이 요청이 실패해도 홈 화면, 랭킹, 로그인 등 기존 기능은 절대 막지 않습니다.
+            // 그래서 이 요청이 실패해도 홈 화면과 로그인 등 기존 기능은 절대 막지 않습니다.
             setOnlineUsers([]);
             setOnlineUsersLastRefreshedAt(formatLocalDateTime());
             setOnlineUsersError('서버 연결 문제로 접속자 정보를 불러오지 못했습니다.');
@@ -365,282 +260,6 @@ const Home = () => {
             setIsOnlineUsersLoading(false);
         }
     };
-
-    // 현재 로그인에서 채팅을 보여주기 시작할 기준 시각을 가져옵니다.
-    // 값이 없으면 지금 시각으로 새로 만들기 때문에, 새 로그인 직후에는 이전 채팅이 보이지 않습니다.
-    const getChatVisibleSinceMs = useCallback(() => {
-        const saved = Number(sessionStorage.getItem(CHAT_VISIBLE_SINCE_KEY));
-
-        if (Number.isFinite(saved) && saved >0) {
-            return saved;
-        }
-
-        const nowMs = Date.now();
-        sessionStorage.setItem(CHAT_VISIBLE_SINCE_KEY, String(nowMs));
-        return nowMs;
-    }, []);
-
-    // ISO 문자열을 사용자의 브라우저 기준 시간으로 바꿉니다.
-    // 채팅 출력 형식은 [연도-월-일 시:분:초 이름 : 내용]이 되도록 Home.jsx에서 조합합니다.
-    const formatChatDateTime = (value) => {
-        const date = value ? new Date(value) : new Date();
-        return formatLocalDateTime(Number.isNaN(date.getTime()) ? new Date() : date);
-    };
-
-    // 실시간 채팅 목록을 서버에서 다시 불러옵니다.
-    // 접속자 목록은 사용자가 버튼을 눌렀을 때만 갱신하지만,
-    // 채팅은 실제 대화에 가깝게 보이도록 3초 간격의 짧은 폴링으로 자동 갱신합니다.
-    // 그래서 화면에는 별도의 '채팅 새로고침' 버튼을 두지 않습니다.
-    const refreshChatMessages = useCallback(async ({ silent = false } = {}) => {
-        const userId = sessionStorage.getItem('userId');
-        const token = sessionStorage.getItem('sessionToken');
-        const serverInstanceId = sessionStorage.getItem(SERVER_INSTANCE_ID_KEY) || localStorage.getItem(SERVER_INSTANCE_ID_KEY) || '';
-
-        if (!loggedInUser || !userId || !token) {
-            setChatMessages([]);
-            setChatLastRefreshedAt('');
-            setChatError('로그인 후 실시간 채팅을 이용할 수 있습니다.');
-            return;
-        }
-
-        if (!silent) setIsChatLoading(true);
-        setChatError('');
-
-        try {
-            const res = await axios.post(`${API_BASE}/api/realtime-chat/list`, {
-                id: userId,
-                sessionToken: token,
-                serverInstanceId,
-                sinceMs: getChatVisibleSinceMs()
-            });
-
-            if (res.data.serverInstanceId) {
-                sessionStorage.setItem(SERVER_INSTANCE_ID_KEY, res.data.serverInstanceId);
-                localStorage.setItem(SERVER_INSTANCE_ID_KEY, res.data.serverInstanceId);
-            }
-
-            if (res.data.valid === false) {
-                savePendingLogoutToast(res.data.reason || 'session_expired');
-                sessionStorage.clear();
-                window.location.reload();
-                return;
-            }
-
-            if (res.data.success) {
-                setChatMessages(Array.isArray(res.data.messages) ? res.data.messages : []);
-                setChatLastRefreshedAt(formatLocalDateTime());
-            } else if (!silent) {
-                setChatError(res.data.msg || '실시간 채팅을 불러오지 못했습니다.');
-            }
-        } catch (err) {
-            if (!silent) setChatError('서버 연결 문제로 채팅을 불러오지 못했습니다.');
-        } finally {
-            if (!silent) setIsChatLoading(false);
-        }
-    }, [formatLocalDateTime, getChatVisibleSinceMs, loggedInUser]);
-
-    // 채팅 전송 함수입니다.
-    // 전송 성공 후 서버가 돌려준 목록으로 화면을 갱신하므로, 보낸 사람 화면에도 즉시 반영됩니다.
-    const sendChatMessage = async (presetText = '') => {
-        // presetText가 있으면 이모지/스티커/GIF 프리셋에서 바로 전송된 문구입니다.
-        // 없으면 사용자가 직접 입력한 chatInput 값을 전송합니다.
-        const text = String(presetText || chatInput).trim();
-        const userId = sessionStorage.getItem('userId');
-        const token = sessionStorage.getItem('sessionToken');
-        const serverInstanceId = sessionStorage.getItem(SERVER_INSTANCE_ID_KEY) || localStorage.getItem(SERVER_INSTANCE_ID_KEY) || '';
-
-        if (!text) {
-            setChatError('채팅 내용을 입력해주세요.');
-            return;
-        }
-
-        if (!loggedInUser || !userId || !token) {
-            setChatError('로그인 후 실시간 채팅을 이용할 수 있습니다.');
-            return;
-        }
-
-        setIsChatLoading(true);
-        setChatError('');
-
-        try {
-            const res = await axios.post(`${API_BASE}/api/realtime-chat/send`, {
-                id: userId,
-                sessionToken: token,
-                serverInstanceId,
-                text,
-                sinceMs: getChatVisibleSinceMs()
-            });
-
-            if (res.data.serverInstanceId) {
-                sessionStorage.setItem(SERVER_INSTANCE_ID_KEY, res.data.serverInstanceId);
-                localStorage.setItem(SERVER_INSTANCE_ID_KEY, res.data.serverInstanceId);
-            }
-
-            if (res.data.valid === false) {
-                savePendingLogoutToast(res.data.reason || 'session_expired');
-                sessionStorage.clear();
-                window.location.reload();
-                return;
-            }
-
-            if (res.data.success) {
-                setChatInput('');
-                setChatPickerOpen(false);
-                setChatMessages(Array.isArray(res.data.messages) ? res.data.messages : []);
-                setChatLastRefreshedAt(formatLocalDateTime());
-            } else {
-                setChatError(res.data.msg || '채팅 전송에 실패했습니다.');
-            }
-        } catch (err) {
-            setChatError('서버 연결 문제로 채팅을 전송하지 못했습니다.');
-        } finally {
-            setIsChatLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        if (!loggedInUser) {
-            // 로그아웃 상태가 되면 이전 접속자/채팅 화면 정보를 모두 지웁니다.
-            // 실제 전체 채팅방 서버 기록은 삭제하지 않고, 현재 브라우저 화면만 비웁니다.
-            setOnlineUsers([]);
-            setOnlineUsersLastRefreshedAt('');
-            setOnlineUsersError('');
-            setIsOnlineUsersLoading(false);
-            setChatMessages([]);
-            setChatInput('');
-            setChatError('');
-            setChatLastRefreshedAt('');
-            setIsChatLoading(false);
-            return;
-        }
-
-        getChatVisibleSinceMs();
-        refreshChatMessages({ silent: true });
-
-        // 채팅만 3초마다 가볍게 갱신합니다.
-        // 접속자 목록은 이전 요청대로 자동 새로고침하지 않고 버튼을 누를 때만 갱신합니다.
-        const chatTimer = setInterval(() => {
-            refreshChatMessages({ silent: true });
-        }, 3000);
-
-        return () => clearInterval(chatTimer);
-    }, [getChatVisibleSinceMs, loggedInUser, refreshChatMessages]);
-
-    useEffect(() => {
-        if (!isRankingOpen) return;
-
-        const fetchRankingData = async () => {
-            try {
-                if ((rankingTab === 'past' || rankingTab === 'ipep_past') && (!pastYear || !pastSession)) {
-                    setRankingData([]);
-                    setMyRankingData(null); 
-                    return;
-                }
-
-                const params = new URLSearchParams({ type: rankingTab });
-                if (rankingTab === 'past' || rankingTab === 'ipep_past') {
-                    // 실기 기출 랭킹도 필기 기출 랭킹처럼 연도/회차로 구분합니다.
-                    if (pastYear) params.append('year', pastYear);
-                    if (pastSession) params.append('session', pastSession);
-                }
-
-                const res = await axios.get(`${API_BASE}/api/rankings?${params.toString()}`);
-                // 랭킹 시즌제가 폐지되어 서버 기준 날짜로 24시간 랭킹이 동작합니다.
-                const rawRankings = res.data.rankings || [];
-                
-                // - 필기 랭킹은 기존 solved_count/total_count 기반 흐름을 유지합니다.
-                // - 실기 문제은행/실기 기출문제는 score(점수)와 correct/total(정답률 표기용)을 분리합니다.
-                // - 이전처럼 실기 분모를 100점으로 강제하지 않고, 백엔드가 내려주는 correctCount/totalCount를 우선 사용합니다.
-                const processedData = rawRankings.map(user => {
-                    const isIpepRanking = rankingTab === 'ipep_random' || rankingTab === 'ipep_past';
-                    const rawScore = Number(user.score ?? user.points ?? user.point ?? 0);
-
-                    const ipepTotal = Number(
-                        user.totalCount ??
-                        user.total_count ??
-                        user.questionCount ??
-                        user.question_count ??
-                        user.solvedCount ??
-                        user.solved_count ??
-                        user.problemCount ??
-                        user.problem_count ??
-                        0
-                    );
-                    const ipepCorrect = Number(
-                        user.correctCount ??
-                        user.correct_count ??
-                        user.correctAnswers ??
-                        user.correct_answers ??
-                        user.correct ??
-                        0
-                    );
-
-                    const writtenTotal = Number(user.total ?? user.totalCount ?? user.total_count ?? user.solved_count ?? 0);
-                    const writtenCorrect = Number(user.correct ?? user.correct_count ?? user.correctCount ?? 0);
-
-                    const total = isIpepRanking ? ipepTotal : writtenTotal;
-                    const correct = isIpepRanking ? ipepCorrect : writtenCorrect;
-                    const score = isIpepRanking ? rawScore : (rankingTab === 'random'? (correct * 5) : correct);
-                    const accuracy = total >0 ? Math.round((correct / total) * 100) : Number(user.accuracy ?? 0);
-
-                    return {
-                        ...user,
-                        id: user.id || user.userId,
-                        name: user.name || user.userName,
-                        score,
-                        accuracy: Number.isFinite(accuracy) ? accuracy : 0,
-                        total: Number.isFinite(total) ? total : 0,
-                        correct: Number.isFinite(correct) ? correct : 0,
-                    };
-                });
-
-                //  프론트엔드에서 계산된 정확한 점수로 신뢰도 100% 재정렬 보장
-                processedData.sort((a, b) => b.score - a.score || b.accuracy - a.accuracy || b.correct - a.correct);
-                
-                // 재정렬 후 1, 2, 3등 랭크 다시 부여
-                processedData.forEach((u, index) => u.rank = index + 1);
-
-                setRankingData(processedData.slice(0, 3)); 
-
-                const currentUserId = sessionStorage.getItem('userId');
-                const meIndex = processedData.findIndex(u => String(u.id || u.userId) === String(currentUserId));
-                if (meIndex !== -1) {
-                    setMyRankingData(processedData[meIndex]); 
-                } else {
-                    setMyRankingData(null);
-                }
-
-            } catch (err) {
-                console.error("랭킹 데이터 불러오기 실패:", err);
-                setRankingData([]); 
-                setMyRankingData(null);
-            }
-        };
-
-        fetchRankingData();
-        const timer = setInterval(fetchRankingData, 10000); 
-        return () => clearInterval(timer);
-    }, [isRankingOpen, rankingTab, pastYear, pastSession]);
-
-    const isPastRankingTab = rankingTab === 'past' || rankingTab === 'ipep_past';
-    const canShowChart = rankingTab === 'random' || rankingTab === 'ipep_random' || (isPastRankingTab && pastYear && pastSession);
-    // 랭킹 탭 표시명을 한 곳에서 관리해서 필기/실기 구분 문구가 흔들리지 않게 합니다.
-    const rankingLabel = getHomeRankingLabel(rankingTab, {
-        random: rankingRandomTabLabel,
-        past: rankingPastTabLabel,
-        ipepRandom: rankingIpepRandomTabLabel,
-        ipepPast: rankingIpepPastTabLabel,
-    });
-    // - 필기/실기 기출 랭킹 필터는 더 이상 2021~2025, 1~3회차를 하드코딩하지 않습니다.
-    // - 서버 DB 카탈로그에 존재하는 연도/회차만 체크박스로 표시합니다.
-    const activePastCatalog = rankingTab === 'ipep_past'? examCatalogs.ipep_past : examCatalogs.written;
-    const pastYearOptions = activePastCatalog.map((item) => item.year);
-    const selectedPastYearCatalog = activePastCatalog.find((item) => String(item.year) === String(pastYear));
-    const pastSessionOptions = selectedPastYearCatalog?.sessions || [];
-    const seasonText = scoreRankingSeasonText;
-    
-    // 로그인 기능은 Home.jsx에서 제거하고 /login 전용 페이지(Login.jsx)로 이동했습니다.
-    // 홈 화면은 배너, 실시간 패널, 랭킹을 담당합니다.
 
     const calcDday = () => {
         if (!dDay) return null;
@@ -669,21 +288,11 @@ const Home = () => {
     const qrUrl = useMemo(() => buildQrImageUrls(currentUrl, API_BASE), [currentUrl]);
 
 
-    // 정답률 표기 유틸
-    // - total이 있으면 정답률 60% (3/5)처럼 보여주고,
-    // - 과거 데이터처럼 total이 비어 있으면 화면 깨짐을 막기 위해 퍼센트만 보여줍니다.
-    const formatAccuracyText = (item) => {
-        const total = Number(item?.total ?? 0);
-        const correct = Number(item?.correct ?? 0);
-        const accuracy = Number(item?.accuracy ?? 0);
-        return total >0 ? `${scoreRankingAccuracyLabel} ${accuracy}% (${correct}/${total})` : `${scoreRankingAccuracyLabel} ${accuracy}%`;
-    };
-
     const formatOnlineTime = (value) => {
-        if (!value) return liveChatJustNowLabel;
+        if (!value) return onlineJustNowLabel;
 
         const date = new Date(value);
-        if (Number.isNaN(date.getTime())) return liveChatJustNowLabel;
+        if (Number.isNaN(date.getTime())) return onlineJustNowLabel;
 
         return date.toLocaleTimeString('ko-KR', {
             hour: '2-digit',
@@ -693,33 +302,6 @@ const Home = () => {
         });
     };
 
-    // 이모지/스티커/GIF 프리셋을 채팅 입력창 뒤에 붙입니다.
-    // 프리셋을 누르는 즉시 전송하지 않고 입력창에 넣어두면,
-    // 사용자가 문구를 수정하거나 일반 텍스트와 섞어서 보낼 수 있습니다.
-    // 또한 브라우저 창 자체가 이동/크기 조절을 지원하므로 별도 드래그 라이브러리를 추가하지 않아도 됩니다.
-    const openChatPopupWindow = () => openHomeChatPopupWindow({
-        loggedInUser,
-        setChatError,
-        getChatVisibleSinceMs,
-        apiBase: API_BASE,
-        serverInstanceIdKey: SERVER_INSTANCE_ID_KEY,
-        chatCopy: {
-            liveChatAutoLabel,
-            liveChatInputPlaceholder,
-            liveChatSendButtonLabel,
-            liveChatEmptyMessage,
-            chatPopupWindowTitle,
-            chatPopupHeadingTitle,
-            chatPopupCloseButtonLabel,
-            chatPopupNotRefreshedLabel,
-            chatPopupKeepNotice,
-            chatPopupLoadingMessage,
-            chatPopupToolTitle,
-        },
-    });
-
-    // 실시간 채팅 카드입니다.
-    // 채팅은 3초마다 자동 갱신되므로 별도 새로고침 버튼을 제거했습니다.
     return (
         <div
             className="home-page wgs-typography-scope ui-home-page" style={{ width: '100%', maxWidth: '1280px', margin: '0 auto', boxSizing: 'border-box' }}
@@ -767,87 +349,25 @@ const Home = () => {
             <div className="ui-home-community" style={{ display: 'flex', flexDirection: 'column', gap: '30px', marginBottom: '30px' }}>
                 <HomeRealtimePanel
                     loggedInUser={loggedInUser}
-                    liveChatSectionTitle={liveChatSectionTitle}
-                    liveChatSectionDesc={liveChatSectionDesc}
-                    liveChatCurrentVisitorPrefix={liveChatCurrentVisitorPrefix}
-                    liveChatCurrentVisitorSuffix={liveChatCurrentVisitorSuffix}
+                    onlineSectionTitle={onlineSectionTitle}
+                    onlineSectionDesc={onlineSectionDesc}
+                    onlineCurrentVisitorPrefix={onlineCurrentVisitorPrefix}
+                    onlineCurrentVisitorSuffix={onlineCurrentVisitorSuffix}
                     onlineUsers={onlineUsers}
-                    liveChatVisitorsTitle={liveChatVisitorsTitle}
+                    onlineVisitorsTitle={onlineVisitorsTitle}
                     isOnlineUsersLoading={isOnlineUsersLoading}
                     refreshOnlineUsers={refreshOnlineUsers}
-                    liveChatRefreshLoadingLabel={liveChatRefreshLoadingLabel}
-                    liveChatRefreshButtonLabel={liveChatRefreshButtonLabel}
+                    onlineRefreshLoadingLabel={onlineRefreshLoadingLabel}
+                    onlineRefreshButtonLabel={onlineRefreshButtonLabel}
                     onlineUsersLastRefreshedAt={onlineUsersLastRefreshedAt}
-                    liveChatRequestTimeLabel={liveChatRequestTimeLabel}
-                    liveChatVisitorsRequestEmpty={liveChatVisitorsRequestEmpty}
-                    liveChatVisitorsRecentDesc={liveChatVisitorsRecentDesc}
+                    onlineRequestTimeLabel={onlineRequestTimeLabel}
+                    onlineVisitorsRequestEmpty={onlineVisitorsRequestEmpty}
+                    onlineVisitorsRecentDesc={onlineVisitorsRecentDesc}
                     onlineUsersError={onlineUsersError}
-                    liveChatVisitorsEmptyBox={liveChatVisitorsEmptyBox}
-                    liveChatMeLabel={liveChatMeLabel}
-                    liveChatRecentActivityLabel={liveChatRecentActivityLabel}
+                    onlineVisitorsEmptyBox={onlineVisitorsEmptyBox}
+                    onlineMeLabel={onlineMeLabel}
+                    onlineRecentActivityLabel={onlineRecentActivityLabel}
                     formatOnlineTime={formatOnlineTime}
-                    renderChatPanel={() => (
-                        <HomeChatPanel
-                            chatMessages={chatMessages}
-                            chatError={chatError}
-                            chatInput={chatInput}
-                            setChatInput={setChatInput}
-                            isChatLoading={isChatLoading}
-                            chatPickerOpen={chatPickerOpen}
-                            setChatPickerOpen={setChatPickerOpen}
-                            chatPickerTab={chatPickerTab}
-                            setChatPickerTab={setChatPickerTab}
-                            chatLastRefreshedAt={chatLastRefreshedAt}
-                            sendChatMessage={sendChatMessage}
-                            formatChatDateTime={formatChatDateTime}
-                            openChatPopupWindow={openChatPopupWindow}
-                            liveChatChatTitle={liveChatChatTitle}
-                            liveChatPopupButtonLabel={liveChatPopupButtonLabel}
-                            liveChatAutoLabel={liveChatAutoLabel}
-                            liveChatResetNotice={liveChatResetNotice}
-                            liveChatEmptyMessage={liveChatEmptyMessage}
-                            liveChatInputPlaceholder={liveChatInputPlaceholder}
-                            liveChatSendButtonLabel={liveChatSendButtonLabel}
-                            liveChatMeLabel={liveChatMeLabel}
-                            chatPopupNotRefreshedLabel={chatPopupNotRefreshedLabel}
-                        />
-                    )}
-                />
-
-                <HomeRankingSection
-                    loggedInUser={loggedInUser}
-                    scoreRankingTitle={scoreRankingTitle}
-                    scoreRankingAlwaysOpenLabel={scoreRankingAlwaysOpenLabel}
-                    rankingTab={rankingTab}
-                    setRankingTab={setRankingTab}
-                    rankingRandomTabLabel={rankingRandomTabLabel}
-                    rankingPastTabLabel={rankingPastTabLabel}
-                    rankingIpepRandomTabLabel={rankingIpepRandomTabLabel}
-                    rankingIpepPastTabLabel={rankingIpepPastTabLabel}
-                    isPastRankingTab={isPastRankingTab}
-                    pastYearOptions={pastYearOptions}
-                    pastYear={pastYear}
-                    setPastYear={setPastYear}
-                    pastSessionOptions={pastSessionOptions}
-                    pastSession={pastSession}
-                    setPastSession={setPastSession}
-                    scoreRankingYearSelectTitle={scoreRankingYearSelectTitle}
-                    scoreRankingSessionSelectTitle={scoreRankingSessionSelectTitle}
-                    canShowChart={canShowChart}
-                    scoreRankingNeedSelectMessage={scoreRankingNeedSelectMessage}
-                    scoreRankingTopPrefix={scoreRankingTopPrefix}
-                    rankingLabel={rankingLabel}
-                    scoreRankingTopSuffix={scoreRankingTopSuffix}
-                    seasonText={seasonText}
-                    rankingData={rankingData}
-                    scoreRankingNoDataMessage={scoreRankingNoDataMessage}
-                    scoreRankingRankSuffix={scoreRankingRankSuffix}
-                    scoreRankingScoreSuffix={scoreRankingScoreSuffix}
-                    formatAccuracyText={formatAccuracyText}
-                    scoreRankingMyRankTitle={scoreRankingMyRankTitle}
-                    myRankingData={myRankingData}
-                    scoreRankingNoPersonalMessage={scoreRankingNoPersonalMessage}
-                    getHomeScreenSetting={getHomeScreenSetting}
                 />
             </div>
         </div>

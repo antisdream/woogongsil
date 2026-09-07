@@ -124,8 +124,6 @@
 .learning-page :is(.mobile-practice-explanation,.written-past-explanation-box) { background: var(--learning-paper) !important; border: 1px solid var(--wgs-border) !important; padding: 24px !important; border-radius: 14px !important; }
 .learning-page :is(.mobile-practice-explanation,.written-past-explanation-box) > div:first-child { color: var(--wgs-primary) !important; }
 .learning-page .mobile-practice-explanation-body { font-size: 16px !important; line-height: 1.8; }
-.learning-page .mobile-practice-rank { border: 1px solid var(--wgs-border) !important; background: var(--learning-soft) !important; }
-.learning-page .mobile-practice-rank :is(span,strong) { color: var(--wgs-text) !important; }
 .learning-page :is(.learning-study-panel,.learning-question-card,.past-exam-question-panel,.mobile-practice-card) { border: 1px solid var(--wgs-border) !important; background: var(--learning-paper) !important; padding: 24px !important; border-radius: 16px !important; box-shadow: none !important; min-width: 0; }
 .learning-page .learning-study-panel { padding: 0 !important; border: 0 !important; background: transparent !important; }
 .learning-page .learning-study-head { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding: 12px 0 16px; }
@@ -217,7 +215,6 @@ body #wgs-multiplayer-page.learning-page {
   .learning-page :is(.ipep-three-week-filters,.past-exam-selector-controls) { display: grid !important; grid-template-columns: minmax(0,1fr) !important; }
   .learning-page.learning-selector, .learning-page.learning-results, .learning-page .learning-results { padding: 24px !important; }
   .learning-page .past-exam-result-time-row { flex-wrap: wrap; gap: 8px !important; }
-  .learning-page .past-exam-my-ranking-row { flex-wrap: wrap; }
 }
 @media(max-width: 480px) {
   .learning-page .learning-image-backdrop { padding: 12px !important; }

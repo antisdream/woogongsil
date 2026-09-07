@@ -156,12 +156,6 @@
     overflow-wrap: anywhere;
   }
 
-  .mobile-practice-page .mobile-practice-rank {
-    gap: 8px !important;
-    margin-bottom: 16px !important;
-    line-height: 1.5;
-  }
-
   .wrong-note-page.mobile-practice-page .mobile-practice-tabs {
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
     gap: 8px !important;

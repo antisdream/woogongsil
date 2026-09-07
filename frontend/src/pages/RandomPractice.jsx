@@ -2,6 +2,7 @@ import '../styles/app/learning-redesign.css';
 // 필기 문제은행 라우트 페이지 컴포넌트입니다.
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import axios from 'axios';
+import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
 import DrawingBoard from './DrawingBoard'; 
 import ErrorReportButton from '../components/ErrorReportButton';
@@ -117,7 +118,6 @@ const RandomPractice = () => {
     const [isCorrect, setIsCorrect] = useState(null);
     const [loadError, setLoadError] = useState(false);
     
-    const [myRankData, setMyRankData] = useState(null);
     
     const [showDrawing, setShowDrawing] = useState(false); 
 
@@ -161,7 +161,6 @@ const RandomPractice = () => {
             setSelectedAnswer(null);
             setIsSubmitted(false);
             setIsCorrect(null);
-            setMyRankData(null);
             setShowDrawing(false); 
         } catch (err) {
             console.error("문제 로딩 에러:", err);
@@ -202,28 +201,10 @@ const RandomPractice = () => {
                     userId, userName, questionId: question.question_id, isCorrect: correct
                 });
 
-                const rankRes = await axios.get(`${API_BASE}/api/rankings?type=random`);
-                if (rankRes.data.isRegularSeason && rankRes.data.rankings) {
-                    const rawRankings = rankRes.data.rankings;
-                    
-                    const processed = rawRankings.map(user => {
-                        const c = Number(user.correct || user.correct_count || 0);
-                        const t = Number(user.total || user.solved_count || 0);
-                        return { ...user, score: c * 5, accuracy: t >0 ? Math.round((c / t) * 100) : 0, correct: c };
-                    });
-                    
-                    processed.sort((a, b) => b.score - a.score || b.accuracy - a.accuracy || b.correct - a.correct);
-                    
-                    const meIndex = processed.findIndex(u => String(u.id) === String(userId) || String(u.userId) === String(userId));
-                    if (meIndex !== -1) {
-                        setMyRankData({ 
-                            rank: meIndex + 1,
-                            score: processed[meIndex].score, 
-                            accuracy: processed[meIndex].accuracy 
-                        });
-                    }
-                }
-            } catch (err) { console.error("결과 저장/랭킹 업데이트 실패"); }
+            } catch (err) {
+                console.error("개인 결과 저장 실패:", err);
+                toast.error("결과 저장에 실패했습니다. 현재 채점 결과는 화면에서 확인할 수 있습니다.");
+            }
         }
 
         setTimeout(() => {
@@ -345,7 +326,7 @@ const RandomPractice = () => {
                             필기 문제은행 해설 출력 영역
                             ------------------------------------------------------------
                             정답/오답 여부와 상관없이 제출 후 항상 보여줍니다.
-                            요청 위치: 정답/오답 결과 박스 아래, 랭킹 업데이트 박스 위.
+                            정답/오답 결과 아래에 해설을 표시합니다.
                             ============================================================ */}
                         <div
                             className="written-explanation-box mobile-practice-explanation" style={{
@@ -367,15 +348,6 @@ const RandomPractice = () => {
                                 {getWrittenExplanation(question) || t('explanation.empty', '이 문제의 해설은 아직 준비 중입니다. 정답을 확인한 뒤 다음 문제로 이어가세요.')}
                             </div>
                         </div>
-
-                        {myRankData && (
-                            <div className="random-rank-row mobile-practice-rank" style={{ background: 'var(--wgs-practice-toggle-bg)', padding: '12px', borderRadius: '8px', border: '1px dashed #fcd34d', marginBottom: '20px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '15px', flexWrap: 'wrap' }}>
-                                <span style={{ color: 'var(--wgs-blue)', fontWeight: 'bold', fontSize: '15px' }}>{t('ranking.update_title', '내 랭킹 업데이트!')}</span>
-                                <span style={{ color: 'var(--wgs-text)', fontSize: '15px' }}>
-                                    <strong style={{ color: 'var(--wgs-blue)' }}>{myRankData.rank ? formatSetting('ranking.rank_value', '{rank}등', { rank: myRankData.rank }) : t('ranking.out_of_rank', '순위권 밖')}</strong> {formatSetting('ranking.summary', '({score}점, 정답률 {accuracy}%)', { score: myRankData.score ?? 0, accuracy: myRankData.accuracy ?? 0 })}
-                                </span>
-                            </div>
-                        )}
 
                         <button className="mobile-practice-primary-action" ref={nextButtonRef} onClick={fetchRandomQuestion} style={{ padding: '15px 40px', background: '#3b82f6', color: 'white', border: 'none', borderRadius: '8px', fontSize: '18px', fontWeight: 'bold', cursor: 'pointer', width: '100%', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
                             {t('buttons.next_question', '다음 문제 풀기')}

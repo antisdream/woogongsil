@@ -227,24 +227,6 @@ body.wgs-theme-dark .wgs-admin-login-submit { color: #14233d; }
 .admin-login-note { margin: 22px 0 0; padding-top: 20px; border-top: 1px solid var(--wgs-border); color: var(--wgs-muted); font-size: 12px; line-height: 1.8; }
 .admin-login-back, .admin-back-link { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; color: var(--wgs-muted); font-size: 13px; text-decoration: none; }
 .admin-login-back { margin-top: 12px; }
-body .admin-user-ranking-page { width: min(100%, 1280px); margin: 0 auto; padding: 28px 28px 64px; background: transparent; color: var(--wgs-text); }
-.admin-user-ranking-head { margin: 24px 0; }
-.admin-user-ranking-head h1 { margin: 6px 0 12px; font-size: clamp(26px, 3vw, 34px); color: var(--wgs-title); }
-.admin-user-ranking-head p { color: var(--wgs-muted); overflow-wrap: anywhere; }
-.admin-user-ranking-page .mobile-ranking-history { background: var(--wgs-card) !important; border-color: var(--wgs-border) !important; border-radius: 16px !important; }
-.admin-user-ranking-page :is(.mobile-ranking-title, .mobile-ranking-field) { color: var(--wgs-title) !important; }
-.admin-user-ranking-page .mobile-ranking-description { color: var(--wgs-muted) !important; font-weight: 500 !important; }
-.admin-user-ranking-page .mobile-ranking-control { background: var(--wgs-input-bg) !important; color: var(--wgs-text) !important; border-color: var(--wgs-border) !important; font-size: 16px; }
-.admin-user-ranking-page .mobile-ranking-summary-card { background: var(--wgs-surface-2) !important; color: var(--wgs-title) !important; border: 1px solid var(--wgs-border); border-radius: 12px !important; }
-.admin-user-ranking-page :is(.mobile-ranking-query, .mobile-ranking-option) { min-height: 44px; border-radius: 10px !important; box-shadow: none !important; }
-.admin-user-ranking-page .mobile-ranking-query { background: var(--wgs-primary) !important; color: #fff !important; }
-.admin-user-ranking-page .mobile-ranking-option[aria-pressed="false"] { background: var(--wgs-card) !important; color: var(--wgs-text) !important; border-color: var(--wgs-border) !important; }
-.admin-user-ranking-page .mobile-ranking-option[aria-pressed="true"] { background: var(--wgs-primary) !important; border-color: var(--wgs-primary) !important; color: #fff !important; }
-body.wgs-theme-dark .admin-user-ranking-page :is(.mobile-ranking-query, .mobile-ranking-option[aria-pressed="true"]) { color: #14233d !important; }
-.admin-user-ranking-page .wgs-ranking-chart-wrap { background: var(--wgs-card) !important; border-color: var(--wgs-border) !important; border-radius: 16px !important; }
-.admin-user-ranking-page .wgs-ranking-chart-wrap svg text { fill: var(--wgs-muted) !important; }
-.admin-user-ranking-page .wgs-chart-zoom-controls button { background: var(--wgs-card) !important; border-color: var(--wgs-border) !important; color: var(--wgs-text) !important; box-shadow: none !important; }
-.admin-user-ranking-page .wgs-chart-zoom-controls > span { background: var(--wgs-card) !important; border-color: var(--wgs-border) !important; color: var(--wgs-text) !important; }
 
 @media (min-width: 1400px) {
   body .admin-page .admin-screen-manager-layout { grid-template-columns: minmax(0, 1.35fr) minmax(280px, .65fr); }
@@ -293,7 +275,6 @@ body.wgs-theme-dark .admin-user-ranking-page :is(.mobile-ranking-query, .mobile-
   body .admin-page .admin-detail-data pre { padding: 14px !important; }
   .wgs-admin-login-page { padding: 88px 16px 32px; }
   .wgs-admin-login-card { padding: 28px 24px; }
-  body .admin-user-ranking-page { padding: 24px 16px 40px; }
 }
 @media (max-width: 360px) {
   body .admin-page.admin-workspace { padding-inline: 12px; }

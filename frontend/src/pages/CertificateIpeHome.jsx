@@ -10,7 +10,7 @@ import '../styles/app/learning-redesign.css';
 // 1. 상단 메뉴의 “정보처리기사” 입구 화면입니다.
 // 2. 필기와 실기를 한 곳에서 선택할 수 있게 하되,
 //  실제 필기/실기 로비와 문제풀이 화면은 기존 컴포넌트를 그대로 사용합니다.
-// 3. DB, API, 채점, 오답노트, 멀티플레이, 랭킹 로직은 유지합니다.
+// 3. DB, API, 채점, 오답노트, 멀티플레이 로직은 유지합니다.
 
 const cardStyle = {
     boxSizing: 'border-box',

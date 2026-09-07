@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useLayoutEffect, useState } from 'react';
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import Admin from '../pages/Admin.jsx';
-import AdminUserRanking from '../pages/AdminUserRanking.jsx';
 import AdminLogin from './AdminLogin.jsx';
 import { FiBookOpen, FiMoon, FiSun } from 'react-icons/fi';
 import { clearAdminSession, fetchAdminSession, getCurrentAdmin, logoutAdmin } from './adminSession.js';
@@ -167,7 +166,6 @@ export default function AdminApp() {
       <Routes>
         <Route path="/manage" element={<Navigate to="/manage/dashboard" replace />} />
         <Route path="/manage/login" element={<Navigate to="/manage/dashboard" replace />} />
-        <Route path="/manage/user-ranking/:targetUserId" element={<AdminUserRanking />} />
         <Route path="/manage/:adminTab" element={<Admin />} />
         <Route path="*" element={<Navigate to="/manage/dashboard" replace />} />
       </Routes>

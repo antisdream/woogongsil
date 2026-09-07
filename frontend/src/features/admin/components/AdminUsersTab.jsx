@@ -41,7 +41,6 @@ export default function AdminUsersTab({
     handleUserSort,
     openUserEmailModal,
     isUserActionProtectedRow,
-    handleOpenUserRanking,
     handleSuspendUser,
     handleDeleteUser,
     handleToggleOperator,
@@ -187,7 +186,6 @@ export default function AdminUsersTab({
                   <th>최근 로그아웃</th>
                   <th>활동</th>
                   <th>가입일자</th>
-                  <th>성적 조회</th>
                   <th>임시정지</th>
                   <th>계정삭제</th>
                   <th>관리자 권한</th>
@@ -196,7 +194,7 @@ export default function AdminUsersTab({
               <tbody>
                 {displayedUsers.length === 0 ? (
                   <tr>
-                    <td colSpan="15" className="admin-empty-cell">
+                    <td colSpan="14" className="admin-empty-cell">
                       {loadingUsers ? '회원 목록을 불러오는 중입니다.' : adminError ? '회원 목록을 확인하지 못했습니다. 새로고침해 주세요.' : appliedKeyword ? '검색 결과가 없습니다. 검색어를 바꾸거나 전체보기를 선택해 주세요.' : '조회된 회원이 없습니다.'}
                     </td>
                   </tr>
@@ -236,13 +234,6 @@ export default function AdminUsersTab({
                         </div>
                       </td>
                       <td>{formatDateTime(pickFirstDateValue(item, ['createdAt', 'created_at', 'registrationDate', 'registrationDateRaw']))}</td>
-                      <td>
-                        {isPrimaryAdminRow(item) ? <span className="admin-protected-label">-</span> : (
-                          <button type="button" className="admin-action-btn admin-action-btn-contrast" onClick={() => handleOpenUserRanking(item)}>
-                            확인하기
-                          </button>
-                        )}
-                      </td>
                       <td>
                         {isUserActionProtectedRow(item) ? <span className="admin-protected-label">관리자 보호</span> : (
                           <>
