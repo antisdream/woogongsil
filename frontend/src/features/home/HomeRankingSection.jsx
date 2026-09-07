@@ -1,8 +1,10 @@
 // Home page feature module for HomeRankingSection.
 import React from 'react';
+import { Link } from 'react-router-dom';
 import MyRankingHistoryChart from '../../components/MyRankingHistoryChart.jsx';
 
 export default function HomeRankingSection({
+    loggedInUser,
     scoreRankingTitle,
     scoreRankingAlwaysOpenLabel,
     rankingTab,
@@ -36,24 +38,25 @@ export default function HomeRankingSection({
     scoreRankingNoPersonalMessage,
     getHomeScreenSetting,
 }) {
+    if (!loggedInUser) return <section className="ui-home-record-invite ui-panel"><div><h2>나의 공부를 한곳에 모으세요.</h2><p>로그인하면 저장한 오답과 학습 기록을 확인할 수 있어요.</p></div><Link to="/login" className="ui-primary">내 기록으로 로그인</Link></section>;
     return (
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <div style={{ background: '#1e2433', borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--wgs-border)', display: 'flex', flexDirection: 'column' }}>
+        <section className="ui-home-ranking" aria-label="학습 순위와 기록" style={{ display: 'flex', flexDirection: 'column' }}>
+            <div style={{ background: 'var(--wgs-card)', borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--wgs-border)', display: 'flex', flexDirection: 'column' }}>
                 <div
-                    style={{ width: '100%', padding: '15px 20px', background: 'var(--wgs-button-muted)', color: '#fcd34d', border: 'none', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '18px', fontWeight: 'bold', boxSizing: 'border-box' }}
+                    style={{ width: '100%', padding: '15px 20px', background: 'var(--wgs-button-muted)', color: 'var(--wgs-title)', border: 'none', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '18px', fontWeight: 'bold', boxSizing: 'border-box' }}
                 >
-                    <span>{scoreRankingTitle}</span>
-                    <span>{scoreRankingAlwaysOpenLabel}</span>
+                    <h2 className="ui-ranking-title">{scoreRankingTitle}</h2>
+                    <span className="ui-ranking-mode-label">{scoreRankingAlwaysOpenLabel === '항상 펼침' ? '실제 학습 기록' : scoreRankingAlwaysOpenLabel}</span>
                 </div>
 
-                <div style={{ padding: '20px', background: '#1e2433' }}>
+                <div style={{ padding: '20px', background: 'var(--wgs-card)' }}>
                     <div
                         className="home-ranking-tabs" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: '10px', marginBottom: '20px' }}
                     >
-                        <button onClick={() => setRankingTab('random')} style={{ padding: '12px', background: rankingTab === 'random'? '#3b82f6' : 'var(--wgs-border)', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>{rankingRandomTabLabel}</button>
-                        <button onClick={() => { setRankingTab('past'); setPastYear(null); setPastSession(null); }} style={{ padding: '12px', background: rankingTab === 'past'? '#3b82f6' : 'var(--wgs-border)', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>{rankingPastTabLabel}</button>
-                        <button onClick={() => setRankingTab('ipep_random')} style={{ padding: '12px', background: rankingTab === 'ipep_random'? '#3b82f6' : 'var(--wgs-border)', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>{rankingIpepRandomTabLabel}</button>
-                        <button onClick={() => { setRankingTab('ipep_past'); setPastYear(null); setPastSession(null); }} style={{ padding: '12px', background: rankingTab === 'ipep_past'? '#3b82f6' : 'var(--wgs-border)', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>{rankingIpepPastTabLabel}</button>
+                        <button type="button" aria-pressed={rankingTab === 'random'} onClick={() => setRankingTab('random')} style={{ padding: '12px', background: rankingTab === 'random'? 'var(--wgs-primary)' : 'var(--wgs-card-soft)', color: rankingTab === 'random' ? 'var(--wgs-card)' : 'var(--wgs-muted)', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>{rankingRandomTabLabel}</button>
+                        <button type="button" aria-pressed={rankingTab === 'past'} onClick={() => { setRankingTab('past'); setPastYear(null); setPastSession(null); }} style={{ padding: '12px', background: rankingTab === 'past'? 'var(--wgs-primary)' : 'var(--wgs-card-soft)', color: rankingTab === 'past' ? 'var(--wgs-card)' : 'var(--wgs-muted)', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>{rankingPastTabLabel}</button>
+                        <button type="button" aria-pressed={rankingTab === 'ipep_random'} onClick={() => setRankingTab('ipep_random')} style={{ padding: '12px', background: rankingTab === 'ipep_random'? 'var(--wgs-primary)' : 'var(--wgs-card-soft)', color: rankingTab === 'ipep_random' ? 'var(--wgs-card)' : 'var(--wgs-muted)', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>{rankingIpepRandomTabLabel}</button>
+                        <button type="button" aria-pressed={rankingTab === 'ipep_past'} onClick={() => { setRankingTab('ipep_past'); setPastYear(null); setPastSession(null); }} style={{ padding: '12px', background: rankingTab === 'ipep_past'? 'var(--wgs-primary)' : 'var(--wgs-card-soft)', color: rankingTab === 'ipep_past' ? 'var(--wgs-card)' : 'var(--wgs-muted)', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>{rankingIpepPastTabLabel}</button>
                     </div>
 
                     {isPastRankingTab && (
@@ -96,15 +99,15 @@ export default function HomeRankingSection({
                             ) : (
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
                                     {rankingData.map((data, index) => (
-                                        <div key={index} style={{ background: index === 0 ? 'linear-gradient(90deg, #3b2a00, #1a2235)' : '#1a2235', padding: '15px', borderRadius: '10px', border: index === 0 ? '2px solid #fbbf24' : '1px solid var(--wgs-border)', position: 'relative', overflow: 'hidden' }}>
+                                        <div key={index} className="ui-ranking-row" style={{ background: 'var(--wgs-card-soft)', padding: '15px', borderRadius: '10px', border: '1px solid var(--wgs-border)', position: 'relative', overflow: 'hidden' }}>
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                <span style={{ color: index === 0 ? '#fbbf24' : 'white', fontWeight: 'bold', fontSize: '18px' }}>
+                                                <span style={{ color: 'var(--wgs-title)', fontWeight: 'bold', fontSize: '18px' }}>
                                                     {data.rank}{scoreRankingRankSuffix} {data.name}
                                                 </span>
-                                                <span style={{ color: '#10b981', fontWeight: 'bold', fontSize: '18px' }}>{data.score}{scoreRankingScoreSuffix}</span>
+                                                <span style={{ color: 'var(--wgs-primary)', fontWeight: 'bold', fontSize: '18px' }}>{data.score}{scoreRankingScoreSuffix}</span>
                                             </div>
                                             <div style={{ background: 'var(--wgs-border)', height: '8px', borderRadius: '4px', margin: '10px 0', overflow: 'hidden' }}>
-                                                <div style={{ width: `${data.accuracy}%`, height: '100%', background: index === 0 ? '#fbbf24' : '#3b82f6', transition: 'width 1s ease-in-out' }} />
+                                                <div style={{ width: `${data.accuracy}%`, height: '100%', background: 'var(--wgs-primary)', transition: 'width 1s ease-in-out' }} />
                                             </div>
                                             <div style={{ fontSize: '12px', color: 'var(--wgs-subtle)', textAlign: 'right' }}>{formatAccuracyText(data)}</div>
                                         </div>
@@ -113,15 +116,15 @@ export default function HomeRankingSection({
                             )}
 
                             <div style={{ marginTop: '20px', paddingTop: '20px', borderTop: '2px dashed var(--wgs-border)' }}>
-                                <h4 style={{ color: '#fcd34d', margin: '0 0 10px 0', fontSize: '16px' }}>{scoreRankingMyRankTitle}</h4>
+                                <h4 style={{ color: 'var(--wgs-title)', margin: '0 0 10px 0', fontSize: '16px' }}>{scoreRankingMyRankTitle}</h4>
                                 {myRankingData ? (
                                     <div
-                                        className="home-my-ranking-row" style={{ background: 'linear-gradient(90deg, var(--wgs-practice-toggle-bg), var(--wgs-card))', padding: '15px', borderRadius: '10px', border: '1px solid #10b981', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}
+                                        className="home-my-ranking-row" style={{ background: 'var(--wgs-card-soft)', padding: '15px', borderRadius: '10px', border: '1px solid var(--wgs-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}
                                     >
-                                        <span style={{ color: 'white', fontWeight: 'bold', fontSize: '16px' }}>
+                                        <span style={{ color: 'var(--wgs-title)', fontWeight: 'bold', fontSize: '16px' }}>
                                             {myRankingData.rank}{scoreRankingRankSuffix} {myRankingData.name}
                                         </span>
-                                        <span style={{ color: '#10b981', fontWeight: 'bold', fontSize: '16px' }}>{myRankingData.score}{scoreRankingScoreSuffix}</span>
+                                        <span style={{ color: 'var(--wgs-primary)', fontWeight: 'bold', fontSize: '16px' }}>{myRankingData.score}{scoreRankingScoreSuffix}</span>
                                         <span style={{ color: 'var(--wgs-subtle)', fontSize: '14px' }}>{formatAccuracyText(myRankingData)}</span>
                                     </div>
                                 ) : (
@@ -139,6 +142,6 @@ export default function HomeRankingSection({
                     )}
                 </div>
             </div>
-        </div>
+        </section>
     );
 }

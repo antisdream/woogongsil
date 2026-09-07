@@ -441,6 +441,7 @@ export default function MyRankingHistoryChart({
             className="mobile-ranking-option"
             key={option.value}
             type="button" onClick={() => setMetric(option.value)}
+            aria-pressed={metric === option.value}
             style={
               metric === option.value
                 ? activeButton(option.value === "accuracy"? "#ef4444" : "#2563eb")
@@ -458,6 +459,7 @@ export default function MyRankingHistoryChart({
             className="mobile-ranking-option"
             key={option.value}
             type="button" onClick={() => setPeriodMode(option.value)}
+            aria-pressed={periodMode === option.value}
             style={periodMode === option.value ? activeButton("#10b981") : buttonBase}
           >
             {option.label}

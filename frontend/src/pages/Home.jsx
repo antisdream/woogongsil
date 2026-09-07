@@ -49,11 +49,11 @@ const Home = () => {
     // 관리자페이지 > 화면 설정 관리에서 저장한 홈 화면 문구/배너 값을 실제 홈 화면에 반영합니다.
     const { getSetting: getHomeScreenSetting } = useScreenSettings('home');
     // 관리자 화면 설정값을 홈 실시간 영역 문구에만 연결합니다.
-    const homeHeroTitle = getHomeScreenSetting('hero.hero_title', '정보 처리 기사');
-    const homeHeroDesc = getHomeScreenSetting('hero.hero_desc', '정보처리기사 필기·실기 학습과 오답 관리를 한 화면에서 이용할 수 있습니다.');
+    const homeHeroTitle = getHomeScreenSetting('hero.hero_title', '정보처리기사 필기 · 실기');
+    const homeHeroDesc = getHomeScreenSetting('hero.hero_desc', '무엇부터 풀지 막막한 날에도, 한 문제부터 시작해 보세요. 문제 풀이와 해설 확인, 오답 복습을 한곳에서 이어갈 수 있어요.');
     const homeHeroLayout = {
-        titleAlign: getHomeScreenSetting('hero.title_align', 'center'),
-        descAlign: getHomeScreenSetting('hero.desc_align', 'center'),
+        titleAlign: getHomeScreenSetting('hero.title_align', 'left'),
+        descAlign: getHomeScreenSetting('hero.desc_align', 'left'),
         titleOffsetX: getHomeScreenSetting('hero.title_offset_x', '0'),
         titleOffsetY: getHomeScreenSetting('hero.title_offset_y', '0'),
         descOffsetX: getHomeScreenSetting('hero.desc_offset_x', '0'),
@@ -722,7 +722,7 @@ const Home = () => {
     // 채팅은 3초마다 자동 갱신되므로 별도 새로고침 버튼을 제거했습니다.
     return (
         <div
-            className="home-page wgs-typography-scope" style={{ width: '100%', maxWidth: '1000px', margin: '0 auto', boxSizing: 'border-box' }}
+            className="home-page wgs-typography-scope ui-home-page" style={{ width: '100%', maxWidth: '1280px', margin: '0 auto', boxSizing: 'border-box' }}
         >
             <HomeQrModal
                 open={showQR}
@@ -764,7 +764,7 @@ const Home = () => {
                 onShowQr={() => setShowQR(true)}
             />
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '30px', marginBottom: '30px' }}>
+            <div className="ui-home-community" style={{ display: 'flex', flexDirection: 'column', gap: '30px', marginBottom: '30px' }}>
                 <HomeRealtimePanel
                     loggedInUser={loggedInUser}
                     liveChatSectionTitle={liveChatSectionTitle}
@@ -815,6 +815,7 @@ const Home = () => {
                 />
 
                 <HomeRankingSection
+                    loggedInUser={loggedInUser}
                     scoreRankingTitle={scoreRankingTitle}
                     scoreRankingAlwaysOpenLabel={scoreRankingAlwaysOpenLabel}
                     rankingTab={rankingTab}
