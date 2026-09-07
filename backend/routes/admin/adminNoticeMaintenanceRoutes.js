@@ -16,7 +16,6 @@ function registerAdminNoticeMaintenanceRoutes(options = {}) {
     const updateAdminMaintenanceState = options.updateAdminMaintenanceState;
     const formatAdminDateTime = options.formatAdminDateTime;
     const writeAdminOperationLog = options.writeAdminOperationLog;
-    const getUndeliveredMealMapUserNoticesV2515 = options.getUndeliveredMealMapUserNoticesV2515;
     const ADMIN_ONLY_USER_ID = options.adminOnlyUserId;
     const DEFAULT_MAINTENANCE_MESSAGE = options.defaultMaintenanceMessage;
 
@@ -24,7 +23,7 @@ function registerAdminNoticeMaintenanceRoutes(options = {}) {
         app, pool, validateAdminSession, validateRealtimeSession, pruneActiveUsers, getActiveUserList,
         sanitizeAdminNoticeText, getAdminBroadcastHistory, createAdminBroadcastNotice,
         getAdminBroadcastsForUser, getAdminMaintenanceState, updateAdminMaintenanceState,
-        formatAdminDateTime, writeAdminOperationLog, getUndeliveredMealMapUserNoticesV2515,
+        formatAdminDateTime, writeAdminOperationLog,
         ADMIN_ONLY_USER_ID, DEFAULT_MAINTENANCE_MESSAGE,
     };
     const missing = Object.entries(required)
@@ -55,7 +54,7 @@ function registerAdminNoticeMaintenanceRoutes(options = {}) {
     };
 
     // 관리자 권한 사용자가 현재 접속 중인 사용자에게 전체 공지를 발송합니다.
-    // DB 구조를 바꾸지 않기 위해 공지는 서버 메모리에 보관하고, 사용자는 /api/admin/notices/latest 폴링으로 수신합니다.
+    // DB 구조를 바꾸지 않기 위해 공지는 서버 메모리에 보관하고, 사용자는 /api/notices/latest 폴링으로 수신합니다.
     const handleAdminNoticeBroadcast = async (req, res) => {
         try {
             const adminSession = await validateAdminSession(req);
@@ -251,9 +250,7 @@ function registerAdminNoticeMaintenanceRoutes(options = {}) {
 
             const body = req.body || {};
             const sinceMs = Number(body.sinceMs || 0);
-            const adminNotices = getAdminBroadcastsForUser(session.user.id, sinceMs);
-            const mealmapNotices = await getUndeliveredMealMapUserNoticesV2515(session.user.id);
-            const notices = [...adminNotices, ...mealmapNotices];
+            const notices = getAdminBroadcastsForUser(session.user.id, sinceMs);
 
             return res.json({
                 success: true,
@@ -270,9 +267,10 @@ function registerAdminNoticeMaintenanceRoutes(options = {}) {
     app.post('/api/admin/notices/list', handleAdminNoticeList);
     app.post('/api/admin/notices/broadcast', handleAdminNoticeBroadcast);
     app.get('/api/admin/operation-logs', handleAdminOperationLogList);
+    app.get('/api/admin/maintenance/status', handleMaintenanceStatus);
     app.get('/api/maintenance/status', handleMaintenanceStatus);
     app.post('/api/admin/maintenance', handleAdminMaintenanceUpdate);
-    app.post('/api/admin/notices/latest', handleLatestAdminNotices);
+    app.post('/api/notices/latest', handleLatestAdminNotices);
 }
 
 module.exports = registerAdminNoticeMaintenanceRoutes;

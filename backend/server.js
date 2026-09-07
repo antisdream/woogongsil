@@ -7,7 +7,6 @@ const crypto = require('crypto');
 const os = require('os');
 const bcrypt = require('bcrypt');
 const http = require('http');
-const https = require('https');
 const { loadEnvFile } = require('./config/env');
 const { createDatabasePool } = require('./config/database');
 
@@ -46,21 +45,26 @@ const registerUserRoutes = require('./routes/userRoutes');
 const registerExamRoutes = require('./routes/examRoutes');
 const registerRealtimeRoutes = require('./routes/realtimeRoutes');
 const registerAuthRoutes = require('./routes/auth/authRoutes');
+const registerAdminAuthRoutes = require('./routes/auth/adminAuthRoutes');
 const registerAccountRecoveryRoutes = require('./routes/auth/accountRecoveryRoutes');
-const {
-    mealmapKakaoMapJsKey,
-    mealmapKakaoRestKey,
-    mealmapHttpsJson,
-} = require('./services/kakaoHelpers');
+const registerVisitorRoutes = require('./routes/visitorRoutes');
+const registerLegalRoutes = require('./routes/legalRoutes');
 const { createRealtimeState } = require('./services/realtimeState');
 const { createAdminRuntimeState } = require('./services/adminRuntimeState');
+const {
+    createAdminSessionService,
+    isInternalApprovalBypassRequest,
+} = require('./services/adminSessionService');
 const { createJsonFileStores } = require('./services/jsonFileStores');
-const { createMealMapUserNotices } = require('./services/mealmapUserNotices');
 const { createWrongNotesSchemaChecker } = require('./services/wrongNotesSchema');
 const { createStudyNoteSchemaChecker } = require('./services/studyNoteSchema');
 const { createSchemaCompatibilityChecker } = require('./services/schemaCompatibility');
 const { createJsonSqlImporter } = require('./services/jsonSqlImporter');
 const { createNoticeMailService } = require('./services/noticeMailService');
+const { createVisitorAnalyticsSchema } = require('./services/visitorAnalyticsSchema');
+const { createVisitorAnalyticsService } = require('./services/visitorAnalyticsService');
+const { createVisitSessionService } = require('./services/visitSessionService');
+const { createLegalConsentService } = require('./services/legalConsentService');
 const { wgsAllowedCorsOrigin, createWgsCorsOptions, createWgsSecurityHeaders, registerRobotsTxt } = require('./services/httpSecurity');
 const { registerMultiplayerFeature } = require('./services/multiplayerFeatureMount');
 const { registerIpepFeature } = require('./services/ipepFeatureMount');
@@ -94,12 +98,9 @@ registerRobotsTxt(app);
 // JSON body를 Express가 읽을 수 있도록 설정합니다.
 app.use(express.json({ limit: '10mb' }));
 
-const { requireHcaptcha } = registerGatekeeperSecurity({
+registerGatekeeperSecurity({
     app,
     crypto,
-    https,
-    backendDir: __dirname,
-    isApprovalBypassRequest: (req) => isApprovalBypassRequest(req),
 });
 app.use('/api/error-report', errorReportRoutes);
 
@@ -107,13 +108,17 @@ app.use('/api/error-report', errorReportRoutes);
 // - 매 요청마다 DB 연결을 새로 만들지 않고 pool에서 빌려 쓰는 방식입니다.
 // - 기존 프로젝트 기본값은 유지하되, .env가 있으면 .env 값을 우선 사용해.
 const pool = createDatabasePool();
-
-const {
-    notifyMealMapPlaceDecisionV2515,
-    notifyMealMapEditDecisionV2515,
-    getUndeliveredMealMapUserNoticesV2515,
-} = createMealMapUserNotices({ pool });
-
+const legalConsentService = createLegalConsentService({ pool });
+registerLegalRoutes({ app, pool, legalConsentService, validateRealtimeSession });
+const visitorAnalyticsSchema = createVisitorAnalyticsSchema({ pool });
+const ensureVisitorAnalyticsSchema = visitorAnalyticsSchema.ensureVisitorAnalyticsSchema;
+const visitorAnalyticsService = createVisitorAnalyticsService({ pool, crypto });
+const visitSessionService = createVisitSessionService({
+    pool,
+    crypto,
+    schema: visitorAnalyticsSchema,
+    ensureSchema: ensureVisitorAnalyticsSchema,
+});
 
 registerMultiplayerFeature({ app, pool, io });
 
@@ -135,6 +140,13 @@ ensureStudyNoteSchema();
 registerIpepFeature({ app, pool, backendDir: __dirname });
 
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+// 예전 관리자 화면 정적 파일이 운영 dist에 남아 있어도 /admin은 항상 먼저 차단합니다.
+app.use((req, res, next) => {
+    if (req.path === '/admin' || req.path.startsWith('/admin/')) {
+        return res.status(404).send('Not Found');
+    }
+    return next();
+});
 app.use(express.static(path.join(__dirname, '..', 'frontend', 'dist')));
 
 // 이메일 인증번호는 메모리에 보관하며 서버 재시작 시 초기화됩니다.
@@ -151,6 +163,7 @@ const ADMIN_USER_ID = String(process.env.WGS_ADMIN_USER_ID || process.env.ADMIN_
 // 인스턴스 ID는 열린 브라우저 탭이 서버 재시작을 감지하고 다시 인증하도록 돕습니다.
 // 접속자와 채팅 버퍼는 메모리 런타임 상태이며 SQL 기반 인증은 그대로 유지합니다.
 const SERVER_INSTANCE_ID = `${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+let adminSessionService = null;
 const {
     activeUsers,
     realtimeChatMessages,
@@ -232,25 +245,23 @@ async function validateAdminSession(req) {
         };
     }
 
-    const auth = await validateRealtimeSession(req);
-
-    // 로그인 세션 자체가 유효하지 않으면 관리자 여부를 볼 필요 없이 차단합니다.
-    if (!auth.valid) {
-        return { ...auth, ok: false, statusCode: 401, message: '관리자 인증이 필요합니다.', isAdmin: false, isPrimaryAdmin: false, isOperator: false };
+    if (!adminSessionService) {
+        return {
+            valid: false,
+            ok: false,
+            statusCode: 503,
+            reason: 'admin_session_unavailable',
+            message: '관리자 세션 서비스가 준비되지 않았습니다.',
+            user: null,
+            isAdmin: false,
+            isPrimaryAdmin: false,
+            isOperator: false,
+        };
     }
 
-    const normalizedUserId = String(auth.user?.id || auth.id || '').trim().toLowerCase();
-    const userControl = await getAdminUserControl(normalizedUserId);
-    const isPrimaryAdmin = isPrimaryAdminUser(userControl);
-    const isOperator = isAdminAccessUser({ ...userControl, id: normalizedUserId });
-    const isSuspended = normalizeAdminBool(userControl?.is_suspended);
-
-    // 최고관리자 또는 운영자 권한을 받은 사용자만 관리자 페이지와 API를 사용할 수 있습니다.
-    if (!isOperator || isSuspended) {
-        return { ...auth, ok: false, statusCode: 403, message: isSuspended ? '임시정지된 계정입니다.' : '관리자 권한이 필요합니다.', valid: false, isAdmin: false, isPrimaryAdmin, isOperator: false, reason: isSuspended ? 'suspended' : 'not_admin' };
-    }
-
-    return { ...auth, ok: true, statusCode: 200, message: '관리자 인증 완료', valid: true, isAdmin: true, isPrimaryAdmin, isOperator, reason: null };
+    // /api/admin 공통 보호 미들웨어가 검증한 결과를 우선 재사용합니다.
+    // 다른 내부 호출 경로에서는 관리자 쿠키를 직접 다시 검증하되 일반 회원 세션은 대체 수단으로 허용하지 않습니다.
+    return req.adminAuth || adminSessionService.authenticateRequest(req);
 }
 
 // 관리자 화면 날짜 포맷 보조 함수
@@ -455,7 +466,6 @@ registerAuthRoutes({
     pool,
     bcrypt,
     sendEmail,
-    requireHcaptcha,
     verificationCodes,
     getUserByEmail,
     getUserById,
@@ -475,6 +485,9 @@ registerAuthRoutes({
     adminUserId: ADMIN_USER_ID,
     serverInstanceId: SERVER_INSTANCE_ID,
     defaultMaintenanceMessage: DEFAULT_MAINTENANCE_MESSAGE,
+    visitSessionService,
+    visitorAnalyticsService,
+    legalConsentService,
 });
 
 
@@ -703,13 +716,57 @@ function getApprovalBypassToken() {
 }
 
 function isApprovalBypassRequest(req) {
-    return req.headers["x-admin-approval-bypass"] === getApprovalBypassToken();
+    return isInternalApprovalBypassRequest(req, getApprovalBypassToken());
 }
+
+adminSessionService = createAdminSessionService({
+    pool,
+    crypto,
+    getAdminUserControl,
+    normalizeAdminBool,
+    isAdminAccessUser,
+    isPrimaryAdminUser,
+});
+
+// 모든 관리자 업무 API를 일반 회원 세션과 분리된 관리자 쿠키로 먼저 보호합니다.
+// 결재 승인 서버 내부 재호출만 런타임 비밀 헤더로 통과시키며 브라우저 CORS에는 이 헤더를 공개하지 않습니다.
+app.use('/api/admin', (req, res, next) => {
+    res.setHeader('Cache-Control', 'private, no-store, max-age=0');
+    res.setHeader('Pragma', 'no-cache');
+    if (isApprovalBypassRequest(req)) return next();
+    return adminSessionService.protect(req, res, next);
+});
+
+registerAdminAuthRoutes({
+    app,
+    pool,
+    bcrypt,
+    getUserById,
+    getAdminUserControl,
+    ensureAdminUserControlSchema,
+    normalizeAdminBool,
+    isAdminAccessUser,
+    isPrimaryAdminUser,
+    adminSessionService,
+    visitSessionService,
+    visitorAnalyticsService,
+});
+
+registerVisitorRoutes({
+    app,
+    pool,
+    crypto,
+    validateAdminSession,
+    visitorSchema: visitorAnalyticsSchema,
+    visitorService: visitorAnalyticsService,
+    visitSessionService,
+    ensureVisitorAnalyticsSchema,
+});
 
 registerAdminRoutes({
     app,
     pool,
-    https,
+    bcrypt,
     validateAdminSession,
     validateRealtimeSession,
     getUserById,
@@ -722,6 +779,7 @@ registerAdminRoutes({
     isAdminAccessUser,
     getAdminUserControl,
     isUserManagementTargetProtected,
+    revokeAdminSessionsForUser: (userId, reason) => adminSessionService.revokeAllForUser(userId, reason),
     getApprovalBypassToken,
     isApprovalBypassRequest,
     touchActiveUser,
@@ -735,13 +793,11 @@ registerAdminRoutes({
     updateAdminMaintenanceState,
     formatAdminDateTime,
     sendEmail,
-    notifyMealMapPlaceDecisionV2515,
-    notifyMealMapEditDecisionV2515,
-    getUndeliveredMealMapUserNoticesV2515,
     adminUserId: ADMIN_USER_ID,
     serverInstanceId: SERVER_INSTANCE_ID,
     adminOnlyUserId: ADMIN_ONLY_USER_ID,
     defaultMaintenanceMessage: DEFAULT_MAINTENANCE_MESSAGE,
+    legalConsentService,
 });
 
 
@@ -763,10 +819,10 @@ registerAccountRecoveryRoutes({
     app,
     pool,
     bcrypt,
-    requireHcaptcha,
     getUserById,
     getUserByEmail,
     verificationCodes,
+    revokeAdminSessionsForUser: (userId, reason) => adminSessionService.revokeAllForUser(userId, reason),
     saltRounds: SALT_ROUNDS,
 });
 
@@ -790,6 +846,7 @@ registerUserRoutes({
     validateRealtimeSession,
     formatDateOnly,
     getKSTDateTime,
+    legalConsentService,
 });
 
 registerExamRoutes({
@@ -816,6 +873,7 @@ registerRankingRoutes({
 registerRankingHistoryRoutes({
     app,
     pool,
+    validateRealtimeSession,
     fs,
     backendDir: __dirname,
     rankingDataFile: RANKING_DATA_FILE,
@@ -829,6 +887,7 @@ registerFortuneRoutes({
     getUserById,
     validateRealtimeSession,
     getKSTDateTime,
+    legalConsentService,
 });
 
 registerBoardRoutes({
@@ -911,9 +970,18 @@ registerSiteManagementRoutes({
     validateAdminSession,
     io,
     adminUserId: ADMIN_USER_ID,
-    mealmapKakaoMapJsKey,
-    mealmapKakaoRestKey,
-    mealmapHttpsJson,
+});
+
+// 관리자 화면은 일반 회원 SPA와 다른 Vite 엔트리를 사용합니다.
+// /manage 하위 새로고침은 일반 회원 SPA와 분리된 관리자 HTML로 보냅니다.
+app.use((req, res, next) => {
+    if (req.path === '/manage' || req.path.startsWith('/manage/')) {
+        const adminIndexPath = path.resolve(__dirname, '..', 'frontend', 'dist', 'manage', 'index.html');
+        return res.sendFile(adminIndexPath, (error) => {
+            if (error && !res.headersSent) res.status(500).send('관리자 화면 없음');
+        });
+    }
+    return next();
 });
 
 // 14. React SPA 새로고침 방지합니다.
@@ -943,19 +1011,24 @@ app.use((req, res) => {
 async function startServer() {
     try {
         await ensureSchemaCompatibility();
+        await legalConsentService.ensureSchema();
         // 사용자 관리에 필요한 컬럼과 결재 테이블을 서버 시작 시 확인합니다.
         // DB 스키마 차이로 로그인 SELECT 단계에서 Unknown column 오류가 발생하지 않도록 보정합니다.
         await ensureAdminUserControlSchema();
+        await adminSessionService.ensureSchema();
+        await ensureVisitorAnalyticsSchema();
         await importDataFromJSON();
 
         const port = Number(process.env.PORT || 5000);
+        const bindHost = String(
+            process.env.WGS_BIND_HOST
+            || (String(process.env.NODE_ENV || '').toLowerCase() === 'production'
+                ? '127.0.0.1'
+                : '0.0.0.0')
+        ).trim();
 
-// ===== MEALMAP_LAYOUT_SETTINGS_V253_BEGIN =====
-// ===== MEALMAP_LAYOUT_SETTINGS_V253_END =====
-
-
-        server.listen(port, () => {
-            console.log(` 우공실 서버 정상 작동 중 (Express + Socket.IO, http://localhost:${port}/)`);
+        server.listen(port, bindHost, () => {
+            console.log(` 우공실 서버 정상 작동 중 (Express + Socket.IO, http://${bindHost}:${port}/)`);
             console.log(` 서버 인스턴스 ID: ${SERVER_INSTANCE_ID}`);
         });
     } catch (error) {

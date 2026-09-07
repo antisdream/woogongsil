@@ -22,6 +22,7 @@
 const express = require('express');
 const {
     cleanText,
+    parseRandomCsv,
     parseRandomIdCsv,
     normalizeFlexible,
     normalizeExactOutput,

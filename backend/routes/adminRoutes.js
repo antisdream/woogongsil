@@ -1,17 +1,15 @@
 // 관리자 인증, 결재, 사용자 관리, 공지 API를 제공합니다.
 'use strict';
 
-const registerMealmapRoutes = require('./mealmapRoutes');
 const registerAdminQuestionRoutes = require('./admin/adminQuestionRoutes');
-const registerAdminUserCalendarRoutes = require('./admin/adminUserCalendarRoutes');
 const registerAdminSignupRequestRoutes = require('./admin/adminSignupRequestRoutes');
 const registerAdminNoticeMaintenanceRoutes = require('./admin/adminNoticeMaintenanceRoutes');
 const registerAdminUserListRoutes = require('./admin/adminUserListRoutes');
+const { maskName } = require('../services/adminPrivacyService');
 
 function registerAdminRoutes(options = {}) {
     const app = options.app;
     const pool = options.pool;
-    const https = options.https;
     const validateAdminSession = options.validateAdminSession;
     const validateRealtimeSession = options.validateRealtimeSession;
     const getUserById = options.getUserById;
@@ -24,6 +22,7 @@ function registerAdminRoutes(options = {}) {
     const isAdminAccessUser = options.isAdminAccessUser;
     const getAdminUserControl = options.getAdminUserControl;
     const isUserManagementTargetProtected = options.isUserManagementTargetProtected;
+    const revokeAdminSessionsForUser = options.revokeAdminSessionsForUser;
     const getApprovalBypassToken = options.getApprovalBypassToken;
     const isApprovalBypassRequest = options.isApprovalBypassRequest;
     const touchActiveUser = options.touchActiveUser;
@@ -37,24 +36,22 @@ function registerAdminRoutes(options = {}) {
     const updateAdminMaintenanceState = options.updateAdminMaintenanceState;
     const formatAdminDateTime = options.formatAdminDateTime;
     const sendEmail = options.sendEmail;
-    const notifyMealMapPlaceDecisionV2515 = options.notifyMealMapPlaceDecisionV2515;
-    const notifyMealMapEditDecisionV2515 = options.notifyMealMapEditDecisionV2515;
-    const getUndeliveredMealMapUserNoticesV2515 = options.getUndeliveredMealMapUserNoticesV2515;
     const ADMIN_USER_ID = options.adminUserId;
     const SERVER_INSTANCE_ID = options.serverInstanceId;
     const ADMIN_ONLY_USER_ID = options.adminOnlyUserId;
     const DEFAULT_MAINTENANCE_MESSAGE = options.defaultMaintenanceMessage;
+    const legalConsentService = options.legalConsentService;
+    const bcrypt = options.bcrypt;
 
     const required = {
-        app, pool, https, validateAdminSession, validateRealtimeSession, getUserById,
+        app, pool, validateAdminSession, validateRealtimeSession, getUserById,
         ensureAdminUserControlSchema, adminTableExists, adminColumnExists, normalizeAdminBool,
-        isAdminAccessUser, getAdminUserControl, isUserManagementTargetProtected,
+        isAdminAccessUser, getAdminUserControl, isUserManagementTargetProtected, revokeAdminSessionsForUser,
         getApprovalBypassToken, isApprovalBypassRequest, touchActiveUser, pruneActiveUsers, getActiveUserList,
         sanitizeAdminNoticeText, getAdminBroadcastHistory, createAdminBroadcastNotice,
         getAdminBroadcastsForUser, getAdminMaintenanceState, updateAdminMaintenanceState,
-        formatAdminDateTime, sendEmail, notifyMealMapPlaceDecisionV2515,
-        notifyMealMapEditDecisionV2515, getUndeliveredMealMapUserNoticesV2515, ADMIN_USER_ID, SERVER_INSTANCE_ID,
-        ADMIN_ONLY_USER_ID, DEFAULT_MAINTENANCE_MESSAGE,
+        formatAdminDateTime, sendEmail, ADMIN_USER_ID, SERVER_INSTANCE_ID,
+        ADMIN_ONLY_USER_ID, DEFAULT_MAINTENANCE_MESSAGE, bcrypt,
     };
     const missing = Object.entries(required).filter(([, value]) => value === undefined || value === null).map(([key]) => key);
     if (missing.length >0) {
@@ -64,25 +61,19 @@ function registerAdminRoutes(options = {}) {
     function shouldBypassAdminApproval(req) {
         const path = req.path || "";
         if (req.method === "GET") return true;
-        if (isApprovalBypassRequest(req)) return true;
         // 관리자 화면/홈 공지 조회처럼 데이터 변경이 없는 POST 조회 API는 결재 요청으로 만들지 않습니다.
-        // 특히 /api/admin/notices/latest는 App.jsx에서 약 5초마다 호출되는 조회용 폴링 API입니다.
         if (req.method === "POST" && (path.endsWith("/list") || path.endsWith("/latest") || path.endsWith("/search") || path.endsWith("/stats"))) return true;
 
         const directPaths = [
-            "/check-auth",
             "/online-users",
             "/users",
             "/approvals",
             "/email-user",
             "/notices/list",
-            "/notices/latest",
-            // 공지 발송과 점검 모드는 운영자 권한자도 결재 없이 즉시 적용합니다.
+            // 전체 공지 발송은 운영자 권한자도 결재 없이 즉시 적용합니다.
             "/notices/broadcast",
-            "/maintenance",
             "/operation-logs",
             "/signup-requests",
-            "/mealmap",
         ];
 
         return directPaths.some((item) => path === item || path.startsWith(`${item}/`));
@@ -91,7 +82,7 @@ function registerAdminRoutes(options = {}) {
     async function getAdminActorFromRequest(req) {
         // 공통 이력에 실제 적용자를 남기기 위해 현재 세션의 사용자 정보를 조회합니다.
         try {
-            const sessionUser = await validateRealtimeSession(req);
+            const sessionUser = await validateAdminSession(req);
             if (!sessionUser?.id) return null;
             const user = await getUserById(sessionUser.id);
             return {
@@ -126,14 +117,39 @@ function registerAdminRoutes(options = {}) {
         }
     }
 
+    function stripAdminSecrets(value, seen = new WeakSet()) {
+        if (Array.isArray(value)) return value.map((item) => stripAdminSecrets(item, seen));
+        if (!value || typeof value !== 'object') return value;
+        if (seen.has(value)) return '[circular]';
+        seen.add(value);
+
+        const blockedKeys = new Set([
+            'sessiontoken',
+            'session_token',
+            'authorization',
+            'x-session-token',
+            'x-csrf-token',
+            'csrftoken',
+            'password',
+            'currentpassword',
+            'newpassword',
+        ]);
+        const sanitized = {};
+        for (const [key, nestedValue] of Object.entries(value)) {
+            if (blockedKeys.has(String(key).toLowerCase())) continue;
+            sanitized[key] = stripAdminSecrets(nestedValue, seen);
+        }
+        return sanitized;
+    }
+
     function summarizeAdminApproval(req) {
-        const body = req.body && typeof req.body === "object"? req.body : {};
+        const body = stripAdminSecrets(req.body && typeof req.body === "object" ? req.body : {});
         const method = req.method || "POST";
         const path = req.originalUrl || req.url || "";
 
         let resource = "관리자 기능";
-        if (path.includes("class-schedules")) resource = "달력·일정";
-        else if (path.includes("notices")) resource = "공지";
+        if (path.includes("notices")) resource = "공지";
+        else if (path.includes("maintenance")) resource = "점검 모드";
         else if (path.includes("questions") || path.includes("problem")) resource = "문제·해설";
         else if (path.includes("settings") || path.includes("screen")) resource = "화면 설정";
         else if (path.includes("users")) resource = "사용자";
@@ -157,7 +173,7 @@ function registerAdminRoutes(options = {}) {
 
         const safeMethod = String(method || 'POST').toUpperCase();
         const safePath = String(path || '');
-        const safeBody = body && typeof body === 'object'? body : {};
+        const safeBody = stripAdminSecrets(body && typeof body === 'object' ? body : {});
         const safeTitle = actionTitle || `[관리자 기능] ${safeMethod}`;
         const safePreview = actionPreview || JSON.stringify({ method: safeMethod, path: safePath, body: safeBody }, null, 2).slice(0, 12000);
 
@@ -203,13 +219,25 @@ function registerAdminRoutes(options = {}) {
 
     async function adminApprovalMiddleware(req, res, next) {
         try {
+            if (isApprovalBypassRequest(req)) return next();
+
+            const auth = await validateAdminSession(req);
+            if (!auth.valid || !auth.isAdmin) {
+                const status = auth.reason === 'not_admin' ? 403 : 401;
+                return res.status(status).json({
+                    success: false,
+                    message: auth.message || '관리자 권한이 필요합니다.',
+                    reason: auth.reason || 'not_admin',
+                });
+            }
+
+            if (shouldBypassAdminApproval(req)) return next();
+            if (auth.isPrimaryAdmin) return next();
+
             // body.userId는 이메일/사용자관리 API에서 대상 회원 id로 쓰이는 경우가 있어 요청자 판별에 쓰지 않는다.
             // 요청자는 프론트 공통 헤더(x-user-id) 또는 기존 admin_id/id 필드만 사용합니다.
             const body = req.body && typeof req.body === "object"? req.body : {};
-            const userId = req.headers["x-user-id"] || req.headers["user-id"] || body.admin_id || body.adminId || body.id || req.query?.userId;
-
-            if (shouldBypassAdminApproval(req)) return next();
-            if (await validatePrimaryAdmin(userId)) return next();
+            const userId = auth.user?.id || auth.id || req.headers["x-user-id"] || req.headers["user-id"] || body.admin_id || body.adminId || body.id || req.query?.userId;
 
             const user = await getAdminUserControl(userId);
             if (!user || !normalizeAdminBool(user.is_operator) || normalizeAdminBool(user.is_suspended)) {
@@ -308,6 +336,8 @@ function registerAdminRoutes(options = {}) {
     // - body가 없는 GET 요청에서도 validateRealtimeSession이 오류 없이 처리되도록 준비합니다.
     app.get('/api/admin/online-users', async (req, res) => {
         try {
+            res.setHeader('Cache-Control', 'private, no-store, max-age=0');
+            res.setHeader('Pragma', 'no-cache');
             const adminUser = await validateAdminSession(req);
             if (!adminUser.valid || !adminUser.isAdmin) {
                 const status = adminUser.reason === 'not_admin'? 403 : 401;
@@ -315,11 +345,12 @@ function registerAdminRoutes(options = {}) {
             }
 
             // 관리자 본인도 현재 활동 중인 사용자로 갱신합니다.
-            touchActiveUser(adminUser.user, req, adminUser.sessionToken);
+            touchActiveUser(adminUser.user, req, adminUser.activityKey);
 
             const users = getActiveUserList().map((user) => ({
                 id: user.id,
-                name: user.name || user.id,
+                name: maskName(user.name || user.id),
+                privacyMasked: true,
                 role: user.role || (String(user.id).toLowerCase() === ADMIN_USER_ID ? 'admin' : 'user'),
                 lastSeenAt: user.lastSeenAt,
                 loginAt: user.loginAt || user.lastSeenAt,
@@ -337,6 +368,44 @@ function registerAdminRoutes(options = {}) {
         }
     });
 
+    // 관리자 전용 사용자 성적 조회는 관리자 쿠키 범위(/api/admin)를 벗어나지 않도록
+    // 기존 랭킹 조회기를 서버 내부 고정 경로로만 호출합니다.
+    app.get('/api/admin/users/:userId/ranking-history', async (req, res) => {
+        try {
+            const auth = await validateAdminSession(req);
+            if (!auth.valid || !auth.isAdmin) {
+                return res.status(403).json({ success: false, message: '관리자 권한이 필요합니다.' });
+            }
+
+            const targetUserId = String(req.params.userId || '').trim();
+            if (!targetUserId) {
+                return res.status(400).json({ success: false, message: '조회할 사용자를 선택해주세요.' });
+            }
+
+            const params = new URLSearchParams();
+            params.set('userId', targetUserId);
+            params.set('id', targetUserId);
+            for (const key of ['type', 'source', 'startDate', 'endDate', 'start', 'end', 'from', 'to']) {
+                const value = String(req.query?.[key] || '').trim();
+                if (value) params.set(key, value.slice(0, 80));
+            }
+
+            const baseUrl = `http://127.0.0.1:${Number(process.env.PORT || 5000)}`;
+            const response = await fetch(`${baseUrl}/api/my-ranking-history-v2?${params.toString()}`, {
+                method: 'GET',
+                headers: { 'x-admin-approval-bypass': getApprovalBypassToken() },
+                signal: AbortSignal.timeout(10000),
+            });
+            const responseText = await response.text();
+            res.status(response.status);
+            res.type(response.headers.get('content-type') || 'application/json');
+            return res.send(responseText);
+        } catch (error) {
+            console.error('[admin user ranking history] error:', error);
+            return res.status(500).json({ success: false, message: '사용자 성적 조회 중 오류가 발생했습니다.' });
+        }
+    });
+
 
     // 관리자 API 요청값 통합 헬퍼.
     // GET 요청은 req.query, POST 요청은 req.body에 값이 들어오므로 둘을 합쳐서 같은 로직으로 처리합니다.
@@ -346,17 +415,6 @@ function registerAdminRoutes(options = {}) {
             ...(req && req.body && typeof req.body === 'object'? req.body : {}),
         };
     }
-
-    registerMealmapRoutes({
-        app,
-        pool,
-        https,
-        validateAdminSession,
-        validateRealtimeSession,
-        notifyMealMapPlaceDecisionV2515,
-        notifyMealMapEditDecisionV2515,
-        createAdminApprovalRequest,
-    });
 
     // 운영자 쓰기 작업은 먼저 결재 대기 목록에 등록합니다.
     app.use('/api/admin', adminApprovalMiddleware);
@@ -379,12 +437,6 @@ function registerAdminRoutes(options = {}) {
         serverInstanceId: SERVER_INSTANCE_ID,
     });
 
-    registerAdminUserCalendarRoutes({
-        app,
-        pool,
-        validateAdminSession,
-    });
-
     registerAdminNoticeMaintenanceRoutes({
         app,
         pool,
@@ -400,7 +452,6 @@ function registerAdminRoutes(options = {}) {
         updateAdminMaintenanceState,
         formatAdminDateTime,
         writeAdminOperationLog,
-        getUndeliveredMealMapUserNoticesV2515,
         adminOnlyUserId: ADMIN_ONLY_USER_ID,
         defaultMaintenanceMessage: DEFAULT_MAINTENANCE_MESSAGE,
     });
@@ -413,6 +464,7 @@ function registerAdminRoutes(options = {}) {
         sendEmail,
         writeAdminOperationLog,
         adminUserId: ADMIN_USER_ID,
+        legalConsentService,
     });
 
     registerAdminUserListRoutes({
@@ -427,6 +479,10 @@ function registerAdminRoutes(options = {}) {
         normalizeAdminBool,
         isPrimaryAdminUser,
         isAdminAccessUser,
+        validateAdminSession,
+        getUserById,
+        bcrypt,
+        writeAdminOperationLog,
     });
 
     // 사용자 접속자 관리 - 접속 제한/삭제/운영자 권한/개별 메일/결재 현황 API
@@ -489,6 +545,7 @@ function registerAdminRoutes(options = {}) {
             );
 
             if (!result.affectedRows) return res.status(404).json({ success: false, message: '사용자를 찾을 수 없습니다.' });
+            if (suspend) await revokeAdminSessionsForUser(targetId, 'account_suspended');
             return res.json({ success: true, message: suspend ? '임시정지 처리되었습니다.' : '임시정지가 해제되었습니다.' });
         } catch (error) {
             console.error('[admin suspend user] error', error);
@@ -552,6 +609,7 @@ function registerAdminRoutes(options = {}) {
                 ['wgs_ranking_random', ['userId', 'user_id', 'account']],
                 ['wgs_ranking_past', ['userId', 'user_id', 'account']],
                 ['wgs_admin_approvals', ['requester_id']],
+                ['wgs_admin_sessions', ['user_id']],
             ];
 
             for (const [tableName, columns] of knownDeleteTargets) {
@@ -643,6 +701,7 @@ function registerAdminRoutes(options = {}) {
             );
 
             if (!result.affectedRows) return res.status(404).json({ success: false, message: '사용자를 찾을 수 없습니다.' });
+            if (!enable) await revokeAdminSessionsForUser(targetId, 'permission_revoked');
             return res.json({ success: true, message: enable ? '운영자 권한이 활성화되었습니다.' : '운영자 권한이 비활성화되었습니다.' });
         } catch (error) {
             console.error('[admin operator user] error', error);

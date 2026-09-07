@@ -1,0 +1,321 @@
+'use strict';
+
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const crypto = require('crypto');
+const {
+    createAdminSessionService,
+    isInternalApprovalBypassRequest,
+    parseCookies,
+    safeEqual,
+} = require('./services/adminSessionService');
+const registerAdminAuthRoutes = require('./routes/auth/adminAuthRoutes');
+
+class FakePool {
+    constructor() {
+        this.sessions = [];
+        this.nextId = 1;
+    }
+
+    async query(sql, params = []) {
+        const normalized = String(sql).replace(/\s+/g, ' ').trim();
+        if (normalized.startsWith('CREATE TABLE IF NOT EXISTS wgs_admin_sessions')) return [{ affectedRows: 0 }];
+
+        if (normalized.startsWith('INSERT INTO wgs_admin_sessions')) {
+            const [sessionHash, userId, createdAt, lastSeenAt, idleExpiresAt, absoluteExpiresAt, ipHash, userAgentHash] = params;
+            const row = {
+                id: this.nextId++,
+                session_hash: sessionHash,
+                user_id: userId,
+                created_at: createdAt,
+                last_seen_at: lastSeenAt,
+                idle_expires_at: idleExpiresAt,
+                absolute_expires_at: absoluteExpiresAt,
+                revoked_at: null,
+                revoke_reason: null,
+                ip_hash: ipHash,
+                user_agent_hash: userAgentHash,
+            };
+            this.sessions.push(row);
+            return [{ affectedRows: 1, insertId: row.id }];
+        }
+
+        if (normalized.startsWith('SELECT id, session_hash')) {
+            const row = this.sessions.find((item) => item.session_hash === params[0]);
+            return [row ? [{ ...row }] : []];
+        }
+
+        if (normalized.startsWith('UPDATE wgs_admin_sessions SET last_seen_at')) {
+            const row = this.sessions.find((item) => item.id === params[2] && !item.revoked_at);
+            if (!row) return [{ affectedRows: 0 }];
+            row.last_seen_at = params[0];
+            row.idle_expires_at = params[1];
+            return [{ affectedRows: 1 }];
+        }
+
+        if (normalized.includes('WHERE session_hash = ?')) {
+            const row = this.sessions.find((item) => item.session_hash === params[1]);
+            if (!row) return [{ affectedRows: 0 }];
+            if (!row.revoked_at) {
+                row.revoked_at = new Date();
+                row.revoke_reason = params[0];
+            }
+            return [{ affectedRows: 1 }];
+        }
+
+        if (normalized.includes('WHERE user_id = ? AND revoked_at IS NULL')) {
+            let affectedRows = 0;
+            for (const row of this.sessions) {
+                if (row.user_id === params[1] && !row.revoked_at) {
+                    row.revoked_at = new Date();
+                    row.revoke_reason = params[0];
+                    affectedRows += 1;
+                }
+            }
+            return [{ affectedRows }];
+        }
+
+        throw new Error(`Unexpected SQL in test: ${normalized}`);
+    }
+}
+
+function responseDouble() {
+    return {
+        headers: {},
+        statusCode: 200,
+        body: null,
+        setHeader(name, value) {
+            this.headers[String(name).toLowerCase()] = value;
+        },
+        status(code) {
+            this.statusCode = code;
+            return this;
+        },
+        json(body) {
+            this.body = body;
+            return this;
+        },
+    };
+}
+
+function createFixture() {
+    const pool = new FakePool();
+    const user = {
+        id: 'admin1',
+        name: '관리자',
+        email: 'admin@example.test',
+        is_primary_admin: 1,
+        is_operator: 1,
+        is_suspended: 0,
+    };
+    const service = createAdminSessionService({
+        pool,
+        crypto,
+        env: {
+            NODE_ENV: 'development',
+            PUBLIC_SITE_URL: 'http://localhost:5000',
+            ADMIN_CSRF_SECRET: 'unit-test-admin-csrf-secret',
+            ADMIN_SESSION_IDLE_MINUTES: '30',
+            ADMIN_SESSION_ABSOLUTE_HOURS: '8',
+        },
+        getAdminUserControl: async (userId) => userId === user.id ? { ...user } : null,
+        normalizeAdminBool: (value) => value === true || value === 1 || value === '1',
+        isAdminAccessUser: (candidate) => Boolean(candidate?.is_primary_admin || candidate?.is_operator),
+        isPrimaryAdminUser: (candidate) => Boolean(candidate?.is_primary_admin),
+    });
+    return { pool, service, user };
+}
+
+test('cookie parser and timing-safe equality reject malformed or different values', () => {
+    assert.deepEqual(parseCookies('a=1; admin=value%202; malformed'), { a: '1', admin: 'value 2' });
+    assert.equal(safeEqual('same-value', 'same-value'), true);
+    assert.equal(safeEqual('same-value', 'different-value'), false);
+    assert.equal(safeEqual('', ''), false);
+});
+
+test('internal approval bypass requires a loopback request without an external proxy address', () => {
+    const token = 'unit-test-internal-approval-token';
+    const request = (remoteAddress, headers = {}) => ({
+        socket: { remoteAddress },
+        headers: { 'x-admin-approval-bypass': token, ...headers },
+    });
+
+    assert.equal(isInternalApprovalBypassRequest(request('127.0.0.1'), token), true);
+    assert.equal(isInternalApprovalBypassRequest(request('::ffff:127.0.0.1'), token), true);
+    assert.equal(isInternalApprovalBypassRequest(request('127.0.0.1', {
+        'x-forwarded-for': '127.0.0.1, ::1',
+    }), token), true);
+    assert.equal(isInternalApprovalBypassRequest(request('203.0.113.10'), token), false);
+    assert.equal(isInternalApprovalBypassRequest(request('127.0.0.1', {
+        'x-forwarded-for': '203.0.113.10',
+    }), token), false);
+    assert.equal(isInternalApprovalBypassRequest(request('127.0.0.1', {
+        'x-real-ip': '203.0.113.10',
+    }), token), false);
+    assert.equal(isInternalApprovalBypassRequest(request('127.0.0.1'), 'wrong-token'), false);
+});
+
+test('admin session uses an HttpOnly cookie and authenticates without exposing the raw token', async () => {
+    const { service, user } = createFixture();
+    const created = await service.createSession(user.id, {
+        headers: { 'user-agent': 'node-test' },
+        ip: '127.0.0.1',
+    });
+    assert.ok(created.rawToken.length >= 40);
+    assert.notEqual(created.rawToken, created.sessionHash);
+
+    const res = responseDouble();
+    service.setSessionCookie(res, created.rawToken);
+    const setCookie = res.headers['set-cookie'];
+    assert.match(setCookie, /HttpOnly/);
+    assert.match(setCookie, /SameSite=Strict/);
+    assert.match(setCookie, /Path=\/api\/admin/);
+    assert.doesNotMatch(setCookie, /Secure/);
+
+    const auth = await service.authenticateRequest({
+        method: 'GET',
+        headers: { cookie: `${service.cookieName}=${encodeURIComponent(created.rawToken)}` },
+    });
+    assert.equal(auth.valid, true);
+    assert.equal(auth.user.id, user.id);
+    assert.equal(auth.isPrimaryAdmin, true);
+    assert.equal(Object.hasOwn(auth, 'rawToken'), false);
+});
+
+test('state-changing administrator requests require both exact Origin and CSRF token', async () => {
+    const { service, user } = createFixture();
+    const created = await service.createSession(user.id, { headers: {}, ip: '127.0.0.1' });
+    const cookie = `${service.cookieName}=${encodeURIComponent(created.rawToken)}`;
+
+    const missingCsrfRes = responseDouble();
+    await service.protect({
+        method: 'POST',
+        path: '/users/example/suspend',
+        headers: { cookie, origin: 'http://localhost:5000' },
+    }, missingCsrfRes, () => assert.fail('request without CSRF must not continue'));
+    assert.equal(missingCsrfRes.statusCode, 403);
+    assert.equal(missingCsrfRes.body.reason, 'invalid_admin_csrf');
+
+    const wrongOriginRes = responseDouble();
+    await service.protect({
+        method: 'POST',
+        path: '/users/example/suspend',
+        headers: { cookie, origin: 'https://evil.example', 'x-csrf-token': created.csrfToken },
+    }, wrongOriginRes, () => assert.fail('request from a wrong Origin must not continue'));
+    assert.equal(wrongOriginRes.statusCode, 403);
+    assert.equal(wrongOriginRes.body.reason, 'invalid_admin_origin');
+
+    let continued = false;
+    const validRes = responseDouble();
+    const validReq = {
+        method: 'POST',
+        path: '/users/example/suspend',
+        headers: { cookie, origin: 'http://localhost:5000', 'x-csrf-token': created.csrfToken },
+    };
+    await service.protect(validReq, validRes, () => { continued = true; });
+    assert.equal(continued, true);
+    assert.equal(validReq.adminAuth.user.id, user.id);
+});
+
+test('expired and revoked sessions fail closed', async () => {
+    const { pool, service, user } = createFixture();
+    const created = await service.createSession(user.id, { headers: {}, ip: '127.0.0.1' });
+    pool.sessions[0].idle_expires_at = new Date(Date.now() - 1000);
+
+    const expired = await service.authenticateRequest({
+        headers: { cookie: `${service.cookieName}=${created.rawToken}` },
+    });
+    assert.equal(expired.valid, false);
+    assert.equal(expired.reason, 'admin_session_expired');
+    assert.ok(pool.sessions[0].revoked_at);
+
+    const second = await service.createSession(user.id, { headers: {}, ip: '127.0.0.1' });
+    await service.revokeSessionHash(second.sessionHash, 'test_revocation');
+    const revoked = await service.authenticateRequest({
+        headers: { cookie: `${service.cookieName}=${second.rawToken}` },
+    });
+    assert.equal(revoked.valid, false);
+    assert.equal(revoked.reason, 'invalid_admin_session');
+});
+
+test('automatic administrator polls do not extend idle expiry', async () => {
+    const { pool, service, user } = createFixture();
+    const created = await service.createSession(user.id, { headers: {}, ip: '127.0.0.1' });
+    const cookie = `${service.cookieName}=${encodeURIComponent(created.rawToken)}`;
+    const originalLastSeen = new Date(Date.now() - 2 * 60 * 1000);
+    const originalIdleExpiry = new Date(Date.now() + 10 * 60 * 1000);
+    pool.sessions[0].last_seen_at = originalLastSeen;
+    pool.sessions[0].idle_expires_at = originalIdleExpiry;
+
+    let pollContinued = false;
+    await service.protect({
+        method: 'GET',
+        path: '/auth/me',
+        headers: { cookie },
+    }, responseDouble(), () => { pollContinued = true; });
+    assert.equal(pollContinued, true);
+    assert.equal(pool.sessions[0].last_seen_at.getTime(), originalLastSeen.getTime());
+    assert.equal(pool.sessions[0].idle_expires_at.getTime(), originalIdleExpiry.getTime());
+
+    let activityContinued = false;
+    await service.protect({
+        method: 'GET',
+        path: '/users',
+        headers: { cookie },
+    }, responseDouble(), () => { activityContinued = true; });
+    assert.equal(activityContinued, true);
+    assert.ok(pool.sessions[0].last_seen_at.getTime() > originalLastSeen.getTime());
+    assert.ok(pool.sessions[0].idle_expires_at.getTime() > originalIdleExpiry.getTime());
+});
+
+test('logout clears the browser cookie even when server-side revocation fails', async () => {
+    const registeredPosts = new Map();
+    const app = {
+        post(path, handler) { registeredPosts.set(path, handler); },
+        get() {},
+    };
+    const adminSessionService = {
+        isAllowedOrigin: () => true,
+        createSession: async () => assert.fail('login is not part of this test'),
+        setSessionCookie: () => assert.fail('login is not part of this test'),
+        clearSessionCookie: (res) => {
+            res.setHeader('Set-Cookie', 'wgs_admin_sid=; Max-Age=0; Path=/api/admin; HttpOnly; SameSite=Strict');
+        },
+        revokeSessionHash: async () => { throw new Error('database unavailable'); },
+        revokeAllForUser: async () => 0,
+    };
+
+    registerAdminAuthRoutes({
+        app,
+        pool: { query: async () => [{ affectedRows: 0 }] },
+        bcrypt: { compare: async () => false },
+        requireHcaptcha: async () => true,
+        getUserById: async () => null,
+        getAdminUserControl: async () => null,
+        ensureAdminUserControlSchema: async () => {},
+        normalizeAdminBool: Boolean,
+        isAdminAccessUser: () => false,
+        isPrimaryAdminUser: () => false,
+        adminSessionService,
+    });
+
+    const handler = registeredPosts.get('/api/admin/auth/logout');
+    assert.equal(typeof handler, 'function');
+    const res = responseDouble();
+    const originalConsoleError = console.error;
+    console.error = () => {};
+    try {
+        await handler({
+            adminAuth: {
+                sessionHash: 'hashed-session',
+                user: { id: 'admin1' },
+            },
+        }, res);
+    } finally {
+        console.error = originalConsoleError;
+    }
+
+    assert.equal(res.statusCode, 500);
+    assert.match(res.headers['set-cookie'], /Max-Age=0/);
+    assert.equal(res.body.reason, 'admin_logout_error');
+});

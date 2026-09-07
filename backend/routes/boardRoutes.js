@@ -76,7 +76,7 @@ function registerBoardRoutes(options = {}) {
         return auth;
     }
 
-app.post('/api/posts/upload-file', createBoardUploadHandler({ backendDir, requireSessionUser }));
+app.post('/api/posts/upload-file', createBoardUploadHandler({ backendDir, requireSessionUser, uploadBucket: 'board' }));
 
 // 12. 게시판 API
 app.get('/api/posts', async (req, res) => {

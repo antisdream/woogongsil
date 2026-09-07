@@ -1,12 +1,16 @@
 // 로그인, 회원가입, 세션 API를 제공합니다.
 'use strict';
 
+const crypto = require('crypto');
+const { createVisitSessionService } = require('../../services/visitSessionService');
+const { createVisitorAnalyticsService } = require('../../services/visitorAnalyticsService');
+const { createLegalConsentService } = require('../../services/legalConsentService');
+
 function registerAuthRoutes(options = {}) {
     const app = options.app;
     const pool = options.pool;
     const bcrypt = options.bcrypt;
     const sendEmail = options.sendEmail;
-    const requireHcaptcha = options.requireHcaptcha;
     const verificationCodes = options.verificationCodes;
     const getUserByEmail = options.getUserByEmail;
     const getUserById = options.getUserById;
@@ -25,12 +29,16 @@ function registerAuthRoutes(options = {}) {
     const ADMIN_USER_ID = options.adminUserId;
     const SERVER_INSTANCE_ID = options.serverInstanceId;
     const DEFAULT_MAINTENANCE_MESSAGE = options.defaultMaintenanceMessage;
+    let legalConsentService = options.legalConsentService || null;
+    const getLegalConsentService = () => {
+        if (!legalConsentService) legalConsentService = createLegalConsentService({ pool });
+        return legalConsentService;
+    };
     const SIGNUP_ADMIN_NOTIFY_EMAIL = String(
         options.signupAdminNotifyEmail || process.env.SIGNUP_ADMIN_NOTIFY_EMAIL || ''
     ).trim();
-
     const required = {
-        app, pool, bcrypt, sendEmail, requireHcaptcha, verificationCodes, getUserByEmail,
+        app, pool, bcrypt, sendEmail, verificationCodes, getUserByEmail,
         getUserById, getKSTDateTime, ensureAdminUserControlSchema, normalizeAdminBool,
         getAdminMaintenanceState, isAdminAccessUser, adminColumnExists, touchActiveUser,
         removeActiveUser, formatDateOnly, isPrimaryAdminUser, validateAdminSession,
@@ -40,43 +48,115 @@ function registerAuthRoutes(options = {}) {
     if (missing.length >0) {
         throw new Error(`registerAuthRoutes missing dependencies: ${missing.join(', ')}`);
     }
+    const visitSessionService = options.visitSessionService || createVisitSessionService({
+        pool,
+        env: options.env,
+        clock: options.clock,
+        crypto: options.crypto,
+    });
+    const visitorAnalyticsService = options.visitorAnalyticsService || createVisitorAnalyticsService({
+        pool,
+        env: options.env,
+        clock: options.clock,
+        crypto: options.crypto,
+    });
 
-    let signupApprovalSchemaReady = false;
-    let signupApprovalSchemaPromise = null;
+    const loginReplaceConfirmations = new Map();
+    const LOGIN_REPLACE_CONFIRMATION_TTL_MS = 60 * 1000;
+
+    function visitorClientIdFromRequest(req) {
+        const header = req?.headers?.['x-wgs-client-id'];
+        const value = Array.isArray(header) ? header[0] : header;
+        return value || req?.body?.visitorClientId || null;
+    }
+
+    function appendSetCookie(res, cookie) {
+        if (typeof res.append === 'function') {
+            res.append('Set-Cookie', cookie);
+            return;
+        }
+        const current = typeof res.getHeader === 'function' ? res.getHeader('Set-Cookie') : undefined;
+        const values = current === undefined
+            ? cookie
+            : [...(Array.isArray(current) ? current : [current]), cookie];
+        res.setHeader('Set-Cookie', values);
+    }
+
+    async function safelyRecordSuccessfulLogin(user, req, historyId, res) {
+        const isExcluded = isAdminAccessUser(user) || isPrimaryAdminUser(user);
+        try {
+            await visitSessionService.recordSuccessfulLogin({
+                clientId: visitorClientIdFromRequest(req),
+                memberUserId: user.id,
+                historyId,
+                isExcluded,
+                request: req,
+            });
+        } catch (error) {
+            // Analytics must never turn a valid credential flow into a failed login.
+            console.error('[visit sessions] login linkage failed:', error.message);
+        }
+        if (isExcluded) {
+            try {
+                appendSetCookie(res, visitorAnalyticsService.createAdminExclusionCookie());
+            } catch (error) {
+                console.error('[visit sessions] admin exclusion cookie failed:', error.message);
+            }
+        } else {
+            try {
+                appendSetCookie(res, visitorAnalyticsService.createAdminExclusionClearCookie());
+            } catch (error) {
+                console.error('[visit sessions] admin exclusion cookie clear failed:', error.message);
+            }
+        }
+    }
+
+    async function safelyLinkAuthenticatedSession(user, req) {
+        try {
+            await visitSessionService.linkAuthenticatedSession({
+                clientId: visitorClientIdFromRequest(req),
+                memberUserId: user.id,
+                isExcluded: isAdminAccessUser(user) || isPrimaryAdminUser(user),
+                request: req,
+            });
+        } catch (error) {
+            // Session validation remains authoritative even if analytics is unavailable.
+            console.error('[visit sessions] session linkage failed:', error.message);
+        }
+    }
+
+    function tokenHash(value) {
+        return crypto.createHash('sha256').update(String(value || ''), 'utf8').digest('hex');
+    }
+
+    function issueLoginReplaceConfirmation(userId, currentSessionToken) {
+        const rawToken = crypto.randomBytes(32).toString('base64url');
+        loginReplaceConfirmations.set(tokenHash(rawToken), {
+            userId: String(userId),
+            currentSessionHash: tokenHash(currentSessionToken),
+            expiresAt: Date.now() + LOGIN_REPLACE_CONFIRMATION_TTL_MS,
+        });
+        return rawToken;
+    }
+
+    function consumeLoginReplaceConfirmation(rawToken, userId, currentSessionToken) {
+        const key = tokenHash(rawToken);
+        const record = loginReplaceConfirmations.get(key);
+        loginReplaceConfirmations.delete(key);
+        if (!record || record.expiresAt < Date.now()) return false;
+        return record.userId === String(userId)
+            && record.currentSessionHash === tokenHash(currentSessionToken);
+    }
+
+    setInterval(() => {
+        const now = Date.now();
+        for (const [key, record] of loginReplaceConfirmations.entries()) {
+            if (!record || record.expiresAt < now) loginReplaceConfirmations.delete(key);
+        }
+    }, 60 * 1000).unref?.();
 
     async function ensureSignupApprovalSchema() {
-        if (signupApprovalSchemaReady) return;
-        if (signupApprovalSchemaPromise) return signupApprovalSchemaPromise;
-
-        signupApprovalSchemaPromise = (async () => {
-            await pool.query(`
-                CREATE TABLE IF NOT EXISTS wgs_signup_requests (
-                    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-                    login_id VARCHAR(100) NOT NULL,
-                    password_hash VARCHAR(255) NOT NULL,
-                    name VARCHAR(100) NOT NULL,
-                    email VARCHAR(255) NOT NULL,
-                    status ENUM('PENDING','APPROVED','REJECTED') NOT NULL DEFAULT 'PENDING',
-                    requested_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                    reviewed_by VARCHAR(100) NULL,
-                    reviewed_at DATETIME NULL,
-                    review_note TEXT NULL,
-                    request_ip VARCHAR(64) NULL,
-                    user_agent TEXT NULL,
-                    PRIMARY KEY (id),
-                    INDEX idx_wgs_signup_status_requested (status, requested_at),
-                    INDEX idx_wgs_signup_login_status (login_id, status),
-                    INDEX idx_wgs_signup_email_status (email, status)
-                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-            `);
-            signupApprovalSchemaReady = true;
-        })();
-
-        try {
-            await signupApprovalSchemaPromise;
-        } finally {
-            signupApprovalSchemaPromise = null;
-        }
+        await getLegalConsentService().ensureSchema();
     }
 
     async function findPendingSignupRequestByIdOrEmail(id, email) {
@@ -130,7 +210,6 @@ function registerAuthRoutes(options = {}) {
 
     // 6. 이메일 인증 API
     app.post('/api/auth/send-code', async (req, res) => {
-        if (!(await requireHcaptcha(req, res, 'auth_send_code'))) return;
 
         const email = String(req.body.email || '').trim().toLowerCase();
         const type = req.body.type;
@@ -195,7 +274,6 @@ function registerAuthRoutes(options = {}) {
     // 예전 프론트/테스트 코드가 남아 있을 경우를 위한 호환 API.
     // 현재 프론트는 /api/auth/send-code를 쓰지만, 과거 코드가 /api/send-verification을 부를 수도 있어 남겨둡니다.
     app.post('/api/send-verification', async (req, res) => {
-        if (!(await requireHcaptcha(req, res, 'auth_send_code'))) return;
 
         const email = String(req.body.email || '').trim().toLowerCase();
         const type = req.body.type || 'find';
@@ -273,7 +351,6 @@ function registerAuthRoutes(options = {}) {
     });
 
     app.post('/api/signup', async (req, res) => {
-        if (!(await requireHcaptcha(req, res, 'signup'))) return;
 
         const id = String(req.body.id || '').trim();
         const password = String(req.body.password || '');
@@ -290,6 +367,12 @@ function registerAuthRoutes(options = {}) {
         }
 
         try {
+            const consentService = getLegalConsentService();
+            const legalValidation = await consentService.validateAcceptanceBundle(
+                req.body?.legal,
+                'signup',
+                { requireAge14: true }
+            );
             const duplicatedId = await getUserById(id);
             if (duplicatedId) return res.status(400).json({ success: false, msg: '이미 존재하는 아이디입니다.' });
 
@@ -307,13 +390,27 @@ function registerAuthRoutes(options = {}) {
             }
 
             const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
-
-            await pool.query(
-                `INSERT INTO wgs_signup_requests
-                 (login_id, password_hash, name, email, status, request_ip, user_agent)
-                 VALUES (?, ?, ?, ?, 'PENDING', ?, ?)`,
-                [id, hashedPassword, name, email, getSignupRequestIp(req), String(req.headers['user-agent'] || '').slice(0, 1000)]
-            );
+            const connection = await pool.getConnection();
+            try {
+                await connection.beginTransaction();
+                const [insertResult] = await connection.query(
+                    `INSERT INTO wgs_signup_requests
+                     (login_id, password_hash, name, email, status, request_ip, user_agent)
+                     VALUES (?, ?, ?, ?, 'PENDING', ?, ?)`,
+                    [id, hashedPassword, name, email, getSignupRequestIp(req), String(req.headers['user-agent'] || '').slice(0, 1000)]
+                );
+                await consentService.insertAcceptanceEvents(connection, {
+                    signupRequestId: insertResult.insertId,
+                    age14Confirmed: legalValidation.age14Confirmed,
+                    acceptedDocuments: legalValidation.acceptedDocuments,
+                });
+                await connection.commit();
+            } catch (transactionError) {
+                try { await connection.rollback(); } catch {}
+                throw transactionError;
+            } finally {
+                connection.release();
+            }
 
             delete verificationCodes[email];
 
@@ -334,6 +431,13 @@ function registerAuthRoutes(options = {}) {
             });
         } catch (error) {
             console.error('회원가입 오류:', error);
+            if (error?.status && error?.code) {
+                return res.status(Number(error.status)).json({
+                    success: false,
+                    code: error.code,
+                    msg: error.message,
+                });
+            }
             return res.status(500).json({ success: false, msg: '가입 처리 중 오류가 발생했습니다.' });
         }
     });
@@ -341,11 +445,19 @@ function registerAuthRoutes(options = {}) {
     app.post('/api/login', async (req, res) => {
         const id = String(req.body.id || '').trim();
         const password = String(req.body.password || '');
-        const force = Boolean(req.body.force);
+        const replaceConfirmationToken = String(req.body.replaceConfirmationToken || '').trim();
+        const force = Boolean(replaceConfirmationToken);
         const clientSessionToken = req.body.clientSessionToken || null;
 
-        // 중복 로그인 확인창에서 '계속 로그인'을 누른 2차 요청은 기존 흐름을 보존하기 위해 hCaptcha를 다시 요구하지 않습니다.
-        if (!force && !(await requireHcaptcha(req, res, 'login'))) return;
+        if (req.body.force && !replaceConfirmationToken) {
+            return res.status(400).json({
+                success: false,
+                errorType: 'unsafe_force_login_disabled',
+                msg: '보안 확인이 만료되었습니다. 처음부터 다시 로그인해주세요.',
+            });
+        }
+
+        // 2차 요청은 첫 요청의 비밀번호 검증 뒤 서버가 발급한 60초 일회용 토큰으로만 허용합니다.
 
         // 점검 모드가 활성화된 경우 일반 사용자의 신규 로그인을 차단합니다.
         // 주 관리자와 운영자 권한 계정은 점검 중에도 로그인할 수 있도록 로그인 검증 이후 권한을 확인합니다.
@@ -405,11 +517,23 @@ function registerAuthRoutes(options = {}) {
             // 기존 로직 유지 + 유연한 예외 처리:
             // clientSessionToken이 있는 브라우저에서만 DB 토큰과 비교해 중복 로그인 알림을 표시합니다.
             // 토큰이 없는 첫 접속 브라우저는 차단하지 않아 사용자가 로그인 화면에 갇히는 문제를 방지합니다.
-            if (user.sessionToken && !force && clientSessionToken && user.sessionToken !== clientSessionToken) {
+            if (user.sessionToken && !force && user.sessionToken !== clientSessionToken) {
+                const confirmationToken = issueLoginReplaceConfirmation(id, user.sessionToken);
                 return res.json({
                     success: false,
                     requireConfirm: true,
+                    replaceConfirmationToken: confirmationToken,
+                    replaceConfirmationExpiresInSeconds: 60,
                     msg: '현재 다른 환경(기기 또는 브라우저)에서 로그인중입니다, 로그아웃 후 계속하시겠습니까?'
+                });
+            }
+
+            if (force && !consumeLoginReplaceConfirmation(replaceConfirmationToken, id, user.sessionToken)) {
+                return res.status(401).json({
+                    success: false,
+                    requireConfirm: false,
+                    errorType: 'replace_confirmation_invalid',
+                    msg: '로그인 교체 확인이 만료되었거나 이미 사용되었습니다. 다시 시도해주세요.',
                 });
             }
 
@@ -420,10 +544,17 @@ function registerAuthRoutes(options = {}) {
                 );
             }
 
-            const newSessionToken = `${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+            // 기존 회원도 현재 활성 약관·개인정보 문서에 동의했는지 로그인 시점에 확인합니다.
+            // 신규 가입자는 승인 과정에서 가입신청 증적이 회원 ID에 연결되므로 이 값이 false가 됩니다.
+            const legalConsentStatus = await getLegalConsentService().getUserEvidenceStatus(user.id);
+            const newSessionToken = crypto.randomBytes(32).toString('base64url');
 
             await pool.query('UPDATE wgs_users SET sessionToken = ? WHERE id = ?', [newSessionToken, id]);
-            await pool.query('INSERT INTO wgs_login_history (userId, time, action) VALUES (?, ?, ?)', [id, getKSTDateTime(), '로그인']);
+            const [loginHistoryResult] = await pool.query(
+                'INSERT INTO wgs_login_history (userId, time, action) VALUES (?, ?, ?)',
+                [id, getKSTDateTime(), '로그인']
+            );
+            await safelyRecordSuccessfulLogin(user, req, loginHistoryResult?.insertId || null, res);
             // 사용자 관리 표의 최근 로그인 표시가 누락되지 않도록 보조 컬럼을 함께 갱신합니다.
             if (await adminColumnExists('wgs_users', 'last_login_at')) {
                 await pool.query('UPDATE wgs_users SET last_login_at = NOW() WHERE id = ?', [id]);
@@ -444,6 +575,8 @@ function registerAuthRoutes(options = {}) {
                     isOperator: isAdminAccessUser(user),
                     isPrimaryAdmin: isPrimaryAdminUser(user),
                 },
+                requiresLegalConsent: !legalConsentStatus.complete,
+                legalConsentStatus,
                 sessionToken: newSessionToken,
                 serverInstanceId: SERVER_INSTANCE_ID
             });
@@ -457,35 +590,44 @@ function registerAuthRoutes(options = {}) {
         const id = String(req.body.id || '').trim();
         const sessionToken = String(req.body.sessionToken || '').trim();
 
+        if (!id || !sessionToken) {
+            return res.status(401).json({
+                success: false,
+                reason: 'invalid_session',
+                msg: '유효한 로그인 세션이 필요합니다.',
+            });
+        }
+
         try {
-            const user = await getUserById(id);
-
-            if (user) {
-                // 다른 기기에서 이미 새로 로그인한 뒤,
-                // 예전 브라우저가 뒤늦게 로그아웃 API를 호출해도 새 세션을 지우지 않도록 방어합니다.
-                // - sessionToken이 넘어오지 않는 프론트엔드 요청도 로그아웃 처리합니다.
-                // - sessionToken이 넘어왔고 DB 토큰과 다르면 이미 다른 세션이 주인이므로 DB 토큰은 유지합니다.
-                const shouldClearDbSession = !sessionToken || user.sessionToken === sessionToken;
-
-                try {
-                    if (shouldClearDbSession) {
-                        await pool.query('UPDATE wgs_users SET sessionToken = NULL, last_logout_at = CURRENT_TIMESTAMP WHERE id = ?', [id]);
-                    } else {
-                        await pool.query('UPDATE wgs_users SET last_logout_at = CURRENT_TIMESTAMP WHERE id = ?', [id]);
-                    }
-                } catch (auditError) {
-                    if (shouldClearDbSession) {
-                        await pool.query('UPDATE wgs_users SET sessionToken = NULL WHERE id = ?', [id]);
-                    }
-                }
-
-                removeActiveUser(id, sessionToken || null);
-                await pool.query('INSERT INTO wgs_login_history (userId, time, action) VALUES (?, ?, ?)', [id, getKSTDateTime(), '로그아웃']);
-                // 사용자 관리 표의 최근 로그아웃 표시가 누락되지 않도록 보조 컬럼을 함께 갱신합니다.
-                if (await adminColumnExists('wgs_users', 'last_logout_at')) {
-                    await pool.query('UPDATE wgs_users SET last_logout_at = NOW() WHERE id = ?', [id]);
-                }
+            let result;
+            try {
+                [result] = await pool.query(
+                    `UPDATE wgs_users
+                     SET sessionToken = NULL, last_logout_at = CURRENT_TIMESTAMP
+                     WHERE id = ? AND sessionToken = ?`,
+                    [id, sessionToken]
+                );
+            } catch (auditError) {
+                [result] = await pool.query(
+                    'UPDATE wgs_users SET sessionToken = NULL WHERE id = ? AND sessionToken = ?',
+                    [id, sessionToken]
+                );
             }
+
+            if (Number(result?.affectedRows || 0) !== 1) {
+                return res.status(401).json({
+                    success: false,
+                    reason: 'invalid_session',
+                    msg: '유효한 로그인 세션이 필요합니다.',
+                });
+            }
+
+            removeActiveUser(id, sessionToken);
+            await pool.query('INSERT INTO wgs_login_history (userId, time, action) VALUES (?, ?, ?)', [id, getKSTDateTime(), '로그아웃']);
+
+            // 공개 방문 세션은 로그인 세션 토큰과 별개입니다. 로그아웃 시 즉시 닫으면
+            // 같은 브라우저의 다음 heartbeat가 5분 이내에도 새 방문으로 중복 집계되므로
+            // 마지막 활동 후 5분 비활동 규칙에 따라 자연스럽게 종료되도록 유지합니다.
 
             return res.json({ success: true, msg: '로그아웃 완료', serverInstanceId: SERVER_INSTANCE_ID });
         } catch (error) {
@@ -523,6 +665,7 @@ function registerAuthRoutes(options = {}) {
                 // 기존 valid/serverInstanceId 응답은 유지하고, 운영자/최고관리자 플래그만 추가로 내려줍니다.
                 const isPrimaryAdmin = isPrimaryAdminUser(user);
                 const isOperator = isAdminAccessUser(user);
+                await safelyLinkAuthenticatedSession(user, req);
 
                 return res.json({
                     valid: true,
@@ -554,61 +697,6 @@ function registerAuthRoutes(options = {}) {
         }
     });
 
-    // 관리자 페이지 흐름: 관리자 권한 확인 API입니다.
-    // ------------------------------------------------------------
-    // 목적:
-    // 1) /admin 화면을 열 때 브라우저의 sessionStorage 값만 믿지 않고
-    //  서버가 DB의 sessionToken과 관리자 아이디를 다시 확인합니다.
-    // 2) DB 최고관리자와 is_operator=1 운영자는 통과시키고 일반 계정은 403으로 차단합니다.
-    // 3) 프론트가 오래된 sessionStorage 값을 들고 있어도 서버 DB 권한값을 기준으로 판단합니다.
-    app.post('/api/admin/check-auth', async (req, res) => {
-        try {
-            const auth = await validateAdminSession(req);
-
-            // 세션 만료, 중복 로그인, 서버 재시작, 일반 사용자 접근을 모두 여기서 막는다.
-            if (!auth.valid || !auth.isAdmin) {
-                const statusCode = auth.reason === 'not_admin'? 403 : 401;
-
-                return res.status(statusCode).json({
-                    success: false,
-                    valid: false,
-                    isAdmin: false,
-                    reason: auth.reason || 'not_admin',
-                    serverInstanceId: SERVER_INSTANCE_ID
-                });
-            }
-
-            return res.json({
-                success: true,
-                valid: true,
-                isAdmin: true,
-                is_admin: 1,
-                isOperator: Boolean(auth.isOperator),
-                is_operator: auth.isOperator ? 1 : 0,
-                isPrimaryAdmin: Boolean(auth.isPrimaryAdmin),
-                is_primary_admin: auth.isPrimaryAdmin ? 1 : 0,
-                reason: null,
-                serverInstanceId: SERVER_INSTANCE_ID,
-                admin: {
-                    id: auth.user.id,
-                    name: auth.user.name || auth.user.id,
-                    email: auth.user.email || '',
-                    isAdmin: true,
-                    isOperator: Boolean(auth.isOperator),
-                    isPrimaryAdmin: Boolean(auth.isPrimaryAdmin)
-                }
-            });
-        } catch (error) {
-            console.error('관리자 권한 확인 오류:', error);
-            return res.status(500).json({
-                success: false,
-                valid: false,
-                isAdmin: false,
-                reason: 'admin_auth_error',
-                serverInstanceId: SERVER_INSTANCE_ID
-            });
-        }
-    });
 }
 
 module.exports = registerAuthRoutes;

@@ -7,6 +7,18 @@ function createStudyNoteSchemaChecker(options = {}) {
         throw new Error('createStudyNoteSchemaChecker requires a MySQL pool.');
     }
 
+    async function columnExists(tableName, columnName) {
+        const [rows] = await pool.query(
+            `SELECT COUNT(*) AS cnt
+               FROM INFORMATION_SCHEMA.COLUMNS
+              WHERE TABLE_SCHEMA = DATABASE()
+                AND TABLE_NAME = ?
+                AND COLUMN_NAME = ?`,
+            [tableName, columnName]
+        );
+        return Number(rows?.[0]?.cnt || 0) > 0;
+    }
+
     async function ensureStudyNoteSchema() {
         try {
             await pool.query(`
@@ -34,6 +46,7 @@ function createStudyNoteSchemaChecker(options = {}) {
                     contentJson LONGTEXT NULL,
                     visibility VARCHAR(20) NOT NULL DEFAULT 'private',
                     docType VARCHAR(40) NOT NULL DEFAULT 'note',
+                    sortOrder INT NOT NULL DEFAULT 0,
                     createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                     updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                     PRIMARY KEY (id),
@@ -43,6 +56,10 @@ function createStudyNoteSchemaChecker(options = {}) {
                     INDEX idx_wgs_study_documents_doc_type (docType)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
             `);
+
+            if (!(await columnExists('wgs_study_documents', 'sortOrder'))) {
+                await pool.query(`ALTER TABLE wgs_study_documents ADD COLUMN sortOrder INT NOT NULL DEFAULT 0 AFTER docType`);
+            }
 
             await pool.query(`
                 CREATE TABLE IF NOT EXISTS wgs_study_document_wrong_refs (
@@ -57,6 +74,28 @@ function createStudyNoteSchemaChecker(options = {}) {
                     INDEX idx_wgs_study_wrong_refs_document (documentId),
                     INDEX idx_wgs_study_wrong_refs_owner (ownerId),
                     INDEX idx_wgs_study_wrong_refs_source (sourceType, sourceId)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+            `);
+
+            await pool.query(`
+                CREATE TABLE IF NOT EXISTS wgs_study_document_drafts (
+                    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+                    ownerId VARCHAR(50) NOT NULL,
+                    documentId BIGINT UNSIGNED NULL,
+                    folderId BIGINT UNSIGNED NULL,
+                    title VARCHAR(255) NOT NULL,
+                    content LONGTEXT NULL,
+                    contentJson LONGTEXT NULL,
+                    visibility VARCHAR(20) NOT NULL DEFAULT 'private',
+                    docType VARCHAR(40) NOT NULL DEFAULT 'note',
+                    wrongRefsJson LONGTEXT NULL,
+                    summary VARCHAR(500) NULL,
+                    saveReason VARCHAR(20) NOT NULL DEFAULT 'manual',
+                    createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    PRIMARY KEY (id),
+                    INDEX idx_wgs_study_drafts_owner_updated (ownerId, updatedAt),
+                    INDEX idx_wgs_study_drafts_document (documentId)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
             `);
         } catch (error) {

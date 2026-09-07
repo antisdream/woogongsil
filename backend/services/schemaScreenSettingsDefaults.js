@@ -23,8 +23,6 @@ function createSchemaScreenSettingDefaultRows() {
             ['home', 'hero', 'text', 'welcome_suffix', '환영 문구 뒷부분', '님, 환영합니다!', '로그인 사용자 이름 뒤에 붙는 문구입니다.', 301],
             ['home', 'hero', 'text', 'dday_prefix', 'D-Day 문구 앞부분', '시험일까지', 'D-Day 값 앞에 붙는 문구입니다.', 310],
             ['home', 'hero', 'text', 'dday_suffix', 'D-Day 문구 뒷부분', '!', 'D-Day 값 뒤에 붙는 문구입니다.', 311],
-            ['home', 'hero', 'text', 'today_class_prefix', '오늘 수업 문구 앞부분', '오늘은', '오늘 수업명 앞에 붙는 문구입니다.', 320],
-            ['home', 'hero', 'text', 'today_class_suffix', '오늘 수업 문구 뒷부분', '수업입니다!', '오늘 수업명 뒤에 붙는 문구입니다.', 321],
             ['home', 'live_chat', 'text', 'current_visitor_prefix', '현재 접속자 앞부분', '현재', '실시간 접속자 수 앞에 붙는 문구입니다.', 430],
             ['home', 'live_chat', 'text', 'current_visitor_suffix', '현재 접속자 뒷부분', '명', '실시간 접속자 수 뒤에 붙는 문구입니다.', 431],
             ['home', 'live_chat', 'text', 'refresh_loading_label', '새로고침 진행 문구', '새로고침 중...', '접속자 목록을 새로고침하는 동안 보이는 문구입니다.', 432],
@@ -65,16 +63,6 @@ function createSchemaScreenSettingDefaultRows() {
             ['home', 'mobile_qr', 'text', 'wifi_hint', '같은 와이파이 안내', '같은 와이파이에 연결된 휴대폰에서만 접속할 수 있습니다.', '모바일 QR 팝업 와이파이 안내 문구입니다.', 605],
             ['home', 'mobile_qr', 'text', 'change_label', '주소 변경 문구', '주소 변경:', '모바일 QR 팝업 주소 변경 입력창 앞 문구입니다.', 606],
             ['home', 'mobile_qr', 'text', 'placeholder', '주소 입력 안내', '자동 감지 중', '모바일 QR 팝업 주소 입력창 placeholder입니다.', 607],
-            ['home', 'calendar', 'text', 'year_suffix', '달력 연도 단위', '년', '홈 달력 제목의 연도 뒤에 붙는 문구입니다.', 700],
-            ['home', 'calendar', 'text', 'month_suffix', '달력 월 단위', '월', '홈 달력 제목의 월 뒤에 붙는 문구입니다.', 701],
-            ['home', 'calendar', 'text', 'today_label', '오늘 버튼 문구', 'Today', '홈 달력 오늘 버튼 문구입니다.', 702],
-            ['home', 'calendar', 'text', 'weekday_sun', '일요일 표시', '일', '홈 달력 일요일 헤더 문구입니다.', 710],
-            ['home', 'calendar', 'text', 'weekday_mon', '월요일 표시', '월', '홈 달력 월요일 헤더 문구입니다.', 711],
-            ['home', 'calendar', 'text', 'weekday_tue', '화요일 표시', '화', '홈 달력 화요일 헤더 문구입니다.', 712],
-            ['home', 'calendar', 'text', 'weekday_wed', '수요일 표시', '수', '홈 달력 수요일 헤더 문구입니다.', 713],
-            ['home', 'calendar', 'text', 'weekday_thu', '목요일 표시', '목', '홈 달력 목요일 헤더 문구입니다.', 714],
-            ['home', 'calendar', 'text', 'weekday_fri', '금요일 표시', '금', '홈 달력 금요일 헤더 문구입니다.', 715],
-            ['home', 'calendar', 'text', 'weekday_sat', '토요일 표시', '토', '홈 달력 토요일 헤더 문구입니다.', 716],
             ['home', 'score_ranking', 'text', 'section_title', '랭킹 영역 제목', '나의 점수는?', '홈 랭킹 영역 제목입니다.', 800],
             ['home', 'score_ranking', 'text', 'always_open_label', '랭킹 항상 펼침 문구', '항상 펼침', '홈 랭킹 영역 오른쪽 상태 문구입니다.', 801],
             ['home', 'score_ranking', 'text', 'tab_random_label', '필기 문제은행 탭 문구', '필기 문제은행', '홈 랭킹 필기 문제은행 탭 문구입니다.', 810],
@@ -122,7 +110,6 @@ function createSchemaScreenSettingDefaultRows() {
             ['all', 'nav', 'text', 'home_label', '상단 메뉴 - 홈', '홈', '상단 네비게이션 홈 메뉴명입니다.', 1100],
             ['all', 'nav', 'text', 'cert_ipe_label', '상단 메뉴 - 정보처리기사', '정보처리기사', '상단 네비게이션 정보처리기사 메뉴명입니다.', 1110],
             ['all', 'nav', 'text', 'multiplayer_label', '상단 메뉴 - 멀티플레이', '멀티플레이', '상단 네비게이션 멀티플레이 메뉴명입니다.', 1120],
-            ['all', 'nav', 'text', 'mealmap_label', '상단 메뉴 - 회식맵', '회식맵', '상단 네비게이션 회식맵 메뉴명입니다.', 1130],
             ['all', 'nav', 'text', 'mypage_label', '상단 메뉴 - 마이페이지', '마이페이지', '상단 네비게이션 마이페이지 메뉴명입니다.', 1140],
             ['all', 'nav', 'text', 'board_label', '상단 메뉴 - 게시판', '게시판', '상단 네비게이션 게시판 메뉴명입니다.', 1150],
             ['all', 'nav', 'text', 'faq_label', '상단 메뉴 - FAQ', 'FAQ', '상단 네비게이션 FAQ 메뉴명입니다.', 1160],
@@ -374,10 +361,7 @@ function createSchemaScreenSettingDefaultRows() {
             ['화면/테마', '글씨가 잘 보이지 않을 때는 어떻게 하나요?', '먼저 다크모드와 라이트모드를 전환해 보고, 브라우저 확대 비율을 100%로 맞춰 주세요.\n특정 페이지에서만 글씨가 흐리거나 보이지 않는다면 그 부분을 게시판에 알려 주세요.'],
             ['계정/로그인', '회원가입 후 바로 로그인할 수 있나요?', '신규 회원가입은 관리자 승인 후 이용할 수 있습니다.\n승인되면 가입한 이메일로 승인 안내가 발송되고, 거절된 경우에는 거절 사유가 함께 안내됩니다.\n기존 회원은 별도 승인 절차 없이 이전처럼 계속 이용할 수 있습니다.'],
             ['필기/실기 문제은행', '문제은행 랜덤 문제는 같은 문제가 바로 반복되나요?', '문제은행은 최근에 푼 문제와 과목을 우선 피해서 다음 문제를 가져오도록 개선되었습니다.\n다만 문제 수가 부족한 경우에는 조건을 자동으로 완화해 학습이 막히지 않도록 처리됩니다.'],
-            ['회식맵', '회식맵 장소를 제보하면 바로 공개되나요?', '신규 장소 제보는 관리자 승인 없이 바로 회식맵에 공개됩니다.\n이미 등록된 장소의 수정 요청이나 삭제 요청은 관리자 또는 최고관리자 검토 후 반영됩니다.'],
-            ['회식맵', '회식맵 장소 등록 시 카테고리는 어떻게 입력하나요?', '카카오 지도 검색으로 장소를 선택하면 가져올 수 있는 카테고리 정보를 우선 사용합니다.\n직접 입력할 때는 한 글자나 초성을 입력하면 한식, 한정식처럼 관련 카테고리 추천을 확인할 수 있습니다.'],
-            ['회식맵', '대표메뉴, 영업시간, 가격도 자동으로 채워지나요?', '카카오 지도 API에서 기본으로 제공되는 장소명, 주소, 좌표, 전화번호, 카테고리 같은 정보는 자동 입력에 활용할 수 있습니다.\n대표메뉴, 영업시간, 최소가격, 최대가격처럼 API 응답에 없는 정보는 사용자가 직접 입력해야 합니다.'],
-            ['화면/테마', '화면 밝기는 어떻게 조절하나요?', '상단의 밝기 슬라이더로 10%부터 100%까지 10% 단위로 조절할 수 있습니다.\n처음 기본값은 50%이며, 사이트를 닫기 전까지 같은 브라우저 화면에서 설정이 유지됩니다.'],
+            ['화면/테마', '화면 밝기는 어떻게 조절하나요?', '상단의 밝기 슬라이더로 10%부터 100%까지 10% 단위로 조절할 수 있습니다.\n처음 기본값은 50%이며, 사이트를 닫기 전까지 같은 브라우저 화면에서 설정이 유지됩니다.', '039'],
         ];
 
         const faqScreenSettingDefaultsNoHardcodeV1 = [
@@ -397,8 +381,8 @@ function createSchemaScreenSettingDefaultRows() {
             ['faq', 'search', 'text', 'reset_button', 'FAQ 검색 초기화 버튼', '초기화', 'FAQ 검색 초기화 버튼명입니다.', 420],
             ['faq', 'search', 'text', 'empty_result', 'FAQ 검색 결과 없음 문구', '검색 결과가 없습니다. 다른 검색어로 다시 시도해 주세요.', 'FAQ 검색 결과가 없을 때 표시하는 문구입니다.', 430],
             ['faq', 'search', 'text', 'result_text', 'FAQ 검색 결과 표시 형식', '“{keyword}” 검색 결과: {count}건', 'FAQ 검색 결과 표시 형식입니다. {keyword}, {count}를 사용할 수 있습니다.', 440],
-            ...faqDefaultItemsNoHardcodeV1.flatMap(([category, question, answer], index) => {
-                const itemNo = String(index + 1).padStart(3, '0');
+            ...faqDefaultItemsNoHardcodeV1.flatMap(([category, question, answer, explicitItemNo], index) => {
+                const itemNo = explicitItemNo || String(index + 1).padStart(3, '0');
                 const sectionKey = `item_${itemNo}`;
                 const sortOrder = 1000 + (index * 10);
 

@@ -250,7 +250,6 @@ async function ensureSchemaCompatibility() {
             ['quick_links', 'mobile_button_label', '\u{1F4F1} 모바일', '모바일'],
             ['hero', 'welcome_prefix', '\u{1F389}', ''],
             ['hero', 'dday_prefix', '\u{1F525} 시험일까지', '시험일까지'],
-            ['hero', 'today_class_prefix', '\u{1F4C5} 오늘은', '오늘은'],
             ['mobile_qr', 'title', '\u{1F4F1} 모바일에서 접속하기', '모바일에서 접속하기'],
             ['score_ranking', 'section_title', '\u{1F3C6} 나의 점수는?', '나의 점수는?'],
             ['score_ranking', 'year_select_title', '\u{1F4C5} 연도 선택', '연도 선택'],
@@ -279,7 +278,6 @@ async function ensureSchemaCompatibility() {
         // 기존 DB 값은 삭제하지 않고 비활성화만 하여 관리자 목록이 헷갈리지 않도록 정리합니다.
         const legacyHomeCopyKeysFix18Cleanup = [
             'welcome_prefix', 'welcome_suffix', 'dday_prefix', 'dday_suffix',
-            'today_class_prefix', 'today_class_suffix',
             'current_visitor_prefix', 'current_visitor_suffix', 'refresh_loading_label',
             'request_time_label', 'me_label', 'recent_activity_label', 'just_now_label',
             'accuracy_label', 'rank_suffix', 'score_suffix', 'no_personal_ranking_message'
@@ -299,7 +297,7 @@ async function ensureSchemaCompatibility() {
 
         // 일부 이전 행은 home.copy.* 형태의 setting_key로 저장되어 있었습니다.
         // 현재 홈 화면은 섹션 기반 키를 사용하므로 이 행들은 이전 중복 데이터입니다.
-        // 예: hero.*, live_chat.*, score_ranking.*, ranking_history.*, calendar.*
+        // 예: hero.*, live_chat.*, score_ranking.*, ranking_history.*
         // 행은 백업 데이터로 보존하되 기본 활성 관리자 목록에서는 숨깁니다.
         await pool.query(
             `UPDATE wgs_screen_settings

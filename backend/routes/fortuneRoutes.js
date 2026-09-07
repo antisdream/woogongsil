@@ -1,12 +1,20 @@
 // 운세와 추천형 보조 API를 제공합니다.
 'use strict';
 
+const { RESULT_STORAGE_VERSION, sanitizeFortuneResult } = require('../services/fortunePrivacyService');
+const { createLegalConsentService } = require('../services/legalConsentService');
+
 function registerFortuneRoutes(options = {}) {
     const app = options.app;
     const pool = options.pool;
     const getUserById = options.getUserById;
     const getKSTDateTime = options.getKSTDateTime;
     const validateRealtimeSession = options.validateRealtimeSession;
+    let legalConsentService = options.legalConsentService || null;
+    const getLegalConsentService = () => {
+        if (!legalConsentService) legalConsentService = createLegalConsentService({ pool });
+        return legalConsentService;
+    };
 
     if (!app || typeof app.post !== 'function') {
         throw new Error('registerFortuneRoutes requires an Express app.');
@@ -15,7 +23,7 @@ function registerFortuneRoutes(options = {}) {
         throw new Error('registerFortuneRoutes requires a MySQL pool.');
     }
     if (typeof getUserById !== 'function' || typeof getKSTDateTime !== 'function' || typeof validateRealtimeSession !== 'function') {
-        throw new Error('registerFortuneRoutes requires user/date/session helpers.');
+        throw new Error('registerFortuneRoutes requires user/date/session/legal-consent helpers.');
     }
 
     function authUserId(auth) {
@@ -54,23 +62,96 @@ app.post('/api/user/fortune-history', async (req, res) => {
     const auth = await requireSessionUser(req, res, req.body.id || req.body.userId);
     if (!auth) return;
 
-    const id = authUserId(auth);
-    const type = req.body.type || 'unknown';
-    const searchData = req.body.searchData || {};
+    return res.status(410).json({
+        success: false,
+        code: 'RAW_FORTUNE_HISTORY_DISABLED',
+        msg: '입력 원본 저장 API는 개인정보 최소화 정책에 따라 비활성화되었습니다.',
+    });
+});
 
+async function persistFortuneConsentAndOptionalResult({ auth, validation, saveResult, type, result, rawInput }) {
+    const userId = authUserId(auth);
+    const user = await getUserById(userId);
+    if (!user) throw new Error('사용자를 찾을 수 없습니다.');
+
+    const connection = await pool.getConnection();
     try {
-        const user = await getUserById(id);
-        if (!user) return res.status(400).json({ success: false, msg: '사용자 없음' });
-
-        await pool.query(
-            'INSERT INTO wgs_fortune_history (userId, time, type, data) VALUES (?, ?, ?, ?)',
-            [id, getKSTDateTime(), type, JSON.stringify(searchData)]
-        );
-
-        return res.json({ success: true, msg: '운세 기록 저장 완료' });
+        await connection.beginTransaction();
+        await getLegalConsentService().insertAcceptanceEvents(connection, {
+            userId,
+            acceptedDocuments: validation.acceptedDocuments,
+        });
+        if (saveResult) {
+            const storageDocument = validation.acceptedDocuments.find(
+                (document) => document.documentCode === 'FORTUNE_RESULT_STORAGE'
+            );
+            const safeResult = sanitizeFortuneResult(type, result, rawInput);
+            await connection.query(
+                `INSERT INTO wgs_fortune_history
+                 (userId, time, type, data, storage_version, legal_document_version, legal_document_sha256)
+                 VALUES (?, ?, ?, ?, ?, ?, ?)`,
+                [
+                    userId,
+                    getKSTDateTime(),
+                    type,
+                    JSON.stringify(safeResult),
+                    RESULT_STORAGE_VERSION,
+                    storageDocument.version,
+                    storageDocument.sha256,
+                ]
+            );
+        }
+        await connection.commit();
     } catch (error) {
-        console.error('운세 기록 저장 오류:', error);
-        return res.status(500).json({ success: false, msg: '운세 기록 저장 중 오류가 발생했습니다.' });
+        try { await connection.rollback(); } catch {}
+        throw error;
+    } finally {
+        connection.release();
+    }
+}
+
+function sendFortuneError(res, error) {
+    if (error?.status && error?.code) {
+        return res.status(Number(error.status)).json({ success: false, code: error.code, msg: error.message });
+    }
+    console.error('[fortune] processing failed:', error.message);
+    return res.status(500).json({ success: false, msg: '운세 처리 중 서버 오류가 발생했습니다.' });
+}
+
+app.delete('/api/user/fortune-history', async (req, res) => {
+    const auth = await requireSessionUser(req, res, req.body?.id || req.query?.id);
+    if (!auth) return;
+    try {
+        const [result] = await pool.query(
+            `DELETE FROM wgs_fortune_history
+             WHERE userId = ? AND storage_version = ?`,
+            [authUserId(auth), RESULT_STORAGE_VERSION]
+        );
+        return res.json({ success: true, deletedCount: Number(result.affectedRows || 0), msg: '저장된 운세 결과를 모두 삭제했습니다.' });
+    } catch (error) {
+        console.error('[fortune history] delete all failed:', error.message);
+        return res.status(500).json({ success: false, msg: '운세 결과 삭제 중 오류가 발생했습니다.' });
+    }
+});
+
+app.delete('/api/user/fortune-history/:historyId', async (req, res) => {
+    const auth = await requireSessionUser(req, res, req.body?.id || req.query?.id);
+    if (!auth) return;
+    const historyId = Number(req.params.historyId);
+    if (!Number.isInteger(historyId) || historyId <= 0) {
+        return res.status(400).json({ success: false, msg: '삭제할 운세 결과를 확인할 수 없습니다.' });
+    }
+    try {
+        const [result] = await pool.query(
+            `DELETE FROM wgs_fortune_history
+             WHERE id = ? AND userId = ? AND storage_version = ?`,
+            [historyId, authUserId(auth), RESULT_STORAGE_VERSION]
+        );
+        if (!result.affectedRows) return res.status(404).json({ success: false, msg: '삭제할 운세 결과가 없습니다.' });
+        return res.json({ success: true, msg: '운세 결과를 삭제했습니다.' });
+    } catch (error) {
+        console.error('[fortune history] delete failed:', error.message);
+        return res.status(500).json({ success: false, msg: '운세 결과 삭제 중 오류가 발생했습니다.' });
     }
 });
 
@@ -146,7 +227,16 @@ function calculateSajuEngine(name, birthdate, birthtime) {
     return { saju, elementCount, yongsin, mostElement, gyeokguk, dayHash, nameHash, isUnknown, yearBranchIdx, dayStemIdx, dayBranchIdx };
 }
 
-app.post('/api/fortune/individual', (req, res) => {
+app.post('/api/fortune/individual', async (req, res) => {
+    const auth = await requireSessionUser(req, res, req.body?.id || req.body?.userId);
+    if (!auth) return;
+    try {
+    const saveResult = req.body?.saveResult === true;
+    const legalValidation = await getLegalConsentService().validateAcceptanceBundle(
+        req.body?.legal,
+        'fortune',
+        { requireDocumentCodes: saveResult ? ['FORTUNE_RESULT_STORAGE'] : [] }
+    );
     const { name, birthdate, birthtime } = req.body;
 
     if (!name || !birthdate) return res.status(400).json({ success: false, msg: '정보가 부족합니다.' });
@@ -181,10 +271,31 @@ app.post('/api/fortune/individual', (req, res) => {
         loveLuck: fortuneSeed % 2 === 0 ? '주변 사람과의 소통이 원활해집니다.' : '오늘은 내 자신의 성장에 집중하는 거이 이득입니다.'
     };
 
-    setTimeout(() => res.json({ success: true, data: result }), 1200);
+    await persistFortuneConsentAndOptionalResult({
+        auth,
+        validation: legalValidation,
+        saveResult,
+        type: 'individual',
+        result,
+        rawInput: { name, birthdate, birthtime, gender: req.body?.gender },
+    });
+    await new Promise((resolve) => setTimeout(resolve, 1200));
+    return res.json({ success: true, data: result, saved: saveResult });
+    } catch (error) {
+        return sendFortuneError(res, error);
+    }
 });
 
-app.post('/api/fortune/couple', (req, res) => {
+app.post('/api/fortune/couple', async (req, res) => {
+    const auth = await requireSessionUser(req, res, req.body?.id || req.body?.userId);
+    if (!auth) return;
+    try {
+    const saveResult = req.body?.saveResult === true;
+    const legalValidation = await getLegalConsentService().validateAcceptanceBundle(
+        req.body?.legal,
+        'fortune',
+        { requireDocumentCodes: saveResult ? ['FORTUNE_RESULT_STORAGE'] : [] }
+    );
     const { p1, p2 } = req.body;
 
     if (!p1?.name || !p1?.birthdate || !p2?.name || !p2?.birthdate) {
@@ -263,7 +374,19 @@ app.post('/api/fortune/couple', (req, res) => {
         details
     };
 
-    setTimeout(() => res.json({ success: true, data: result }), 1500);
+    await persistFortuneConsentAndOptionalResult({
+        auth,
+        validation: legalValidation,
+        saveResult,
+        type: 'couple',
+        result,
+        rawInput: { p1, p2 },
+    });
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+    return res.json({ success: true, data: result, saved: saveResult });
+    } catch (error) {
+        return sendFortuneError(res, error);
+    }
 });
 }
 

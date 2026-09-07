@@ -1,5 +1,7 @@
 'use strict';
 
+const { createLegalConsentService } = require('../../services/legalConsentService');
+
 function registerAdminSignupRequestRoutes(options = {}) {
     const app = options.app;
     const pool = options.pool;
@@ -8,6 +10,11 @@ function registerAdminSignupRequestRoutes(options = {}) {
     const sendEmail = options.sendEmail;
     const writeAdminOperationLog = options.writeAdminOperationLog;
     const ADMIN_USER_ID = options.adminUserId;
+    let legalConsentService = options.legalConsentService || null;
+    const getLegalConsentService = () => {
+        if (!legalConsentService) legalConsentService = createLegalConsentService({ pool });
+        return legalConsentService;
+    };
 
     const missing = Object.entries({ app, pool, validateAdminSession, ensureAdminUserControlSchema, sendEmail, writeAdminOperationLog, ADMIN_USER_ID })
         .filter(([, value]) => value === undefined || value === null)
@@ -16,42 +23,8 @@ function registerAdminSignupRequestRoutes(options = {}) {
         throw new Error(`registerAdminSignupRequestRoutes missing dependencies: ${missing.join(', ')}`);
     }
 
-    let signupApprovalSchemaReady = false;
-    let signupApprovalSchemaPromise = null;
-
     async function ensureSignupApprovalSchema() {
-        if (signupApprovalSchemaReady) return;
-        if (signupApprovalSchemaPromise) return signupApprovalSchemaPromise;
-
-        signupApprovalSchemaPromise = (async () => {
-            await pool.query(`
-                CREATE TABLE IF NOT EXISTS wgs_signup_requests (
-                    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-                    login_id VARCHAR(100) NOT NULL,
-                    password_hash VARCHAR(255) NOT NULL,
-                    name VARCHAR(100) NOT NULL,
-                    email VARCHAR(255) NOT NULL,
-                    status ENUM('PENDING','APPROVED','REJECTED') NOT NULL DEFAULT 'PENDING',
-                    requested_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                    reviewed_by VARCHAR(100) NULL,
-                    reviewed_at DATETIME NULL,
-                    review_note TEXT NULL,
-                    request_ip VARCHAR(64) NULL,
-                    user_agent TEXT NULL,
-                    PRIMARY KEY (id),
-                    INDEX idx_wgs_signup_status_requested (status, requested_at),
-                    INDEX idx_wgs_signup_login_status (login_id, status),
-                    INDEX idx_wgs_signup_email_status (email, status)
-                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-            `);
-            signupApprovalSchemaReady = true;
-        })();
-
-        try {
-            await signupApprovalSchemaPromise;
-        } finally {
-            signupApprovalSchemaPromise = null;
-        }
+        await getLegalConsentService().ensureSchema();
     }
 
     function normalizeSignupRequestStatus(value) {
@@ -109,6 +82,7 @@ function registerAdminSignupRequestRoutes(options = {}) {
             }
 
             await ensureSignupApprovalSchema();
+            await getLegalConsentService().purgeExpiredRecords();
             const requestedStatus = String(req.query?.status || 'PENDING').trim().toUpperCase();
             const keyword = String(req.query?.search || '').trim();
             const params = [];
@@ -127,22 +101,41 @@ function registerAdminSignupRequestRoutes(options = {}) {
 
             const whereClause = where.length ? `WHERE ${where.join(' AND ')}` : '';
             const [rows] = await pool.query(
-                `SELECT id, login_id AS loginId, name, email, status,
+                `SELECT r.id, r.login_id AS loginId, r.name, r.email, r.status,
                         DATE_FORMAT(requested_at, '%Y-%m-%d %H:%i:%s') AS requestedAt,
-                        reviewed_by AS reviewedBy,
-                        DATE_FORMAT(reviewed_at, '%Y-%m-%d %H:%i:%s') AS reviewedAt,
-                        review_note AS reviewNote,
-                        request_ip AS requestIp,
-                        user_agent AS userAgent
-                 FROM wgs_signup_requests
+                        r.reviewed_by AS reviewedBy,
+                        DATE_FORMAT(r.reviewed_at, '%Y-%m-%d %H:%i:%s') AS reviewedAt,
+                        r.review_note AS reviewNote,
+                        DATE_FORMAT(r.retention_until, '%Y-%m-%d %H:%i:%s') AS retentionUntil,
+                        DATE_FORMAT(r.personal_data_purged_at, '%Y-%m-%d %H:%i:%s') AS personalDataPurgedAt,
+                        (SELECT COUNT(DISTINCT d.document_code)
+                           FROM wgs_legal_acceptance_events e
+                           INNER JOIN wgs_legal_documents d ON d.id = e.document_id
+                          WHERE e.signup_request_id = r.id
+                            AND e.event_type = 'ACCEPTED'
+                            AND e.age_14_confirmed = 1
+                            AND d.is_active = 1
+                            AND d.document_code IN ('TERMS', 'SIGNUP_PRIVACY')
+                            AND e.document_version = d.version
+                            AND e.document_sha256 = d.content_sha256) AS legalAcceptedCount
+                 FROM wgs_signup_requests r
                  ${whereClause}
-                 ORDER BY requested_at DESC, id DESC
+                 ORDER BY r.requested_at DESC, r.id DESC
                  LIMIT 1000`,
                 params
             );
             const stats = await getSignupRequestStats();
 
-            return res.json({ success: true, isPrimaryAdmin: true, requests: rows, stats });
+            return res.json({
+                success: true,
+                isPrimaryAdmin: true,
+                requests: rows.map((row) => ({
+                    ...row,
+                    legalEvidenceComplete: Number(row.legalAcceptedCount || 0) === 2,
+                    legalAcceptedCount: Number(row.legalAcceptedCount || 0),
+                })),
+                stats,
+            });
         } catch (error) {
             console.error('[admin signup requests list] error', error);
             return res.status(500).json({ success: false, message: '회원가입 승인 목록 조회 중 오류가 발생했습니다.' });
@@ -175,6 +168,19 @@ function registerAdminSignupRequestRoutes(options = {}) {
                 await conn.rollback();
                 return res.status(400).json({ success: false, message: '이미 처리된 회원가입 요청입니다.' });
             }
+            const consentService = getLegalConsentService();
+            const evidence = await consentService.getSignupEvidenceStatus(conn, requestId);
+            if (!evidence.complete) {
+                await conn.rollback();
+                return res.status(409).json({
+                    success: false,
+                    message: '최신 이용약관·개인정보 동의 및 만 14세 이상 확인 증적이 없어 승인할 수 없습니다. 신청자가 새 가입 절차로 다시 신청해야 합니다.',
+                });
+            }
+            if (!request.password_hash) {
+                await conn.rollback();
+                return res.status(409).json({ success: false, message: '가입신청의 임시 비밀번호 정보가 없어 승인할 수 없습니다.' });
+            }
 
             const [duplicateRows] = await conn.query(
                 'SELECT id, email FROM wgs_users WHERE id = ? OR LOWER(email) = ? LIMIT 1',
@@ -189,11 +195,14 @@ function registerAdminSignupRequestRoutes(options = {}) {
                 'INSERT INTO wgs_users (id, password, name, email, sessionToken) VALUES (?, ?, ?, ?, NULL)',
                 [request.login_id, request.password_hash, request.name, request.email]
             );
+            await consentService.linkSignupAcceptancesToUser(conn, requestId, request.login_id);
             await conn.query(
                 `UPDATE wgs_signup_requests
-                 SET status = 'APPROVED', reviewed_by = ?, reviewed_at = NOW(), review_note = NULL
+                 SET status = 'APPROVED', reviewed_by = ?, reviewed_at = NOW(), review_note = NULL,
+                     approved_user_id = ?, password_hash = NULL, request_ip = NULL, user_agent = NULL,
+                     retention_until = DATE_ADD(NOW(), INTERVAL ${consentService.signupRetentionDays} DAY)
                  WHERE id = ?`,
-                [auth.user?.id || ADMIN_USER_ID, requestId]
+                [auth.user?.id || ADMIN_USER_ID, request.login_id, requestId]
             );
             await conn.commit();
 
@@ -263,10 +272,13 @@ function registerAdminSignupRequestRoutes(options = {}) {
 
             await conn.query(
                 `UPDATE wgs_signup_requests
-                 SET status = 'REJECTED', reviewed_by = ?, reviewed_at = NOW(), review_note = ?
+                 SET status = 'REJECTED', reviewed_by = ?, reviewed_at = NOW(), review_note = ?,
+                     password_hash = NULL, request_ip = NULL, user_agent = NULL,
+                     retention_until = DATE_ADD(NOW(), INTERVAL ${getLegalConsentService().signupRetentionDays} DAY)
                  WHERE id = ?`,
                 [auth.user?.id || ADMIN_USER_ID, reason, requestId]
             );
+            await getLegalConsentService().markSignupEvidenceForRetention(conn, requestId);
             await conn.commit();
 
             const mailResult = await sendEmail(

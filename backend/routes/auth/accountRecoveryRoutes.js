@@ -5,13 +5,13 @@ function registerAccountRecoveryRoutes(options = {}) {
     const app = options.app;
     const pool = options.pool;
     const bcrypt = options.bcrypt;
-    const requireHcaptcha = options.requireHcaptcha;
     const getUserById = options.getUserById;
     const getUserByEmail = options.getUserByEmail;
     const verificationCodes = options.verificationCodes;
+    const revokeAdminSessionsForUser = options.revokeAdminSessionsForUser;
     const SALT_ROUNDS = options.saltRounds;
 
-    const required = { app, pool, bcrypt, requireHcaptcha, getUserById, getUserByEmail, verificationCodes, SALT_ROUNDS };
+    const required = { app, pool, bcrypt, getUserById, getUserByEmail, verificationCodes, revokeAdminSessionsForUser, SALT_ROUNDS };
     const missing = Object.entries(required).filter(([, value]) => value === undefined || value === null).map(([key]) => key);
     if (missing.length >0) {
         throw new Error(`registerAccountRecoveryRoutes missing dependencies: ${missing.join(', ')}`);
@@ -45,7 +45,6 @@ function registerAccountRecoveryRoutes(options = {}) {
     });
 
     app.post('/api/find-pw/reset', async (req, res) => {
-        if (!(await requireHcaptcha(req, res, 'find_reset'))) return;
 
         const id = String(req.body.id || '').trim();
         const newPassword = String(req.body.newPassword || '');
@@ -64,6 +63,7 @@ function registerAccountRecoveryRoutes(options = {}) {
             const hashedPassword = await bcrypt.hash(newPassword, SALT_ROUNDS);
 
             await pool.query('UPDATE wgs_users SET password = ?, sessionToken = NULL WHERE id = ?', [hashedPassword, id]);
+            await revokeAdminSessionsForUser(id, 'password_reset');
 
             delete verificationCodes[email];
 
@@ -74,27 +74,16 @@ function registerAccountRecoveryRoutes(options = {}) {
         }
     });
 
-    // 예전 API명 호환용.
-    app.post('/api/reset-pw', async (req, res) => {
-        const email = String(req.body.email || '').trim().toLowerCase();
-        const newPassword = String(req.body.newPassword || '');
-
-        try {
-            const user = await getUserByEmail(email);
-            if (!user) return res.status(404).json({ success: false, msg: '계정을 찾을 수 없습니다.' });
-
-            const hashedPassword = await bcrypt.hash(newPassword, SALT_ROUNDS);
-            await pool.query('UPDATE wgs_users SET password = ?, sessionToken = NULL WHERE id = ?', [hashedPassword, user.id]);
-
-            return res.json({ success: true });
-        } catch (error) {
-            console.error('구버전 비밀번호 재설정 오류:', error);
-            return res.status(500).json({ success: false, msg: '비밀번호 변경 실패' });
-        }
+    // 본인확인 없이 이메일만으로 비밀번호를 바꾸던 구형 경로는 즉시 폐쇄합니다.
+    app.post('/api/reset-pw', (req, res) => {
+        return res.status(410).json({
+            success: false,
+            error: 'LEGACY_PASSWORD_RESET_DISABLED',
+            msg: '지원이 종료된 비밀번호 재설정 경로입니다.',
+        });
     });
 
     app.post('/api/user/change-pw', async (req, res) => {
-        if (!(await requireHcaptcha(req, res, 'change_pw'))) return;
 
         const id = String(req.body.id || '').trim();
         const newPw = String(req.body.newPw || '');
@@ -113,6 +102,7 @@ function registerAccountRecoveryRoutes(options = {}) {
             const hashedPassword = await bcrypt.hash(newPw, SALT_ROUNDS);
 
             await pool.query('UPDATE wgs_users SET password = ?, sessionToken = NULL WHERE id = ?', [hashedPassword, id]);
+            await revokeAdminSessionsForUser(id, 'password_changed');
 
             delete verificationCodes[email];
 

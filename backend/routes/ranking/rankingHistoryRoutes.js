@@ -7,6 +7,7 @@ const { createLegacyRankingHistoryHandler } = require('./legacyRankingHistoryHan
 function registerRankingHistoryRoutes(options = {}) {
     const app = options.app;
     const pool = options.pool;
+    const validateRealtimeSession = options.validateRealtimeSession;
     const fs = options.fs || require('fs');
     const backendDir = options.backendDir || path.resolve(__dirname, '..', '..');
     const RANKING_DATA_FILE = options.rankingDataFile || path.join(backendDir, 'ranking_data.json');
@@ -20,12 +21,50 @@ function registerRankingHistoryRoutes(options = {}) {
     if (!pool || typeof pool.query !== 'function') {
         throw new Error('registerRankingHistoryRoutes requires a MySQL pool.');
     }
+    if (typeof validateRealtimeSession !== 'function') {
+        throw new Error('registerRankingHistoryRoutes requires validateRealtimeSession.');
+    }
+
+    async function requireRankingHistorySession(req, res, next) {
+        res.setHeader('Cache-Control', 'private, no-store, max-age=0');
+        res.setHeader('Pragma', 'no-cache');
+        try {
+            const auth = await validateRealtimeSession(req);
+            if (!auth.valid) {
+                return res.status(401).json({
+                    ok: false, success: false, valid: false,
+                    reason: auth.reason || 'session_expired',
+                    msg: '로그인 세션이 만료되었습니다. 다시 로그인해주세요.',
+                });
+            }
+            const authenticatedId = String(auth.user?.id || auth.id || '').trim();
+            const query = req.query || {};
+            const requestedIds = [query.userId, query.userid, query.user_id, query.id]
+                .filter((id) => id !== undefined && id !== null && String(id).trim() !== '')
+                .map((id) => String(id).trim());
+            if (!authenticatedId || requestedIds.some((id) => id !== authenticatedId)) {
+                return res.status(403).json({
+                    ok: false, success: false, valid: false,
+                    reason: 'forbidden_user_mismatch',
+                    msg: '본인의 랭킹 기록만 조회할 수 있습니다.',
+                });
+            }
+            req.wgsRankingHistoryUserId = authenticatedId;
+            return next();
+        } catch (error) {
+            return res.status(500).json({
+                ok: false, success: false, reason: 'session_check_failed',
+                msg: '로그인 상태를 확인하지 못했습니다.',
+            });
+        }
+    }
+
     const wgsB4cMyRankingHistoryHandler = createLegacyRankingHistoryHandler({ pool });
 
 
 // 개인 랭킹 이력 조회 라우트입니다.
 // 프론트엔드가 호출하는 랭킹 이력 API를 DB 랭킹 테이블과 연결합니다.
-// 동일한 응답 구조를 유지해 달력, 홈 화면, 랭킹 화면에서 같은 데이터를 사용할 수 있도록 합니다.
+// 동일한 응답 구조를 유지해 홈 화면과 랭킹 화면에서 같은 데이터를 사용할 수 있도록 합니다.
 // userId가 로그인 ID, 이름, 닉네임 중 하나로 전달되어도 users 테이블 후보값을 확장해 매칭합니다.
 
 function wgsB4gNum(v, fallback = 0) {
@@ -170,10 +209,7 @@ async function wgsB4gQueryWrittenRankingTable({ tableName, type, userCandidates,
     "memberId",
     "member_id",
     "loginId",
-    "login_id",
-    "username",
-    "name",
-    "nickname"
+    "login_id"
   ]);
 
   const dateCol = wgsB4gPickColumn(fields, [
@@ -318,12 +354,10 @@ async function wgsB4gQueryJsonRankings({ type, userCandidates, startDate, endDat
         item.user_id ??
         item.userid ??
         item.loginId ??
-        item.name ??
-        item.nickname ??
         ""
       ).trim();
 
-      if (candidateSet.size && userValue && !candidateSet.has(userValue)) continue;
+      if (!userValue || !candidateSet.has(userValue)) continue;
 
       const date = wgsB4gDateOnly(item.date || item.created_at || item.createdAt || item.rankingDate);
       if (!date || date < startDate || date >endDate) continue;
@@ -395,17 +429,7 @@ async function wgsB4gMyRankingHistoryHandler(req, res) {
     const startDate = String(req.query.startDate || req.query.from || today).slice(0, 10);
     const endDate = String(req.query.endDate || req.query.to || today).slice(0, 10);
 
-    const rawUserId = String(
-      req.query.userId ||
-      req.query.userid ||
-      req.query.user_id ||
-      req.session?.user?.userId ||
-      req.session?.user?.id ||
-      req.session?.user?.name ||
-      req.user?.userId ||
-      req.user?.id ||
-      ""
-    ).trim();
+    const rawUserId = req.wgsRankingHistoryUserId;
 
     if (!rawUserId) {
       return res.json({
@@ -424,7 +448,8 @@ async function wgsB4gMyRankingHistoryHandler(req, res) {
       });
     }
 
-    const userCandidates = await wgsB4gGetUserCandidates(rawUserId);
+    // 이름/별명으로 다른 계정의 기록을 섞지 않고 검증된 로그인 ID만 사용합니다.
+    const userCandidates = [rawUserId];
 
     let rows = [];
 
@@ -494,16 +519,16 @@ async function wgsB4gMyRankingHistoryHandler(req, res) {
   }
 }
 
-app.get('/api/my-ranking-history-v2', wgsB4gMyRankingHistoryHandler);
-app.get('/api/my-ranking-history', wgsB4gMyRankingHistoryHandler);
+app.get('/api/my-ranking-history-v2', requireRankingHistorySession, wgsB4gMyRankingHistoryHandler);
+app.get('/api/my-ranking-history', requireRankingHistorySession, wgsB4gMyRankingHistoryHandler);
 // 개인 랭킹 히스토리 DB 실연동 우선 라우트 끝
 
 
-app.get('/api/my-ranking-history', wgsB4cMyRankingHistoryHandler);
-app.get('/api/my-ranking-history-v2', wgsB4cMyRankingHistoryHandler);
+app.get('/api/my-ranking-history', requireRankingHistorySession, wgsB4cMyRankingHistoryHandler);
+app.get('/api/my-ranking-history-v2', requireRankingHistorySession, wgsB4cMyRankingHistoryHandler);
 
 
-app.get('/api/my-ranking-history', async (req, res) => {
+app.get('/api/my-ranking-history', requireRankingHistorySession, async (req, res) => {
     try {
         const allowedTypes = ['random', 'past', 'ipep_random', 'ipep_past'];
 

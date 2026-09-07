@@ -47,6 +47,13 @@ npm-debug.log*
 backend/logs/
 
 # 로컬 임시 파일
+backend.env
+*.pem
+*.key
+frontend/public/ipep-img/
+_codex_ops/
+_codex_compare/
+deploy_packages/
 *_tmp.*
 *.tmp
 backend/tmp/

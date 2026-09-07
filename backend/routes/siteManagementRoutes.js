@@ -1,16 +1,11 @@
-// 화면 설정, 수업 달력, 회식맵 관리자 API를 제공합니다.
+// 화면 설정 관리자 API를 제공합니다.
 'use strict';
-
-const registerClassScheduleRoutes = require('./site/classScheduleRoutes');
 
 function registerSiteManagementRoutes(options = {}) {
     const app = options.app;
     const pool = options.pool;
     const validateAdminSession = options.validateAdminSession;
     const io = options.io || { emit() {} };
-    const mealmapKakaoMapJsKey = options.mealmapKakaoMapJsKey;
-    const mealmapKakaoRestKey = options.mealmapKakaoRestKey;
-    const mealmapHttpsJson = options.mealmapHttpsJson;
     const ADMIN_USER_ID = String(options.adminUserId || process.env.WGS_ADMIN_USER_ID || process.env.ADMIN_USER_ID || '').trim().toLowerCase();
 
     if (!app || typeof app.get !== 'function') {
@@ -22,14 +17,11 @@ function registerSiteManagementRoutes(options = {}) {
     if (typeof validateAdminSession !== 'function') {
         throw new Error('registerSiteManagementRoutes requires validateAdminSession.');
     }
-    if (typeof mealmapKakaoMapJsKey !== 'function' || typeof mealmapKakaoRestKey !== 'function' || typeof mealmapHttpsJson !== 'function') {
-        throw new Error('registerSiteManagementRoutes requires MealMap Kakao helper functions.');
-    }
 // 관리자 화면의 "화면 설정 관리" 탭에서 페이지별/전체 공통 텍스트, 레이아웃,
 // 색상, 이미지 경로를 CRUD로 관리하기 위한 API입니다.
 // 기존 문제 풀이, 로그인, 게시판 로직과 분리된 wgs_screen_settings 테이블만 사용합니다.
 
-const SCREEN_SETTING_PAGE_KEYS = ['all', 'home', 'cert_ipe', 'written', 'past', 'random', 'ipep', 'wrong', 'mypage', 'board', 'faq', 'fortune', 'exam', 'mealmap', 'multiplayer', 'login', 'signup', 'find_auth', 'change_pw', 'admin'];
+const SCREEN_SETTING_PAGE_KEYS = ['all', 'home', 'cert_ipe', 'written', 'past', 'random', 'ipep', 'wrong', 'mypage', 'board', 'faq', 'fortune', 'exam', 'multiplayer', 'login', 'signup', 'find_auth', 'change_pw', 'admin'];
 const SCREEN_SETTING_TYPES = ['text', 'layout', 'color', 'image', 'link'];
 
 function cleanScreenSettingText(value, fallback = '') {
@@ -82,11 +74,6 @@ function validateScreenSetting(payload) {
 // - 일반 사용자 화면에서도 읽어야 하므로 공개 API로 유지합니다.
 // - page_key를 넘기면 전체 공통(all) + 해당 페이지 설정을 함께 내려줍니다.
 // - settings 배열은 관리자/디버깅용, settingsMap은 프론트 적용용입니다.
-
-    registerClassScheduleRoutes({
-        app,
-        pool,
-    });
 
 app.get('/api/screen-settings', async (req, res) => {
     try {
@@ -458,221 +445,6 @@ app.post('/api/admin/screen-settings/bulk', async (req, res) => {
         res.status(500).json({ ok: false, message: '전체 페이지 공통 설정을 저장하지 못했습니다.' });
     }
 });
-
-
-
-//  BEGIN =====
-// 회식맵 레이아웃 공개/관리자 API는 React SPA 대체 라우팅과 API 404 미들웨어보다 위에 있어야 합니다.
-const MEALMAP_DEFAULT_LAYOUTS_V253 = {
-  contentMaxWidth: '1480px',
-  heroTitleSize: '42px',
-  mapMinHeight: '760px',
-  detailPanelWidth: '360px',
-  cardRadius: '24px',
-  sectionGap: '24px',
-};
-
-async function ensureMealMapLayoutSettingsTableV253() {
-  await pool.query(`CREATE TABLE IF NOT EXISTS mealmap_page_layouts (
-      setting_key VARCHAR(80) NOT NULL PRIMARY KEY,
-      setting_value VARCHAR(120) NOT NULL,
-      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
-  `);
-
-  for (const [settingKey, settingValue] of Object.entries(MEALMAP_DEFAULT_LAYOUTS_V253)) {
-    await pool.query(
-      `INSERT IGNORE INTO mealmap_page_layouts (setting_key, setting_value) VALUES (?, ?)`,
-      [settingKey, String(settingValue)]
-    );
-  }
-}
-
-async function getMealMapLayoutSettingsV253() {
-  await ensureMealMapLayoutSettingsTableV253();
-  const [rows] = await pool.query(`SELECT setting_key, setting_value FROM mealmap_page_layouts`);
-  const out = { ...MEALMAP_DEFAULT_LAYOUTS_V253 };
-  for (const row of rows || []) {
-    out[row.setting_key] = row.setting_value;
-  }
-  return out;
-}
-
-function sanitizeMealMapLayoutValueV253(key, value) {
-  const allowed = new Set(Object.keys(MEALMAP_DEFAULT_LAYOUTS_V253));
-  if (!allowed.has(key)) return null;
-  const raw = String(value ?? '').trim();
-  if (!raw) return MEALMAP_DEFAULT_LAYOUTS_V253[key];
-  // CSS injection 방지: 숫자, px, rem, %, vw, vh, clamp(), calc()에 필요한 안전 문자만 허용합니다.
-  const safe = raw.replace(/[^0-9a-zA-Z가-힣.%() +\-_,]/g, '').slice(0, 80);
-  return safe || MEALMAP_DEFAULT_LAYOUTS_V253[key];
-}
-
-app.get('/api/mealmap/layouts', async (req, res) => {
-  try {
-    const layouts = await getMealMapLayoutSettingsV253();
-    return res.json({ success: true, layouts });
-  } catch (err) {
-    console.error('[mealmap layouts public]', err);
-    return res.status(500).json({ success: false, msg: '회식맵 레이아웃 설정을 불러오지 못했습니다.' });
-  }
-});
-
-app.get('/api/admin/mealmap/layouts', async (req, res) => {
-  try {
-    const admin = await validateAdminSession(req);
-    if (!(admin?.ok || admin?.valid)) return res.status(admin?.statusCode || 401).json({ success: false, msg: admin?.message || '관리자 권한 확인에 실패했습니다.' });
-    const layouts = await getMealMapLayoutSettingsV253();
-    return res.json({ success: true, layouts });
-  } catch (err) {
-    console.error('[mealmap layouts admin get]', err);
-    return res.status(500).json({ success: false, msg: '회식맵 레이아웃 설정을 불러오지 못했습니다.' });
-  }
-});
-
-app.put('/api/admin/mealmap/layouts', async (req, res) => {
-  try {
-    const admin = await validateAdminSession(req);
-    if (!(admin?.ok || admin?.valid)) return res.status(admin?.statusCode || 401).json({ success: false, msg: admin?.message || '관리자 권한 확인에 실패했습니다.' });
-    await ensureMealMapLayoutSettingsTableV253();
-    const layouts = req.body?.layouts || {};
-    const keys = Object.keys(MEALMAP_DEFAULT_LAYOUTS_V253);
-    for (const key of keys) {
-      const value = sanitizeMealMapLayoutValueV253(key, layouts[key]);
-      await pool.query(
-        `INSERT INTO mealmap_page_layouts (setting_key, setting_value)
-         VALUES (?, ?)
-         ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value), updated_at = CURRENT_TIMESTAMP`,
-        [key, value]
-      );
-    }
-    const saved = await getMealMapLayoutSettingsV253();
-    return res.json({ success: true, layouts: saved, msg: '회식맵 레이아웃 설정이 저장되었습니다.' });
-  } catch (err) {
-    console.error('[mealmap layouts admin put]', err);
-    return res.status(500).json({ success: false, msg: '회식맵 레이아웃 설정 저장에 실패했습니다.' });
-  }
-});
-//  END =====
-
-
-//  BEGIN =====
-function wgsMaskMealmapKeyV2510(value) {
-    const key = String(value || '').trim();
-    if (!key) return { exists: false, masked: '(empty)', length: 0, hex32: false };
-    if (key.length < 10) return { exists: true, masked: '(too short)', length: key.length, hex32: /^[0-9a-fA-F]{32}$/.test(key) };
-    return {
-        exists: true,
-        masked: `${key.slice(0, 4)}...${key.slice(-4)}`,
-        length: key.length,
-        hex32: /^[0-9a-fA-F]{32}$/.test(key),
-    };
-}
-
-app.get('/api/mealmap/kakao/key-check', (req, res) => {
-    const jsKey = mealmapKakaoMapJsKey();
-    const restKey = mealmapKakaoRestKey();
-    return res.json({
-        success: true,
-        note: '키 전체값은 보안상 출력하지 않습니다. JavaScript 지도 키와 REST 키는 서로 다른 값이어야 합니다.',
-        currentRequest: {
-            host: req.headers.host || '',
-            origin: req.headers.origin || '',
-            referer: req.headers.referer || '',
-        },
-        keys: {
-            javascriptKey: wgsMaskMealmapKeyV2510(jsKey),
-            restApiKey: wgsMaskMealmapKeyV2510(restKey),
-            same: Boolean(jsKey && restKey && jsKey === restKey),
-        },
-        kakaoDeveloperChecklist: [
-            '카카오 Developers > 내 애플리케이션 > 앱 키에서 JavaScript 키를 KAKAO_MAP_JS_KEY에 넣었는지 확인',
-            '카카오 Developers > 플랫폼 >Web 플랫폼에 http://localhost:5000 등록',
-            'Vite 개발 주소로 직접 볼 경우 http://localhost:5173 등록',
-            '배포 전 https://woogongsil.site 등록',
-            '카카오맵 API 사용 설정/활성화 상태 확인',
-        ],
-        localTestUrls: {
-            sdkIsolatedTest: 'http://localhost:5000/api/mealmap/kakao/js-test',
-            restApiTest: 'http://localhost:5000/api/mealmap/kakao/rest-test?query=서울시청',
-        },
-    });
-});
-
-app.get('/api/mealmap/kakao/rest-test', async (req, res) => {
-    const restKey = mealmapKakaoRestKey();
-    if (!restKey) {
-        return res.status(400).json({ success: false, message: 'KAKAO_REST_API_KEY가 backend/.env에 없습니다.' });
-    }
-
-    const query = String(req.query.query || '서울시청').trim().slice(0, 80) || '서울시청';
-    try {
-        const result = await mealmapHttpsJson(
-            'dapi.kakao.com',
-            `/v2/local/search/address.json?query=${encodeURIComponent(query)}`,
-            { Authorization: `KakaoAK ${restKey}` }
-        );
-        return res.status(result.statusCode >= 400 ? 502 : 200).json({
-            success: result.statusCode >= 200 && result.statusCode < 300,
-            upstreamStatusCode: result.statusCode,
-            query,
-            documentsCount: Array.isArray(result.data?.documents) ? result.data.documents.length : 0,
-            sample: Array.isArray(result.data?.documents) && result.data.documents[0]
-                ? {
-                    address_name: result.data.documents[0].address_name,
-                    x: result.data.documents[0].x,
-                    y: result.data.documents[0].y,
-                }
-                : null,
-            rawError: result.statusCode >= 400 ? result.data : undefined,
-        });
-    } catch (err) {
-        return res.status(500).json({ success: false, message: err?.message || String(err) });
-    }
-});
-
-app.get('/api/mealmap/kakao/js-test', (req, res) => {
-    const jsKey = mealmapKakaoMapJsKey();
-    const masked = wgsMaskMealmapKeyV2510(jsKey);
-    const sdkUrl = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${encodeURIComponent(jsKey)}&libraries=services&autoload=false`;
-    res.type('html').send(`<!doctype html>
-<html lang="ko">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content=" width=device-width, initial-scale=1" />
-  <title>우공실 카카오 지도 SDK 점검</title>
-  <style>body { font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 0; padding: 24px; background: #eef6ff; color: #111827; }
-    .wrap { max-width: 980px; margin: 0 auto; }
-    .card { background: #fff; border: 1px solid #dbe5f2; border-radius: 18px; padding: 18px; box-shadow: 0 16px 45px rgba(15,23,42,.10); margin-bottom: 16px; }
-    # map { width: 100%; height: 520px; border-radius: 16px; border: 1px solid #dbe5f2; overflow: hidden; background: #dbeafe; }
-    code { display: block; white-space: pre-wrap; background: #0f172a; color: #e5edf7; padding: 12px; border-radius: 12px; line-height: 1.5; }
-    .ok { color: #059669; font-weight: 900; }
-    .bad { color: #e11d48; font-weight: 900; }
-  </style>
-</head>
-<body>
-  <div class="wrap">
-    <div class="card">
-      <h1>우공실 카카오 지도 SDK 점검</h1>
-      <p>현재 접속 Origin: <strong>${String(req.protocol || 'http')}://${String(req.headers.host || '')}</strong></p>
-      <p>JavaScript 키: <strong>${masked.masked}</strong> / length=${masked.length} / hex32=${masked.hex32}</p>
-      <p id="status">SDK 로딩 대기 중...</p>
-      <code id="log"></code>
-    </div>
-    <div id="map"></div>
-  </div>
-  <script>const logEl = document.getElementById('log');
-    const statusEl = document.getElementById('status');
-    function log(message) { logEl.textContent += String(message) + '\\n'; console.log('[kakao-js-test]', message); }
-    window.addEventListener('error', function(event) { log('window error: ' + (event.message || 'unknown')); });
-    log('sdk url preview: https://dapi.kakao.com/v2/maps/sdk.js?appkey=${String(jsKey).slice(0,4)}...${String(jsKey).slice(-4)}&libraries=services&autoload=false');
-    log('origin: ' + window.location.origin);
-  </script>
-  ${jsKey ? `<script src="${sdkUrl}" onload="log('SDK script onload fired'); if (window.kakao && window.kakao.maps && window.kakao.maps.load) { kakao.maps.load(function(){ try { const map = new kakao.maps.Map(document.getElementById('map'), { center: new kakao.maps.LatLng(37.5665, 126.9780), level: 5 }); new kakao.maps.Marker({ map: map, position: new kakao.maps.LatLng(37.5665, 126.9780) }); statusEl.innerHTML = '<span class=\\'ok\\'>성공: 카카오 지도 SDK가 정상 로드되었습니다.</span>'; log('kakao map created'); } catch (err) { statusEl.innerHTML = '<span class=\\'bad\\'>실패: 지도 생성 중 오류</span>'; log('map create error: ' + (err && err.message ? err.message : err)); } }); } else { statusEl.innerHTML = '<span class=\\'bad\\'>실패: SDK는 불러왔지만 window.kakao.maps.load가 없습니다.</span>'; log('window.kakao.maps.load is missing. Check Web platform domain / Kakao Maps activation / JavaScript key.'); }" onerror="statusEl.innerHTML = '<span class=\\'bad\\'>실패: SDK 스크립트 네트워크 로드 실패</span>'; log('SDK script network error');"></script>` : `<script>statusEl.innerHTML = '<span class="bad">실패: KAKAO_MAP_JS_KEY가 없습니다.</span>'; log('KAKAO_MAP_JS_KEY missing');</script>`}
-</body>
-</html>`);
-});
-//  END =====
 }
 
 module.exports = registerSiteManagementRoutes;
