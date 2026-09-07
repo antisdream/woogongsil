@@ -1,5 +1,6 @@
 // 최고관리자가 재인증한 경우에만 단일 회원의 개인정보 원문을 잠시 표시합니다.
 import React from 'react';
+import AdminModalBackdrop from './AdminModalBackdrop.jsx';
 
 export default function AdminPrivacyRevealModal({
     privacyModal,
@@ -13,12 +14,12 @@ export default function AdminPrivacyRevealModal({
     const revealed = privacyModal.revealed;
 
     return (
-      <div className="admin-mail-backdrop" role="presentation" onClick={closePrivacyRevealModal}>
+      <AdminModalBackdrop onClose={closePrivacyRevealModal} canClose={!privacyModal.loading} labelledBy="admin-privacy-title">
         <form className="admin-mail-modal admin-privacy-modal" onSubmit={handlePrivacyReveal} onClick={(event) => event.stopPropagation()}>
           <div className="admin-mail-modal-head">
             <div>
               <p>최고관리자 제한 기능</p>
-              <h2>회원 개인정보 원문 열람</h2>
+              <h2 id="admin-privacy-title">회원 개인정보 원문 열람</h2>
             </div>
             <button type="button" className="admin-mail-close" onClick={closePrivacyRevealModal} disabled={privacyModal.loading} aria-label="개인정보 열람 팝업 닫기">닫기</button>
           </div>
@@ -54,8 +55,9 @@ export default function AdminPrivacyRevealModal({
                 />
               </label>
               <label>
-                <span>열람 사유 (5자 이상)</span>
+                <span id="admin-privacy-reason-label">열람 사유 (5자 이상)</span>
                 <textarea
+                  aria-labelledby="admin-privacy-reason-label"
                   value={privacyModal.reason}
                   onChange={(event) => setPrivacyModal((prev) => ({ ...prev, reason: event.target.value, error: '' }))}
                   maxLength={500}
@@ -76,6 +78,6 @@ export default function AdminPrivacyRevealModal({
             ) : null}
           </div>
         </form>
-      </div>
+      </AdminModalBackdrop>
     );
 }

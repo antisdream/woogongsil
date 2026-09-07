@@ -49,8 +49,8 @@ export default function AdminQuestionsTab({
                 </button>
             </div>
 
-            {questionError && <div className="admin-alert admin-alert-error">{questionError}</div>}
-            {questionSuccess && <div className="admin-alert admin-alert-success">{questionSuccess}</div>}
+            {questionError && <div className="admin-alert admin-alert-error" role="alert">{questionError}</div>}
+            {questionSuccess && <div className="admin-alert admin-alert-success" role="status">{questionSuccess}</div>}
 
             <div className="admin-question-summary-grid">
                 <article>
@@ -102,7 +102,7 @@ export default function AdminQuestionsTab({
                         <span className="admin-small-status">{loadingQuestions ? '불러오는 중...' : `총 ${questionTotal}개`}</span>
                     </div>
 
-                    <div className="admin-table-scroll">
+                    <div className="admin-table-scroll" tabIndex={0} role="region" aria-label="문제 목록, 좌우 스크롤 가능" aria-busy={loadingQuestions}>
                         <table className="admin-user-table admin-question-table">
                             <thead>
                                 <tr>
@@ -117,7 +117,7 @@ export default function AdminQuestionsTab({
                             <tbody>
                                 {questionRows.length === 0 ? (
                                     <tr>
-                                        <td colSpan="6" className="admin-empty-cell">조회된 문제가 없습니다.</td>
+                                        <td colSpan="6" className="admin-empty-cell">{loadingQuestions ? '문제 목록을 불러오는 중입니다.' : questionError ? '문제 목록을 확인하지 못했습니다.' : '검색 결과가 없습니다. 조건을 바꾸거나 초기화해 주세요.'}</td>
                                     </tr>
                                 ) : (
                                     questionRows.map((item) => (
@@ -157,7 +157,7 @@ export default function AdminQuestionsTab({
                 <aside className="admin-question-detail-card">
                     <h3>선택 문제 수정</h3>
                     <p>
-                        관리자 전용 API로 선택한 문제의 상세 정보를 수정합니다. 저장 전에는 DB 값이 변경되지 않습니다.
+                        목록에서 문제를 선택해 내용과 해설을 검토하세요. 수정 내용은 저장 버튼을 누른 뒤 반영됩니다.
                     </p>
                     {loadingQuestionDetail ? <div className="admin-empty-box">상세 정보를 불러오는 중입니다.</div> : (
                         <AdminQuestionDetailForm

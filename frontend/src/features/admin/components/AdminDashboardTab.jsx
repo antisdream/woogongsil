@@ -1,5 +1,6 @@
 // 관리자 기능 모듈입니다: AdminDashboardTab
 import React from 'react';
+import { FiArrowUpRight } from 'react-icons/fi';
 import { normalizeApprovalStatus } from '../adminUtils.js';
 
 export default function AdminDashboardTab({
@@ -13,20 +14,24 @@ export default function AdminDashboardTab({
     questionMeta,
     visitorSummary,
     visitorError,
+    loadingUsers,
+    adminError,
 }) {
     return (
     <section className="admin-panel admin-dashboard-panel">
       <div className="admin-panel-head">
         <div>
-          <h2>관리 현황 요약</h2>
-          <p>현재 사이트 운영 상태와 주요 관리 영역을 빠르게 확인합니다.</p>
+          <h2>운영 업무 바로가기</h2>
+          <p>현황을 확인하고 필요한 관리 화면으로 이동하세요.</p>
         </div>
       </div>
 
+      {adminError && <div className="admin-alert admin-alert-error" role="alert">{adminError}</div>}
       <div className="admin-dashboard-grid">
         <button type="button" className="admin-dashboard-card" onClick={() => openAdminTab('users')}>
+          <FiArrowUpRight className="admin-dashboard-arrow" aria-hidden="true" />
           <strong>사용자·접속 관리</strong>
-          <p>회원 {summary.totalUsers || users.length}명 · 현재 접속 {onlineUsers.length}명</p>
+          <p>{loadingUsers ? '회원 현황을 불러오는 중입니다.' : adminError ? '회원 현황 확인이 필요합니다.' : `회원 ${summary.totalUsers || users.length}명 · 현재 접속 ${onlineUsers.length}명`}</p>
         </button>
         <button type="button" className="admin-dashboard-card" onClick={() => openAdminTab('visitors')}>
           <strong>방문 통계</strong>
@@ -52,7 +57,7 @@ export default function AdminDashboardTab({
         </button>
         <button type="button" className="admin-dashboard-card" onClick={() => openAdminTab('display')}>
           <strong>화면 설정 관리</strong>
-          <p>레이아웃, 문구, 색상, 이미지 관리 영역 준비</p>
+          <p>사이트 문구, 배너와 화면 설정을 관리합니다.</p>
         </button>
       </div>
     </section>

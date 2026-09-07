@@ -57,8 +57,9 @@ export default function AdminApprovalsTab({
           </button>
         </div>
       </div>
-      {approvalError && <div className="admin-alert admin-alert-error">{approvalError}</div>}
-      <div className="admin-table-scroll admin-approval-scroll">
+      {approvalError && <div className="admin-alert admin-alert-error" role="alert">{approvalError}</div>}
+      <p className="admin-table-help">처리 전 요청 내용과 상세를 확인하세요. 표를 좌우로 스크롤하면 나머지 항목을 볼 수 있습니다.</p>
+      <div className="admin-table-scroll admin-approval-scroll" tabIndex={0} role="region" aria-label="결재 목록, 좌우 스크롤 가능" aria-busy={loadingApprovals}>
         <table className="admin-user-table admin-approval-table">
           <colgroup>
             <col className="approval-col-check" />
@@ -108,7 +109,7 @@ export default function AdminApprovalsTab({
             {pagedApprovals.length === 0 ? (
               <tr>
                 <td colSpan={approvalMeta.isPrimaryAdmin ? 11 : 10} className="admin-empty-cell">
-                  결재 내역이 없습니다.
+                  {loadingApprovals ? '결재 내역을 불러오는 중입니다.' : approvalError ? '결재 내역을 확인하지 못했습니다. 새로고침해 주세요.' : '결재 내역이 없습니다.'}
                 </td>
               </tr>
             ) : (
@@ -119,12 +120,15 @@ export default function AdminApprovalsTab({
                 return (
                   <tr key={approval.id} className={selected ? 'admin-approval-row-selected' : ''}>
                     <td className="admin-approval-check-col">
+                      <label className="admin-checkbox-hit">
                       <input
                         type="checkbox" checked={selected}
+                        aria-label={`결재 ${approval.id} 선택`}
                         disabled={!deletable}
                         title={deletable ? '정리할 결재 내역 선택' : '대기 상태는 승인/반려 후 정리 가능'}
                         onChange={() => toggleApprovalSelection(approval)}
                       />
+                      </label>
                     </td>
                     <td className="admin-approval-no-col">{(safeApprovalPage - 1) * APPROVAL_PAGE_SIZE + index + 1}</td>
                     <td className="approval-status-cell">

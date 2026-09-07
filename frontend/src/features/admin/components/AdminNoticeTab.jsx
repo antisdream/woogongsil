@@ -173,7 +173,7 @@ export default function AdminNoticeTab({
                     <span>총 {operationLogTotal}건 · 1페이지당 50개</span>
                 </div>
 
-                <div className="admin-table-scroll admin-operation-log-table-wrap">
+                <div className="admin-table-scroll admin-operation-log-table-wrap" tabIndex={0} role="region" aria-label="운영 적용 내역, 좌우 스크롤 가능">
                     <table className="admin-operation-log-table">
                         <thead>
                             <tr>

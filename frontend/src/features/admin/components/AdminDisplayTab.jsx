@@ -96,7 +96,7 @@ function ScreenSettingValueControl({ screenForm, handleScreenFormChange }) {
     }
 
     return (
-        <textarea value={screenForm.setting_value} onChange={(event) => handleScreenFormChange('setting_value', event.target.value)} placeholder={screenForm.setting_type === 'image'? '예: /images/banner.png 또는 https://...' : '관리할 문구, 크기값, CSS값 등을 입력'} rows={5} />
+        <textarea aria-label="설정 값" value={screenForm.setting_value} onChange={(event) => handleScreenFormChange('setting_value', event.target.value)} placeholder={screenForm.setting_type === 'image'? '예: /images/banner.png 또는 https://...' : '관리할 문구, 크기값, CSS값 등을 입력'} rows={5} />
     );
 }
 
@@ -156,8 +156,8 @@ export default function AdminDisplayTab({
         </article>
       </div>
 
-      {screenError && <div className="admin-alert admin-alert-error">{screenError}</div>}
-      {screenSuccess && <div className="admin-alert admin-alert-success">{screenSuccess}</div>}
+      {screenError && <div className="admin-alert admin-alert-error" role="alert">{screenError}</div>}
+      {screenSuccess && <div className="admin-alert admin-alert-success" role="status">{screenSuccess}</div>}
 
       <div className="admin-screen-manager-layout">
         <form className="admin-screen-form-card" onSubmit={handleScreenSettingSubmit}>
@@ -216,7 +216,7 @@ export default function AdminDisplayTab({
 
           <label className="admin-screen-full-label">
             관리자 메모
-            <textarea value={screenForm.description} onChange={(event) => handleScreenFormChange('description', event.target.value)} placeholder="이 설정을 어디에 쓰는지 적어두면 AWS 배포 후 유지보수할 때 편합니다." rows={3} />
+            <textarea aria-label="관리자 메모" value={screenForm.description} onChange={(event) => handleScreenFormChange('description', event.target.value)} placeholder="설정을 사용하는 위치와 변경 목적을 적어주세요." rows={3} />
           </label>
 
           <div className="admin-screen-form-bottom">
@@ -243,7 +243,7 @@ export default function AdminDisplayTab({
           </div>
           <div className="admin-screen-help-box">
             <strong>현재 적용 방식</strong>
-            <p>화면 설정 저장소와 관리자 화면을 추가했습니다. 화면 반영은 연결용 API(/api/screen-settings)를 통해 안전하게 처리됩니다.</p>
+            <p>저장한 설정은 연결된 화면에 반영됩니다. 활성 상태와 적용 페이지를 확인한 뒤 저장하세요.</p>
           </div>
         </aside>
       </div>
@@ -271,7 +271,7 @@ export default function AdminDisplayTab({
           <span className="admin-small-status">{loadingScreenSettings ? '불러오는 중...' : `총 ${screenSettings.length}개 표시`}</span>
         </div>
 
-        <div className="admin-table-scroll">
+        <div className="admin-table-scroll" tabIndex={0} role="region" aria-label="화면 설정 목록, 좌우 스크롤 가능" aria-busy={loadingScreenSettings}>
           <table className="admin-user-table admin-screen-table">
             <thead>
               <tr>
@@ -287,7 +287,7 @@ export default function AdminDisplayTab({
             </thead>
             <tbody>
               {screenSettings.length === 0 ? (
-                <tr><td colSpan="8" className="admin-empty-cell">등록된 화면 설정이 없습니다.</td></tr>
+                <tr><td colSpan="8" className="admin-empty-cell">{loadingScreenSettings ? '화면 설정을 불러오는 중입니다.' : screenError ? '화면 설정을 확인하지 못했습니다. 새로고침해 주세요.' : '선택한 조건에 해당하는 화면 설정이 없습니다.'}</td></tr>
               ) : screenSettings.map((setting) => {
                 const pageLabel = SCREEN_SETTING_PAGE_OPTIONS.find((option) => option.value === setting.page_key)?.label || setting.page_key;
                 const typeLabel = SCREEN_SETTING_TYPE_OPTIONS.find((option) => option.value === setting.setting_type)?.label || setting.setting_type;

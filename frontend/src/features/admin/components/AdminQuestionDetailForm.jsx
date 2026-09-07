@@ -60,7 +60,7 @@ function AdminQuestionDetailForm({
 
           <label className="admin-question-wide-label">
             <span>문제 지문</span>
-            <textarea value={questionForm.question} onChange={(event) => handleQuestionFormChange('question', event.target.value)} />
+            <textarea aria-label="문제 지문" value={questionForm.question} onChange={(event) => handleQuestionFormChange('question', event.target.value)} />
           </label>
 
           <div className="admin-question-image-grid">
@@ -80,7 +80,7 @@ function AdminQuestionDetailForm({
             {[1, 2, 3, 4].map((num) => (
               <label key={num}>
                 <span>보기 {num}</span>
-                <textarea value={questionForm[`opt${num}`]} onChange={(event) => handleQuestionFormChange(`opt${num}`, event.target.value)} />
+                <textarea aria-label={`보기 ${num}`} value={questionForm[`opt${num}`]} onChange={(event) => handleQuestionFormChange(`opt${num}`, event.target.value)} />
               </label>
             ))}
           </div>
@@ -104,7 +104,7 @@ function AdminQuestionDetailForm({
 
           <label className="admin-question-wide-label">
             <span>해설 텍스트</span>
-            <textarea value={questionForm.explanation_text} onChange={(event) => handleQuestionFormChange('explanation_text', event.target.value)} />
+            <textarea aria-label="해설 텍스트" value={questionForm.explanation_text} onChange={(event) => handleQuestionFormChange('explanation_text', event.target.value)} />
           </label>
 
           <p className="admin-question-help">
@@ -178,25 +178,25 @@ function AdminQuestionDetailForm({
 
         <label className="admin-question-wide-label">
           <span>실기 문제 지문</span>
-          <textarea value={questionForm.question_text} onChange={(event) => handleQuestionFormChange('question_text', event.target.value)} />
+          <textarea aria-label="실기 문제 지문" value={questionForm.question_text} onChange={(event) => handleQuestionFormChange('question_text', event.target.value)} />
         </label>
 
         <div className="admin-question-options-grid">
           <label>
             <span>정답 원문(answer_raw)</span>
-            <textarea value={questionForm.answer_raw} onChange={(event) => handleQuestionFormChange('answer_raw', event.target.value)} />
+            <textarea aria-label="정답 원문(answer_raw)" value={questionForm.answer_raw} onChange={(event) => handleQuestionFormChange('answer_raw', event.target.value)} />
           </label>
           <label>
             <span>정규화 정답(answer_normalized)</span>
-            <textarea value={questionForm.answer_normalized} onChange={(event) => handleQuestionFormChange('answer_normalized', event.target.value)} />
+            <textarea aria-label="정규화 정답(answer_normalized)" value={questionForm.answer_normalized} onChange={(event) => handleQuestionFormChange('answer_normalized', event.target.value)} />
           </label>
           <label>
             <span>정답 별칭 JSON(answer_aliases_json)</span>
-            <textarea value={questionForm.answer_aliases_json} onChange={(event) => handleQuestionFormChange('answer_aliases_json', event.target.value)} placeholder='예: ["정답", "동의어"]' />
+            <textarea aria-label="정답 별칭 JSON(answer_aliases_json)" value={questionForm.answer_aliases_json} onChange={(event) => handleQuestionFormChange('answer_aliases_json', event.target.value)} placeholder='예: ["정답", "동의어"]' />
           </label>
           <label>
             <span>부분점수 JSON(answer_slots_json)</span>
-            <textarea value={questionForm.answer_slots_json} onChange={(event) => handleQuestionFormChange('answer_slots_json', event.target.value)} placeholder='예: [{"answers":["A"],"score":2}]' />
+            <textarea aria-label="부분점수 JSON(answer_slots_json)" value={questionForm.answer_slots_json} onChange={(event) => handleQuestionFormChange('answer_slots_json', event.target.value)} placeholder='예: [{"answers":["A"],"score":2}]' />
           </label>
         </div>
 
@@ -219,7 +219,7 @@ function AdminQuestionDetailForm({
 
         <label className="admin-question-wide-label">
           <span>실기 해설 텍스트</span>
-          <textarea value={questionForm.explanation_text} onChange={(event) => handleQuestionFormChange('explanation_text', event.target.value)} placeholder="실기 DB에 explanation_text 컬럼이 없으면 백엔드가 없는 컬럼만 자동 추가합니다." />
+          <textarea aria-label="실기 해설 텍스트" value={questionForm.explanation_text} onChange={(event) => handleQuestionFormChange('explanation_text', event.target.value)} placeholder="실기 DB에 explanation_text 컬럼이 없으면 백엔드가 없는 컬럼만 자동 추가합니다." />
         </label>
 
         <p className="admin-question-help">

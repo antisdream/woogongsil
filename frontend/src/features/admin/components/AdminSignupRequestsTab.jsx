@@ -50,8 +50,8 @@ export default function AdminSignupRequestsTab({
         </div>
       </div>
 
-      {signupRequestError && <div className="admin-alert admin-alert-error">{signupRequestError}</div>}
-      {signupRequestSuccess && <div className="admin-alert admin-alert-success">{signupRequestSuccess}</div>}
+      {signupRequestError && <div className="admin-alert admin-alert-error" role="alert">{signupRequestError}</div>}
+      {signupRequestSuccess && <div className="admin-alert admin-alert-success" role="status">{signupRequestSuccess}</div>}
 
       <div className="admin-summary-grid admin-signup-request-summary">
         <article>
@@ -90,7 +90,8 @@ export default function AdminSignupRequestsTab({
         </form>
       </div>
 
-      <div className="admin-table-scroll admin-signup-request-scroll">
+      <p className="admin-table-help">표를 좌우로 스크롤해 필수 동의 증적과 처리 버튼을 확인하세요.</p>
+      <div className="admin-table-scroll admin-signup-request-scroll" tabIndex={0} role="region" aria-label="회원가입 요청 목록, 좌우 스크롤 가능" aria-busy={signupRequestLoading}>
         <table className="admin-user-table admin-signup-request-table">
           <thead>
             <tr>
@@ -110,7 +111,7 @@ export default function AdminSignupRequestsTab({
           <tbody>
             {signupRequests.length === 0 ? (
               <tr>
-                <td colSpan="11" className="admin-empty-cell">조회된 회원가입 요청이 없습니다.</td>
+                <td colSpan="11" className="admin-empty-cell">{signupRequestLoading ? '가입 요청을 불러오는 중입니다.' : signupRequestError ? '가입 요청을 확인하지 못했습니다. 새로고침해 주세요.' : '선택한 조건에 해당하는 가입 요청이 없습니다.'}</td>
               </tr>
             ) : (
               signupRequests.map((request, index) => {

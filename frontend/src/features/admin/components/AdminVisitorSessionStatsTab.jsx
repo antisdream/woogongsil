@@ -233,7 +233,7 @@ export default function AdminVisitorSessionStatsTab({
         </fieldset>
 
         <label className="admin-visitor-member-select">
-          회원 선택 <small>Ctrl 또는 Cmd를 누르면 여러 명을 선택할 수 있습니다.</small>
+          회원 선택 <small>여러 회원을 선택할 수 있습니다. PC에서는 Ctrl 또는 Cmd를 함께 눌러 선택하세요.</small>
           <select
             multiple
             size={Math.min(6, Math.max(3, members.length || 3))}

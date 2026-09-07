@@ -75,7 +75,7 @@ export default function AdminUsersTab({
       </div>
     </div>
 
-    {onlineError && <div className="admin-alert admin-alert-error">{onlineError}</div>}
+    {onlineError && <div className="admin-alert admin-alert-error" role="alert">{onlineError}</div>}
 
     <div className="admin-online-grid">
       <article className="admin-online-count-card">
@@ -86,7 +86,7 @@ export default function AdminUsersTab({
 
       <div className="admin-online-list-card">
         {onlineUsers.length === 0 ? (
-          <div className="admin-empty-box">현재 서버 메모리에 표시할 접속자가 없습니다.</div>
+          <div className="admin-empty-box" role="status">{loadingOnline ? '접속 현황을 불러오는 중입니다.' : onlineError ? '접속 현황을 확인하지 못했습니다. 새로고침해 주세요.' : '현재 접속 중인 사용자가 없습니다.'}</div>
         ) : (
           <div className="admin-online-list">
             {onlineUsers.map((onlineUser) => (
@@ -134,7 +134,7 @@ export default function AdminUsersTab({
       )}
     </div>
 
-    {adminError && <div className="admin-alert admin-alert-error">{adminError}</div>}
+    {adminError && <div className="admin-alert admin-alert-error" role="alert">{adminError}</div>}
 
     <div className="admin-summary-grid">
       <article>
@@ -171,7 +171,8 @@ export default function AdminUsersTab({
             </div>
           </div>
 
-          <div className="admin-table-scroll admin-user-table-scroll">
+          <p className="admin-table-help">표를 좌우로 스크롤해 회원별 관리 기능을 확인하세요. 개인정보 열람·정지·삭제는 각 확인 절차 후 처리됩니다.</p>
+          <div className="admin-table-scroll admin-user-table-scroll" tabIndex={0} role="region" aria-label="회원 목록, 좌우 스크롤 가능" aria-busy={loadingUsers}>
             <table className="admin-user-table">
               <thead>
                 <tr>
@@ -196,7 +197,7 @@ export default function AdminUsersTab({
                 {displayedUsers.length === 0 ? (
                   <tr>
                     <td colSpan="15" className="admin-empty-cell">
-                      조회된 회원이 없습니다.
+                      {loadingUsers ? '회원 목록을 불러오는 중입니다.' : adminError ? '회원 목록을 확인하지 못했습니다. 새로고침해 주세요.' : appliedKeyword ? '검색 결과가 없습니다. 검색어를 바꾸거나 전체보기를 선택해 주세요.' : '조회된 회원이 없습니다.'}
                     </td>
                   </tr>
                 ) : (
@@ -292,7 +293,7 @@ export default function AdminUsersTab({
               <button type="button" className="admin-toggle-green" onClick={handleUserPanelToggle}>사용자 관리</button>
             </div>
           </div>
-          <div className="admin-table-scroll admin-log-table-scroll">
+          <div className="admin-table-scroll admin-log-table-scroll" tabIndex={0} role="region" aria-label="최근 접속 기록, 좌우 스크롤 가능" aria-busy={loadingUsers}>
             <table className="admin-user-table admin-recent-log-table">
               <thead>
                 <tr>
@@ -305,7 +306,7 @@ export default function AdminUsersTab({
               <tbody>
                 {displayedRecentLogs.length === 0 ? (
                   <tr>
-                    <td colSpan="4" className="admin-empty-cell">최근 접속 기록이 없습니다.</td>
+                    <td colSpan="4" className="admin-empty-cell">{loadingUsers ? '접속 기록을 불러오는 중입니다.' : adminError ? '접속 기록을 확인하지 못했습니다.' : '최근 접속 기록이 없습니다.'}</td>
                   </tr>
                 ) : (
                   displayedRecentLogs.map((log, index) => (

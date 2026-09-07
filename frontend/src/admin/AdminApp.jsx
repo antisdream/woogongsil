@@ -3,6 +3,7 @@ import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-
 import Admin from '../pages/Admin.jsx';
 import AdminUserRanking from '../pages/AdminUserRanking.jsx';
 import AdminLogin from './AdminLogin.jsx';
+import { FiBookOpen, FiMoon, FiSun } from 'react-icons/fi';
 import { clearAdminSession, fetchAdminSession, getCurrentAdmin, logoutAdmin } from './adminSession.js';
 
 const ADMIN_THEME_STORAGE_KEY = 'wgsAdminThemeMode';
@@ -24,7 +25,7 @@ function AdminThemeToggle({ themeMode, onChange }) {
         onClick={() => onChange('light')}
         aria-pressed={themeMode === 'light'}
       >
-        <span aria-hidden="true">☀</span>
+        <FiSun aria-hidden="true" />
         라이트
       </button>
       <button
@@ -33,7 +34,7 @@ function AdminThemeToggle({ themeMode, onChange }) {
         onClick={() => onChange('dark')}
         aria-pressed={themeMode === 'dark'}
       >
-        <span aria-hidden="true">☾</span>
+        <FiMoon aria-hidden="true" />
         다크
       </button>
     </div>
@@ -123,7 +124,7 @@ export default function AdminApp() {
         <div className="wgs-admin-theme-corner">
           <AdminThemeToggle themeMode={themeMode} onChange={setThemeMode} />
         </div>
-        <p>관리자 세션을 확인하고 있습니다.</p>
+        <p role="status">관리자 세션을 확인하고 있습니다.</p>
       </div>
     );
   }
@@ -153,8 +154,10 @@ export default function AdminApp() {
 
   return (
     <div className="wgs-admin-root">
+      <a className="admin-skip-link" href="#admin-main-content">관리 내용으로 건너뛰기</a>
       <div className="wgs-admin-session-bar">
-        <span className="wgs-admin-session-identity">{admin?.name || admin?.id} 관리자 세션</span>
+        <a href="/" className="admin-top-brand"><FiBookOpen aria-hidden="true" /><span>우공실 <small>운영 관리</small></span></a>
+        <span className="wgs-admin-session-identity">{admin?.name || admin?.id} 관리자</span>
         <div className="wgs-admin-session-actions">
           <AdminThemeToggle themeMode={themeMode} onChange={setThemeMode} />
           <button className="wgs-admin-logout-button" type="button" onClick={handleLogout}>관리자 로그아웃</button>

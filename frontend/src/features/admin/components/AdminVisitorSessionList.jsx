@@ -82,7 +82,7 @@ export default function AdminVisitorSessionList({
       )}
 
       {!error && sessions.length > 0 && (
-        <div className="admin-visitor-session-table-wrap">
+        <div className="admin-visitor-session-table-wrap" tabIndex={0} role="region" aria-label="방문 세션 목록, 좌우 스크롤 가능">
           <table className="admin-visitor-session-table">
             <caption className="admin-visitor-sr-only">선택 기간 방문 세션 상세 목록</caption>
             <thead>

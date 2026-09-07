@@ -15,6 +15,7 @@ import './styles/admin/admin-user-overrides.css';
 import './styles/admin/admin-approval-detail.css';
 import './styles/admin/admin-theme-fixes.css';
 import './styles/admin/admin-login.css';
+import './styles/admin/admin-redesign.css';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>

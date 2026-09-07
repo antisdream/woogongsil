@@ -667,8 +667,8 @@ return () => {
     () => [
       {
         label: '전체 회원',
-        value: `${summary.totalUsers || users.length}명`,
-        desc: '등록된 회원 기준',
+        value: loadingUsers || adminError ? '—' : `${summary.totalUsers || users.length}명`,
+        desc: adminError ? '회원 현황 확인 필요' : loadingUsers ? '회원 현황 조회 중' : '등록된 회원 기준',
       },
       {
         label: '현재 접속',
@@ -696,7 +696,7 @@ return () => {
         desc: '필기·실기 문제 전체',
       },
     ],
-    [adminApprovals, noticeHistory.length, onlineUsers.length, questionMeta.summary, summary.totalUsers, users.length, visitorStats.data, visitorStats.error]
+    [adminApprovals, noticeHistory.length, onlineUsers.length, questionMeta.summary, summary.totalUsers, users.length, visitorStats.data, visitorStats.error, loadingUsers, adminError]
   );
 
 
@@ -726,7 +726,7 @@ return () => {
   }
 
   return (
-    <div className="admin-page admin-page-tabbed">
+    <div className="admin-page admin-page-tabbed admin-workspace">
       {/* 관리자 페이지 상단 요약 영역 */}
       <AdminPageHeader
         maintenanceForm={maintenanceForm}
@@ -736,6 +736,7 @@ return () => {
         isPrimaryAdminViewer={isPrimaryAdminViewer}
       />
 
+      <main id="admin-main-content" className="admin-workspace-content" tabIndex={-1}>
       {/* 대시보드 탭: 운영자가 자주 확인하는 핵심 상태를 한 화면에 요약합니다. */}
       {activeAdminTab === 'dashboard' && (
         <AdminDashboardTab
@@ -749,6 +750,8 @@ return () => {
           questionMeta={questionMeta}
           visitorSummary={visitorStats.data?.summary}
           visitorError={visitorStats.error}
+          loadingUsers={loadingUsers}
+          adminError={adminError}
         />
       )}
 
@@ -961,6 +964,7 @@ return () => {
 
 
 
+      </main>
     </div>
   );
 }
