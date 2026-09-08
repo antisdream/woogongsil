@@ -9,6 +9,8 @@
 
 이 문서는 2026-09-08 기준의 제공 기능과 운영·Android 앱 검증 결과를 정리합니다. 날짜별 변경과 당시 검증 범위는 [변경 이력](./PATCH_NOTES.md)에서 확인할 수 있습니다.
 
+현재 웹 릴리즈는 [v2.4.0](https://github.com/antisdream/woogongsil/releases/tag/v2.4.0)입니다. GitHub Actions를 통한 최초 Lightsail 배포와 운영 버전 대조를 완료했고, 같은 웹 파일을 포함한 Android 2.4.0 debug APK를 Galaxy Z Flip4에 업데이트했습니다. 다음 배포는 [릴리즈 배포 안내](./docs/RELEASE_DEPLOYMENT.md)의 순서를 따릅니다.
+
 ## 학습과 주요 화면
 
 | 기능 | 경로 | 할 수 있는 일 |
