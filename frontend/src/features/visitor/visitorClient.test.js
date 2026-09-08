@@ -3,7 +3,7 @@ import test from 'node:test';
 import axios from 'axios';
 
 import { getAdminClientId } from '../../admin/adminSession.js';
-import { getOrCreateWgsClientId, normalizeVisitReceipt, touchVisitorSession } from './visitorClient.js';
+import { fetchVisitorSummary, getOrCreateWgsClientId, normalizeVisitorSummary, normalizeVisitReceipt, touchVisitorSession } from './visitorClient.js';
 
 test('a collection acknowledgement is accepted without public counts or session data', () => {
   assert.deepEqual(normalizeVisitReceipt({
@@ -19,6 +19,50 @@ test('failed or incomplete collection acknowledgements are rejected', () => {
   for (const payload of [null, {}, { success: false }, { todayCount: 1, totalCount: 2 },
     { success: true, counted: true }, { success: true, counted: 'true', ignored: false }]) {
     assert.equal(normalizeVisitReceipt(payload), null);
+  }
+});
+
+test('summary accepts real zeroes, strips private fields and rejects missing or inconsistent counts', () => {
+  assert.deepEqual(normalizeVisitorSummary({
+    success: true, todayCount: 0, totalCount: 1000, users: [{ id: 'private' }],
+  }), { todayCount: 0, totalCount: 1000 });
+  for (const counts of [{}, { todayCount: -1, totalCount: 4 }, { todayCount: 5, totalCount: 4 },
+    { todayCount: '2', totalCount: 4 }, { todayCount: 2.5, totalCount: 4 },
+    { todayCount: 2, totalCount: Number.MAX_SAFE_INTEGER + 1 }]) {
+    assert.equal(normalizeVisitorSummary({ success: true, ...counts }), null);
+  }
+});
+
+test('summary reads coalesce, have no client identifier and recover immediately after a network failure', async () => {
+  const previousAdapter = axios.defaults.adapter;
+  const requests = [];
+  let fail = false;
+  axios.defaults.adapter = async (config) => {
+    requests.push(config);
+    if (fail) throw new Error('offline');
+    return { data: { success: true, todayCount: 2, totalCount: 1000 }, status: 200,
+      statusText: 'OK', headers: {}, config };
+  };
+  try {
+    const first = fetchVisitorSummary({ now: 2_000_000 });
+    assert.equal(fetchVisitorSummary({ now: 2_000_000 }), first);
+    assert.deepEqual(await first, { todayCount: 2, totalCount: 1000 });
+    await fetchVisitorSummary({ now: 2_014_999 });
+    assert.equal(requests.length, 1);
+    assert.equal(requests[0].method, 'get');
+    assert.equal(requests[0].url, '/api/visitors/summary');
+    assert.equal(requests[0].headers.has('X-WGS-Client-Id'), false);
+    fail = true;
+    assert.equal(await fetchVisitorSummary({ now: 2_015_000 }), null);
+    fail = false;
+    assert.deepEqual(await fetchVisitorSummary({ now: 2_015_001 }), { todayCount: 2, totalCount: 1000 });
+    assert.equal(requests.length, 3);
+    const midnight = Date.parse('2026-09-08T15:00:00Z');
+    await fetchVisitorSummary({ now: midnight - 1000 });
+    await fetchVisitorSummary({ now: midnight + 1000 });
+    assert.equal(requests.length, 5, 'Korean date rollover bypasses the short client cache');
+  } finally {
+    axios.defaults.adapter = previousAdapter;
   }
 });
 

@@ -7,7 +7,9 @@ const registerVisitorRoutes = require('./routes/visitorRoutes');
 const registerRetiredFeatureRoutes = require('./routes/retiredFeatureRoutes');
 const { createAdminRuntimeState } = require('./services/adminRuntimeState');
 
-async function fixture(t) {
+async function fixture(t, { clock, getSummary = async () => ({
+    todayCount: 41, totalCount: 701, users: [{ id: 'private-member' }], session: { id: 'private-session' },
+}) } = {}) {
     const app = express();
     const calls = { visits: 0, summaries: 0, adminReads: 0, authentication: 0 };
     const visitService = {
@@ -21,7 +23,7 @@ async function fixture(t) {
                 session: { visitorType: 'member', startedAt: '2026-09-08 09:00:00' },
             };
         },
-        async getPublicSummary() { calls.summaries += 1; throw new Error('Public summary must not be queried'); },
+        async getPublicSummary(options) { calls.summaries += 1; return getSummary(options); },
         async getAdminStats() { calls.adminReads += 1; return { summary: { today: 41, total: 701 }, series: [] }; },
         async getAdminSessions() { calls.adminReads += 1; return { sessions: [{ id: 'session-1' }] }; },
         async getAdminMembers() { calls.adminReads += 1; return { members: [{ id: 'member-1' }] }; },
@@ -33,6 +35,7 @@ async function fixture(t) {
     registerRetiredFeatureRoutes({ app });
     registerVisitorRoutes({
         app,
+        clock,
         visitorService: visitService,
         visitSessionService: visitService,
         memberLoginActivityService: { async getStats() { calls.adminReads += 1; return { totalCount: 12 }; } },
@@ -119,6 +122,60 @@ test('administrator visitor and login metrics remain gated and available through
         if (path === paths[0]) assert.deepEqual(body.summary, { today: 41, total: 701 });
     }
     assert.equal(calls.adminReads, 4);
+});
+
+test('public footer reads expose only two counts without collecting visits or applying private filters', async t => {
+    const { origin, calls } = await fixture(t);
+    const responses = await Promise.all(Array.from({ length: 4 }, () => fetch(
+        `${origin}/api/visitors/summary?memberIds=private-member&period=year`,
+    )));
+    for (const response of responses) {
+        assert.equal(response.status, 200);
+        assert.match(response.headers.get('cache-control'), /no-store/);
+        assert.deepEqual(await response.json(), { success: true, todayCount: 41, totalCount: 701 });
+    }
+    assert.deepEqual(calls, { visits: 0, summaries: 1, adminReads: 0, authentication: 0 });
+});
+
+test('summary cache expires after 30 seconds and immediately on the Korean date boundary', async t => {
+    let now = new Date('2026-09-08T14:59:59Z');
+    const { origin, calls } = await fixture(t, {
+        clock: () => now,
+        getSummary: async ({ now: current }) => ({
+            todayCount: current < new Date('2026-09-08T15:00:00Z') ? 41 : 0, totalCount: 701,
+        }),
+    });
+    const read = async () => (await fetch(`${origin}/api/visitors/summary`)).json();
+    assert.equal((await read()).todayCount, 41);
+    now = new Date('2026-09-08T15:00:01Z');
+    assert.equal((await read()).todayCount, 0);
+    assert.equal(calls.summaries, 2);
+    await read();
+    assert.equal(calls.summaries, 2);
+    now = new Date('2026-09-08T15:00:31Z');
+    await read();
+    assert.equal(calls.summaries, 3);
+});
+
+test('summary failures and invalid counts are unavailable, never fabricated zeroes or cached errors', async t => {
+    t.mock.method(console, 'error', () => {});
+    let attempt = 0;
+    const { origin, calls } = await fixture(t, { getSummary: async () => {
+        attempt += 1;
+        if (attempt === 1) throw new Error('database unavailable');
+        if (attempt === 2) return { todayCount: -1, totalCount: 701 };
+        return { todayCount: 0, totalCount: 701 };
+    } });
+    for (let index = 0; index < 2; index += 1) {
+        const response = await fetch(`${origin}/api/visitors/summary`);
+        assert.equal(response.status, 503);
+        assert.deepEqual(await response.json(), { success: false, reason: 'visitor_summary_unavailable' });
+    }
+    const recovered = await fetch(`${origin}/api/visitors/summary`);
+    assert.equal(recovered.status, 200);
+    assert.deepEqual(await recovered.json(), { success: true, todayCount: 0, totalCount: 701 });
+    assert.equal(calls.summaries, 3);
+    assert.equal(calls.visits, 0);
 });
 
 test('member notice delivery preserves the message and cursor while audience counts remain in administrator history', () => {

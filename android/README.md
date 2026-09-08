@@ -28,7 +28,9 @@ macOS/Linux에서는 android 디렉터리에서 다음 명령을 사용합니다
 
 생성 APK는 android/app/build/outputs/apk/debug/app-debug.apk이며 패키지는 site.woogongsil.app.debug입니다. 기본 debug 빌드에는 내부 배포용 서명 키가 필요하지 않습니다. 실행하면 운영 HTTPS 웹과 API에 연결됩니다.
 
-앱의 기본 버전은 저장소 루트 `VERSION`에서 읽습니다. `2.4.0`은 `versionCode=20400`이며 계산식은 `major*10000 + minor*100 + patch`입니다. minor와 patch는 0~99 범위여야 합니다. 빌드 종류에 따라 `-debug`, `-mobile-ui`, `-internal` 접미사가 붙습니다. 기존 debug 패키지와 Android debug 서명 방식은 유지됩니다.
+앱의 기본 버전은 저장소 루트 `VERSION`에서 읽습니다. `2.4.1`은 `versionCode=20401`이며 계산식은 `major*10000 + minor*100 + patch`입니다. minor와 patch는 0~99 범위여야 합니다. 빌드 종류에 따라 `-debug`, `-mobile-ui`, `-internal` 접미사가 붙습니다. 기존 debug 패키지와 Android debug 서명 방식은 유지됩니다.
+
+2.4.1 웹은 공통 하단에 오늘·누적 방문 횟수를 표시합니다. 기본 APK는 운영 웹의 표시를 사용하며, 예전 웹을 포함한 UI 테스트 APK는 다시 빌드·설치해야 합니다. [집계 기준과 2026-09-09 검증 범위](../docs/VISITOR_COUNTS.md)를 참고하세요.
 
 ## 현재 웹 화면을 포함한 Windows debug 빌드
 

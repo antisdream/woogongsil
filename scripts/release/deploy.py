@@ -74,6 +74,14 @@ def health(manifest):
             if (code != 200 or not result.get("success") or result.get("counted") is not False
                     or not result.get("ignored") or set(result) - {"success", "counted", "ignored", "reason"}):
                 raise RuntimeError("Private visitor aggregate boundary failed")
+            code, payload = request("/api/visitors/summary")
+            result = json.loads(payload)
+            if (code != 200 or result.get("success") is not True
+                    or set(result) != {"success", "todayCount", "totalCount"}
+                    or any(type(result.get(key)) is not int or result[key] < 0
+                           for key in ("todayCount", "totalCount"))
+                    or result["todayCount"] > result["totalCount"]):
+                raise RuntimeError("Public visitor summary verification failed")
             return
         except (OSError, ValueError, RuntimeError) as error:
             if attempt == 14:

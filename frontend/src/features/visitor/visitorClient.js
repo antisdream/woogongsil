@@ -2,6 +2,7 @@ import axios from 'axios';
 
 const CLIENT_ID_STORAGE_KEY = 'wgs_client_id';
 const VISIT_ENDPOINT = '/api/visitors/visit';
+const SUMMARY_ENDPOINT = '/api/visitors/summary';
 const VISIT_TIMEOUT_MS = 5000;
 export const VISIT_TOUCH_THROTTLE_MS = 45 * 1000;
 
@@ -9,6 +10,9 @@ let volatileClientId = '';
 let visitRequestPromise = null;
 let lastVisitRequestStartedAt = 0;
 let lastVisitReceipt = null;
+let summaryRequestPromise = null;
+let lastSummary = null;
+let lastSummaryRequestedAt = 0;
 
 function createClientId() {
   const randomId = (window.crypto && window.crypto.randomUUID)
@@ -55,6 +59,37 @@ export function normalizeVisitReceipt(payload) {
     ignored: payload.ignored,
     reason: typeof payload.reason === 'string' ? payload.reason : null,
   };
+}
+
+export function normalizeVisitorSummary(payload) {
+  if (payload?.success !== true
+      || !Number.isSafeInteger(payload.todayCount) || payload.todayCount < 0
+      || !Number.isSafeInteger(payload.totalCount) || payload.totalCount < payload.todayCount) {
+    return null;
+  }
+  return { todayCount: payload.todayCount, totalCount: payload.totalCount };
+}
+
+export function fetchVisitorSummary({ now = Date.now() } = {}) {
+  if (summaryRequestPromise) return summaryRequestPromise;
+  const kstDay = (timestamp) => Math.floor((timestamp + 9 * 60 * 60 * 1000) / 86_400_000);
+  if (lastSummary && now >= lastSummaryRequestedAt
+      && kstDay(now) === kstDay(lastSummaryRequestedAt)
+      && now - lastSummaryRequestedAt < 15_000) return Promise.resolve(lastSummary);
+
+  lastSummaryRequestedAt = now;
+  const nextPromise = axios.get(SUMMARY_ENDPOINT, { timeout: VISIT_TIMEOUT_MS })
+    .then((response) => normalizeVisitorSummary(response.data))
+    .catch(() => null)
+    .then((summary) => {
+      lastSummary = summary;
+      return summary;
+    })
+    .finally(() => {
+      if (summaryRequestPromise === nextPromise) summaryRequestPromise = null;
+    });
+  summaryRequestPromise = nextPromise;
+  return nextPromise;
 }
 
 async function recordVisit() {

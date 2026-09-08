@@ -4,6 +4,7 @@ const { createVisitorAnalyticsSchema } = require('../services/visitorAnalyticsSc
 const {
     VisitorAnalyticsInputError,
     createVisitorAnalyticsService,
+    getKstDateKey,
 } = require('../services/visitorAnalyticsService');
 const {
     createMemberLoginActivityService,
@@ -114,7 +115,47 @@ function registerVisitorRoutes(options = {}) {
         throw new Error('registerVisitorRoutes requires a visit session service.');
     }
 
-    // Visit collection has no public statistics read endpoint.
+    // Share reads for 30 seconds; never carry yesterday's KST count into today.
+    let summaryCache = null;
+    let summaryRequest = null;
+    const clock = options.clock || (() => new Date());
+    const publicSummary = async () => {
+        const current = new Date(clock());
+        const day = getKstDateKey(current);
+        if (summaryCache?.day === day && current.getTime() < summaryCache.expiresAt) {
+            return summaryCache.value;
+        }
+        if (summaryRequest?.day === day) return summaryRequest.promise;
+        const promise = Promise.resolve().then(async () => {
+            await ensureSchema();
+            const result = await visitSessionService.getPublicSummary({ now: current });
+            const { todayCount, totalCount } = result;
+            if (!Number.isSafeInteger(todayCount) || todayCount < 0
+                || !Number.isSafeInteger(totalCount) || totalCount < todayCount) {
+                throw new Error('Invalid visitor summary.');
+            }
+            const value = { success: true, todayCount, totalCount };
+            summaryCache = { day, expiresAt: current.getTime() + 30_000, value };
+            return value;
+        }).finally(() => {
+            if (summaryRequest?.promise === promise) summaryRequest = null;
+        });
+        summaryRequest = { day, promise };
+        return promise;
+    };
+
+    // Public reads expose only aggregate visit counts and never create a visit.
+    app.get('/api/visitors/summary', async (_req, res) => {
+        setNoStore(res);
+        try {
+            return res.json(await publicSummary());
+        } catch (error) {
+            console.error('[visitor analytics] public summary failed:', error.message);
+            return res.status(503).json({ success: false, reason: 'visitor_summary_unavailable' });
+        }
+    });
+
+    // Collection remains POST-only and returns no statistics or identities.
     app.get('/api/visitors/visit', (_req, res) => {
         setNoStore(res);
         res.setHeader('Allow', 'POST');
@@ -140,7 +181,7 @@ function registerVisitorRoutes(options = {}) {
                 clientId: clientIdFromRequest(req),
                 request: req,
             });
-            // Only acknowledge collection; aggregate and session data are administrator-only.
+            // Only acknowledge collection; individual session data remains administrator-only.
             return res.json({
                 success: true,
                 counted: result.counted === true,

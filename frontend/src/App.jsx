@@ -18,7 +18,7 @@ import './styles/app/design-system.css';
 import useScreenSettings from './useScreenSettings';
 import RealTimeClock from './components/app/RealTimeClock';
 import AppNavigation from './components/app/AppNavigation';
-import VisitorSessionHeartbeat from './features/visitor/VisitorSessionHeartbeat.jsx';
+import VisitorStats from './features/visitor/VisitorStats.jsx';
 import { getOrCreateWgsClientId } from './features/visitor/visitorClient.js';
 import {
     buildThemeToneVariables,
@@ -756,9 +756,8 @@ function App() {
                         </Routes>
                     </Suspense>
                 </main>
-                <VisitorSessionHeartbeat />
                 <footer className="ui-footer">
-                    <div><strong>우공실</strong><span>한 문제씩 쌓아가는 나의 공부실</span></div>
+                    <div className="ui-footer-brand"><strong>우공실</strong><span>한 문제씩 쌓아가는 나의 공부실</span><VisitorStats /></div>
                     <div className="ui-footer-links"><a href="/faq" onClick={(event) => handleNavigation(event, '/faq')}>이용 안내</a><a href="/fortune" onClick={(event) => handleNavigation(event, '/fortune')}>오늘의 운세</a><a href="/terms" onClick={(event) => handleNavigation(event, '/terms')}>이용약관</a><a href="/privacy" onClick={(event) => handleNavigation(event, '/privacy')}>개인정보 처리 안내</a></div>
                 </footer>
             </div>
