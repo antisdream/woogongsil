@@ -324,7 +324,6 @@ function createVisitSessionService(options = {}) {
                 counted: false,
                 ignored: true,
                 reason: 'automated_request',
-                ...(await getPublicSummary({ now: current })),
                 session: null,
             };
         }
@@ -355,7 +354,6 @@ function createVisitSessionService(options = {}) {
             counted,
             ignored: false,
             reason: counted ? null : 'active_session',
-            ...(await getPublicSummary({ now: current })),
             session: publicSessionPayload(session),
         };
     }

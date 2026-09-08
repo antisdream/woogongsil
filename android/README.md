@@ -28,6 +28,8 @@ macOS/Linux에서는 android 디렉터리에서 다음 명령을 사용합니다
 
 생성 APK는 android/app/build/outputs/apk/debug/app-debug.apk이며 패키지는 site.woogongsil.app.debug입니다. 기본 debug 빌드에는 내부 배포용 서명 키가 필요하지 않습니다. 실행하면 운영 HTTPS 웹과 API에 연결됩니다.
 
+앱의 기본 버전은 저장소 루트 `VERSION`에서 읽습니다. `2.4.0`은 `versionCode=20400`이며 계산식은 `major*10000 + minor*100 + patch`입니다. minor와 patch는 0~99 범위여야 합니다. 빌드 종류에 따라 `-debug`, `-mobile-ui`, `-internal` 접미사가 붙습니다. 기존 debug 패키지와 Android debug 서명 방식은 유지됩니다.
+
 ## 현재 웹 화면을 포함한 Windows debug 빌드
 
 PowerShell 5.1 이상과 저장소 frontend의 의존성에 맞는 Node.js/npm이 필요합니다. 저장소 루트의 frontend에서 먼저 의존성을 설치합니다.
@@ -45,6 +47,19 @@ Set-Location ..\android
 ~~~
 
 기본 웹 소스 경로는 android의 형제 디렉터리인 frontend입니다. 다른 체크아웃을 사용할 때만 -FrontendRoot로 명시합니다. 스크립트는 새 웹 번들을 android/build/local-web 아래에 생성하고, 해당 번들을 포함한 debug APK의 단위 테스트·Lint·조립을 실행합니다. 결과 디렉터리의 result.json과 APK 옆 .sha256 파일에서 번들 ID와 산출물을 확인할 수 있습니다.
+
+### 배포 확인을 마친 웹 산출물 포함
+
+CI에서 배포한 frontend dist를 내려받은 경우 `-WebDistRoot`로 그 디렉터리를 지정하면 npm 빌드를 다시 실행하지 않고 APK에 포함합니다. `-FrontendRoot`와 함께 사용할 수 없습니다. 배포 결과에서 확인한 전체 Git commit을 `-ReleaseCommit`에 전달합니다.
+
+~~~powershell
+$deployedCommit = '배포 확인을 마친 40자리 Git commit'
+.\scripts\Build-LocalWebDebug.ps1 -WebDistRoot 'C:\artifacts\frontend-dist' -ReleaseVersion '2.4.0' -ReleaseCommit $deployedCommit -JdkRoot $env:WGS_JDK17_HOME -GradleJdkRoot $env:JAVA_HOME -AndroidSdkRoot $env:ANDROID_HOME
+~~~
+
+입력 dist에는 `index.html`, `assets/`, `version.json`이 있어야 합니다. `version.json.version`은 저장소 `VERSION` 및 선택한 `-ReleaseVersion`과 같아야 하며, `commit`은 전체 40자리 Git SHA여야 합니다. `-ReleaseCommit`을 지정하면 그 값도 대조하고, `tag`가 있으면 `v<version>`인지 검사합니다. 관리자 `manage/`, 소스맵, 숨김 파일은 기존과 같이 번들에서 제외합니다. 원본 dist는 수정하지 않습니다.
+
+`result.json`의 `webSource=prebuilt-dist`, `webRelease`의 버전·커밋·원본 version.json 해시, `webContentSha256`로 어떤 웹 파일을 사용했는지 확인할 수 있습니다. APK 내부 `assets/webapp/_wgs-bundle.json`에는 같은 정보와 개별 파일 SHA-256가 들어 있습니다. content 해시는 경로를 ordinal 순서로 정렬한 `소문자SHA256 두칸 상대경로` 목록을 LF로 연결하고 마지막 개행 없이 UTF-8로 해시한 값입니다. 이 정보는 입력 파일의 식별 근거이며, 운영 배포 성공 여부는 배포 작업에서 별도로 확인합니다.
 
 이 빌드는 웹 화면 파일만 APK에 포함합니다. API와 인증은 기존 HTTPS 서버에 연결되므로 모든 기능의 오프라인 동작을 의미하지 않습니다. 스크립트는 기기 설치나 서버 배포를 수행하지 않습니다.
 

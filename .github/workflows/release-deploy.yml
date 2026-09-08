@@ -1,0 +1,102 @@
+name: Release to AWS Lightsail
+
+on:
+  release:
+    types: [published]
+
+concurrency:
+  group: production-release
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    if: ${{ !github.event.release.draft && !github.event.release.prerelease }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    environment:
+      name: production
+      url: https://woogongsil.site
+    permissions:
+      contents: write
+    env:
+      RELEASE_TAG: ${{ github.event.release.tag_name }}
+    steps:
+      - name: Check out the released commit
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Validate the release target
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          [[ "$RELEASE_TAG" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]
+          commit="$(git rev-parse HEAD)"
+          [[ "$(git rev-parse "refs/tags/$RELEASE_TAG^{commit}")" == "$commit" ]]
+          git merge-base --is-ancestor "$commit" origin/main
+          printf 'RELEASE_COMMIT=%s\n' "$commit" >> "$GITHUB_ENV"
+      - name: Prepare Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22.22.2
+          cache: npm
+          cache-dependency-path: |
+            frontend/package-lock.json
+            backend/package-lock.json
+      - name: Verify backend and release recovery
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          npm ci --prefix backend --no-audit --no-fund
+          npm test --prefix backend
+          node --test backend/*.test.js
+          node scripts/release/migrate-notices.cjs verify
+          python3 -m unittest discover -s scripts/release -p '*_test.py' -v
+      - name: Verify and build the website
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          npm ci --prefix frontend --no-audit --no-fund
+          cd frontend
+          npm run lint
+          mapfile -d '' tests < <(find src -type f \( -name '*.test.js' -o -name '*.test.mjs' \) -print0)
+          node --test "${tests[@]}"
+          npm run build
+      - name: Package the release
+        run: python3 scripts/release/package.py --tag "$RELEASE_TAG" --commit "$RELEASE_COMMIT" --output release-output/woogongsil-release.tar.gz
+      - name: Deploy and verify on Lightsail
+        env:
+          DEPLOY_KEY: ${{ secrets.WGS_DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.WGS_DEPLOY_KNOWN_HOSTS }}
+          DEPLOY_HOST: ${{ vars.WGS_DEPLOY_HOST }}
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          umask 077
+          [[ "$DEPLOY_HOST" =~ ^[a-zA-Z0-9.-]+$ ]]
+          key="$RUNNER_TEMP/wgs-release-key"
+          known="$RUNNER_TEMP/wgs-release-known-hosts"
+          trap 'rm -f -- "$key" "$known"' EXIT
+          printf '%s\n' "$DEPLOY_KEY" > "$key"
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > "$known"
+          checksum="$(cut -d ' ' -f 1 release-output/woogongsil-release.tar.gz.sha256)"
+          ssh -i "$key" -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$known" \
+            -o ConnectTimeout=20 -o ServerAliveInterval=15 -o ServerAliveCountMax=4 \
+            "ubuntu@$DEPLOY_HOST" "deploy $RELEASE_TAG $RELEASE_COMMIT $checksum" < release-output/woogongsil-release.tar.gz
+          curl --fail --silent --show-error --retry 3 --max-time 20 \
+            "https://woogongsil.site/version.json?release=$RELEASE_COMMIT" > release-output/deployed-version.json
+          python3 - <<'PY'
+          import json, os
+          current = json.load(open('release-output/deployed-version.json'))
+          assert current['commit'] == os.environ['RELEASE_COMMIT']
+          assert current['tag'] == os.environ['RELEASE_TAG']
+          PY
+      - name: Attach the deployed bundle to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload "$RELEASE_TAG" release-output/woogongsil-release.tar.gz \
+            release-output/woogongsil-release.tar.gz.sha256 release-output/deployed-version.json --clobber

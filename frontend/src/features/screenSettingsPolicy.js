@@ -1,5 +1,5 @@
 const RETIRED_SCREEN_SECTIONS = new Set([
-    'live_chat', 'chat_popup', 'score_ranking', 'ranking_history', 'ranking',
+    'online_users', 'live_chat', 'chat_popup', 'score_ranking', 'ranking_history', 'ranking',
 ]);
 
 export const isRetiredScreenSection = (section) => (

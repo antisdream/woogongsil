@@ -43,7 +43,6 @@ const registerGatekeeperSecurity = require('./middleware/gatekeeperSecurity');
 const registerPracticalUserRoutes = require('./routes/practicalUserRoutes');
 const registerUserRoutes = require('./routes/userRoutes');
 const registerExamRoutes = require('./routes/examRoutes');
-const registerRealtimeRoutes = require('./routes/realtimeRoutes');
 const registerAuthRoutes = require('./routes/auth/authRoutes');
 const registerAdminAuthRoutes = require('./routes/auth/adminAuthRoutes');
 const registerAccountRecoveryRoutes = require('./routes/auth/accountRecoveryRoutes');
@@ -796,13 +795,6 @@ registerAdminRoutes({
 });
 
 
-registerRealtimeRoutes({
-    app,
-    validateRealtimeSession,
-    touchActiveUser,
-    getActiveUserList,
-    serverInstanceId: SERVER_INSTANCE_ID,
-});
 
 registerAccountRecoveryRoutes({
     app,

@@ -3,6 +3,7 @@
 // Removed feature URLs must return JSON instead of the SPA fallback.
 function registerRetiredFeatureRoutes({ app }) {
     const paths = [
+        '/api/online-users',
         '/api/rankings',
         '/api/my-ranking-history',
         '/api/my-ranking-history-v2',

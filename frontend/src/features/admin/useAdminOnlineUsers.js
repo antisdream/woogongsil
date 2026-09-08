@@ -14,7 +14,7 @@ export default function useAdminOnlineUsers() {
   const [onlineFetchedAt, setOnlineFetchedAt] = useState(null);
 
   // 현재 서버 메모리에 남아 있는 실시간 접속자 목록을 조회합니다.
-  // 기존 홈 화면의 접속자 기능에서 쓰던 /api/online-users API를 재사용해 DB 변경 없이 안전하게 연결합니다.
+  // 별도 관리자 세션으로 보호된 API만 사용합니다.
   const fetchOnlineUsers = useCallback(async () => {
     const user = getStoredUser();
 

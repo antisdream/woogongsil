@@ -104,7 +104,18 @@ function createAdminRuntimeState(options = {}) {
         const safeSinceMs = Number.isFinite(Number(sinceMs)) ? Number(sinceMs) : 0;
         const minCreatedAtMs = Math.max(safeSinceMs, connectedSinceMs || 0);
 
-        return adminBroadcastNotices.filter((notice) => notice.createdAtMs > minCreatedAtMs);
+        return adminBroadcastNotices
+            .filter((notice) => notice.createdAtMs > minCreatedAtMs)
+            .map((notice) => ({
+                id: notice.id,
+                title: notice.title,
+                message: notice.message,
+                level: notice.level,
+                authorId: notice.authorId,
+                authorName: notice.authorName,
+                createdAt: notice.createdAt,
+                createdAtMs: notice.createdAtMs,
+            }));
     }
 
     function createAdminBroadcastNotice({ title, message, level, authorId, authorName, deliveredTo }) {

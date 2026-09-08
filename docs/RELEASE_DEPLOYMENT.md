@@ -1,0 +1,39 @@
+# GitHub 릴리즈 배포
+
+정식 GitHub 릴리즈를 발행하면 해당 태그의 코드를 검사·빌드한 뒤 AWS Lightsail에 배포합니다. `main`에 커밋을 푸시하거나 태그만 만드는 작업은 운영 배포를 시작하지 않습니다. 초안과 사전 릴리즈도 배포하지 않습니다.
+
+## 다음 버전 배포 순서
+
+1. 원하는 변경을 로컬에서 확인하고 `main`에 커밋·푸시합니다. 커밋 메시지는 `YYYY-MM-DD|작업내용`으로 작성합니다.
+2. [새 릴리즈 작성](https://github.com/antisdream/woogongsil/releases/new)에서 새로운 태그를 입력합니다. 예: `v2.4.1`. 대상은 `main`을 선택합니다.
+3. 제목에 버전과 변경 내용을 적고, 본문에는 사용자에게 달라지는 기능과 필요한 안내를 작성합니다. **Set as a pre-release**는 선택하지 않습니다.
+4. **Publish release**를 누릅니다. [Actions](https://github.com/antisdream/woogongsil/actions/workflows/release-deploy.yml)에서 해당 버전의 `Release to AWS Lightsail`이 성공했는지 확인합니다.
+5. [운영 버전](https://woogongsil.site/version.json)의 `tag`와 `commit`이 발행한 릴리즈와 같은지 확인합니다. 녹색 성공과 버전 일치를 모두 확인한 뒤 배포 완료로 판단합니다.
+
+태그는 `v숫자.숫자.숫자` 형식이며, `main`에 포함된 커밋만 허용합니다. 이미 발행한 태그를 다른 커밋으로 이동하지 말고 새 버전을 발행합니다. 새 릴리즈의 웹 버전 정보는 태그에서 생성되므로 `VERSION` 파일을 미리 수정해야 웹 배포가 시작되는 것은 아닙니다. `VERSION`은 Android 빌드의 기본 버전으로 사용합니다.
+
+## 자동으로 확인하는 내용
+
+- 백엔드 구문·회귀 검사, 공지 마이그레이션 검사, 배포 경로·원복 검사, 프런트엔드 Lint·단위 검사와 공개/관리자 웹 빌드.
+- 릴리즈 파일의 SHA-256, 서버의 관리 대상 소스가 이전 배포와 일치하는지 확인. 서버를 직접 수정한 경우 자동 덮어쓰기를 중단합니다.
+- 배포 직전 DB 논리 백업과 변경 대상 소스 복구본 생성. `.env`, 업로드, 런타임 JSON, 문제 이미지와 폰트는 보존합니다.
+- 공개 웹·관리자 웹 응답, 관리자 비인증 차단, 종료한 공개 접속자 API, 방문 기록 응답에 집계 수가 없는지 확인.
+- 운영 웹의 버전·커밋 일치. 확인한 배포 묶음과 체크섬은 해당 GitHub 릴리즈의 첨부 파일로 남깁니다.
+
+동시 운영 배포는 직렬로 실행합니다. 실행 중인 배포를 새 릴리즈 때문에 취소하지 않습니다. GitHub Actions의 동시성 제한상 이미 실행 중인 작업 외에 대기 작업이 여러 개면 이전 대기가 대체될 수 있으므로, 현재 배포가 끝난 다음 새 버전을 발행합니다.
+
+## 실패한 경우
+
+검사·빌드 실패는 서버 파일을 변경하지 않습니다. 서버 반영 뒤 상태 검사에 실패하면 직전 관리 대상 소스와 웹 화면을 복원하고 백엔드를 재시작합니다. 이번 v2.4.0 공지 정리는 해당 글만 트랜잭션으로 변경하며, 실패 시 그 글만 되돌립니다. 운영 DB 전체를 자동 복원해서 다른 사용자의 새 기록을 덮어쓰지 않습니다.
+
+실패한 Actions 실행의 로그를 확인합니다. 일시적인 연결 실패라면 같은 실행의 **Re-run failed jobs**를 사용할 수 있습니다. 소스 불일치나 공지 원문 충돌은 원인을 먼저 확인합니다. 자동 원복 결과와 백업은 서버에 보관됩니다. 서버 전원 중단이나 디스크 고장처럼 프로세스가 복구 코드를 실행할 수 없는 경우에는 보관한 복구본을 사용해 수동 복구해야 합니다.
+
+## 운영 설정과 Android
+
+GitHub `production` 환경에는 배포용 SSH 키와 고정된 서버 호스트 키를 Secret으로, 접속 호스트를 Variable로 저장합니다. 개인 Lightsail SSH 키를 GitHub에 올리지 않습니다. 서버의 배포용 키는 지정된 배포 수신 명령만 실행하도록 제한합니다. 비밀값과 DB 백업은 공개 저장소나 릴리즈 첨부 파일에 포함하지 않습니다.
+
+최초 자동 배포를 시작하기 전에 애플리케이션 전체, MySQL 데이터·설정, Nginx·인증서, PM2, 방화벽·예약 작업·패키지 정보를 Lightsail 안에 백업하고 체크섬을 확인합니다. 이후 릴리즈는 위의 변경 대상 복구본과 DB 백업을 만듭니다. 백업 자동 삭제는 설정하지 않으므로 디스크 사용량을 운영자가 확인합니다.
+
+Android APK 생성·기기 설치는 웹 릴리즈와 별도입니다. 이번 설치처럼 웹과 같은 파일을 포함하려면 성공한 릴리즈의 `woogongsil-release.tar.gz`를 풀고 `app/frontend/dist`를 [Android 빌드 스크립트](../android/README.md)의 `-WebDistRoot`로 전달합니다. `-ReleaseVersion`과 `-ReleaseCommit`으로 기대 버전을 대조할 수 있습니다. 내부 debug APK를 Google Play 배포 준비 완료로 해석하지 않습니다.
+
+참고: [GitHub 릴리즈 이벤트](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#release), [GitHub 배포 환경과 동시성](https://docs.github.com/en/actions/how-tos/deploy/configure-and-manage-deployments/control-deployments).

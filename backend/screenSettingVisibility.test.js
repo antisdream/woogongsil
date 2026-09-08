@@ -12,7 +12,7 @@ function fixture() {
     const events = [];
     const rows = [
         { id: 1, page_key: 'home', section_key: 'hero', setting_key: 'title', setting_value: 'Learning', is_active: 1 },
-        { id: 2, page_key: 'home', section_key: 'live_chat', setting_key: 'title', setting_value: 'Old chat', is_active: 1 },
+        { id: 2, page_key: 'home', section_key: 'online_users', setting_key: 'title', setting_value: 'Old presence', is_active: 1 },
         { id: 3, page_key: 'multiplayer', section_key: 'scoreboard', setting_key: 'rank_label', setting_value: 'Rank', is_active: 1 },
     ];
     const app = Object.fromEntries(['get', 'post', 'put', 'patch', 'delete'].map(method => [method, (path, handler) => handlers.set(`${method} ${path}`, handler)]));
@@ -61,7 +61,7 @@ test('public settings and map omit retired rows, while admin list and summary us
     const f = fixture();
     const publicResult = await f.call('get', '/api/screen-settings', { query: { page_key: 'home' } });
     assert.deepEqual(publicResult.body.settings.map(row => row.id), [1, 3]);
-    assert.equal(publicResult.body.settingsMap['home.live_chat.title'], undefined);
+    assert.equal(publicResult.body.settingsMap['home.online_users.title'], undefined);
     const adminResult = await f.call('get', '/api/admin/screen-settings');
     assert.deepEqual(adminResult.body.settings.map(row => row.id), [1, 3]);
     assert.equal(adminResult.body.summary.total_count, 2);
@@ -73,7 +73,7 @@ test('public settings and map omit retired rows, while admin list and summary us
 test('creating, updating and bulk upserting retired settings is rejected without a write', async () => {
     const f = fixture();
     for (const [method, path] of [['post', '/api/admin/screen-settings'], ['put', '/api/admin/screen-settings/:id'], ['post', '/api/admin/screen-settings/bulk']]) {
-        const res = await f.call(method, path, { params: { id: '1' }, body: { page_key: 'home', section_key: 'score_ranking', setting_type: 'text', setting_key: 'title', setting_label: 'Old ranking' } });
+        const res = await f.call(method, path, { params: { id: '1' }, body: { page_key: 'home', section_key: 'online_users', setting_type: 'text', setting_key: 'title', setting_label: 'Old presence' } });
         assert.equal(res.statusCode, 400);
     }
     assert.equal(f.queries.length, 0);

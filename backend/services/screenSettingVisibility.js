@@ -1,7 +1,7 @@
 'use strict';
 
 // Keep stored legacy rows for rollback; exclude only the retired feature keys.
-const RETIRED_SECTION_KEYS = Object.freeze(['live_chat', 'chat_popup', 'score_ranking', 'ranking_history', 'ranking']);
+const RETIRED_SECTION_KEYS = Object.freeze(['online_users', 'live_chat', 'chat_popup', 'score_ranking', 'ranking_history', 'ranking']);
 const RETIRED_HOME_COPY_KEYS = Object.freeze([
     'current_visitor_prefix', 'current_visitor_suffix', 'refresh_loading_label',
     'request_time_label', 'me_label', 'recent_activity_label', 'just_now_label',

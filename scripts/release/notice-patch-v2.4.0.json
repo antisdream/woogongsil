@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "migrationId": "notice-v2.4.0",
+  "releaseVersion": "v2.4.0",
+  "description": "Remove two internal guidance notices, version two release notices, and annotate three historical presence references. Source database rows are excluded from this manifest.",
+  "hashScope": "All reviewed row fields except live views and likes; exact original rows are saved privately before mutation.",
+  "operations": [
+    {
+      "id": "1788843848863",
+      "kind": "remove",
+      "beforeSha256": "751d0fdfbfd8ab29fd0f79af6e4488d65d7c552b2f6cf234f4be81b46acaed98"
+    },
+    {
+      "id": "1788843848866",
+      "kind": "remove",
+      "beforeSha256": "778ffa2c97526d583067d7d7d6abb222f81b84e22a4f40b618ab17856ec3f994"
+    },
+    {
+      "id": "1788843848867",
+      "kind": "rename",
+      "title": "[업데이트] v2.4.0 홈에서 학습 시작과 이용 안내를 쉽게",
+      "beforeSha256": "2e9e248fcbc55c1353c7af2d76941cd8db92e675f457db1242cff4fd6ef088ef",
+      "afterSha256": "ee9b41001be3ad37733bdbcb61a0a2c63a3ce40f6d650e97331172802c037c09"
+    },
+    {
+      "id": "1788843848868",
+      "kind": "rename",
+      "title": "[업데이트] v2.4.0 모바일 입력 화면과 Android 앱 시작 화면",
+      "beforeSha256": "3002d81d4b8ef4a2230bda238982dfe62269375abb8dadd975ad14433865078b",
+      "afterSha256": "8033b9d7d53de9dd1eb19a6c9ef3c68bc60fd313a815197bd13149fe011892fc"
+    },
+    {
+      "id": "1778573092936",
+      "kind": "append",
+      "paragraph": "※ v2.4.0 현재 실시간 접속자 표시는 제공하지 않습니다. 위 관련 내용은 당시 변경 이력입니다.",
+      "blockId": "c33f9f56-a94e-41ca-894c-1b9cf94d5e40",
+      "beforeSha256": "67b64b4bb5b92ef4a257d7066ddd9325b76e24aa69574af2a199913ef10b1ecd",
+      "afterSha256": "e1a6e91b75f12f63b1e583ffef0888132b34902bee553f90d63fef9f9116f165"
+    },
+    {
+      "id": "1782443063818",
+      "kind": "append",
+      "paragraph": "※ v2.4.0 현재 실시간 접속자 표시는 제공하지 않습니다. 위 관련 내용은 당시 변경 이력입니다.",
+      "blockId": "bf2bdf8c-5bd6-463b-9310-efc220dd0875",
+      "beforeSha256": "4cb46c7c03d3126cc2470098cdb0ccc0cd8116c0eb0cc10b9cf5228a595fff03",
+      "afterSha256": "3d9e1ae26c89908e29d307383f293e631c3f70ddb3d7ef3e2505c160a83b9561"
+    },
+    {
+      "id": "1782443052470",
+      "kind": "append",
+      "paragraph": "※ v2.4.0 현재 실시간 접속자 표시는 제공하지 않습니다. 위 관련 내용은 당시 변경 이력입니다.",
+      "blockId": "bb80b610-6e27-40e0-b88f-3a748f67e86b",
+      "beforeSha256": "9054d4ae1b8d79751582825df908380033237d7ad68acedfa3a426ca8df5d6ba",
+      "afterSha256": "e12d43cc6a5d91e4d5e3f0ac3e09043cecf3e8908ae90905dea356b77a09f728"
+    }
+  ]
+}

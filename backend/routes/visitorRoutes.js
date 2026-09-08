@@ -102,7 +102,6 @@ function registerVisitorRoutes(options = {}) {
         throw new Error('registerVisitorRoutes requires validateAdminSession.');
     }
     if (!visitorService || typeof visitorService.recordVisit !== 'function'
-        || typeof visitorService.getPublicSummary !== 'function'
         || typeof visitorService.getAdminStats !== 'function'
         || typeof visitorService.verifyAdminExclusionToken !== 'function'
         || typeof visitorService.createAdminExclusionCookie !== 'function'
@@ -111,24 +110,29 @@ function registerVisitorRoutes(options = {}) {
     }
     if (!visitSessionService
         || typeof visitSessionService.recordVisit !== 'function'
-        || typeof visitSessionService.getPublicSummary !== 'function'
         || typeof visitSessionService.getAdminStats !== 'function') {
         throw new Error('registerVisitorRoutes requires a visit session service.');
     }
 
+    // Visit collection has no public statistics read endpoint.
+    app.get('/api/visitors/visit', (_req, res) => {
+        setNoStore(res);
+        res.setHeader('Allow', 'POST');
+        return res.status(405).json({ success: false, code: 'method_not_allowed' });
+    });
+
     app.post('/api/visitors/visit', async (req, res) => {
+        setNoStore(res);
         try {
             await ensureSchema();
             const cookies = parseCookies(req?.headers?.cookie);
             const exclusionToken = cookies[visitorService.adminExclusionCookieName];
             if (visitorService.verifyAdminExclusionToken(exclusionToken)) {
-                const summary = await visitSessionService.getPublicSummary();
                 return res.json({
                     success: true,
                     counted: false,
                     ignored: true,
                     reason: 'admin_excluded',
-                    ...summary,
                 });
             }
 
@@ -136,7 +140,13 @@ function registerVisitorRoutes(options = {}) {
                 clientId: clientIdFromRequest(req),
                 request: req,
             });
-            return res.json({ success: true, ...result });
+            // Only acknowledge collection; aggregate and session data are administrator-only.
+            return res.json({
+                success: true,
+                counted: result.counted === true,
+                ignored: result.ignored === true,
+                reason: typeof result.reason === 'string' ? result.reason : null,
+            });
         } catch (error) {
             const status = errorStatus(error);
             if (status >= 500) console.error('[visitor analytics] public visit failed:', error.message);

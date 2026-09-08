@@ -57,3 +57,6 @@ deploy_packages/
 *_tmp.*
 *.tmp
 backend/tmp/
+__pycache__/
+*.py[cod]
+/release-output/

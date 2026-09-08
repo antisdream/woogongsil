@@ -423,7 +423,9 @@ test('a browser is counted once while active and again only after five minutes o
     assert.equal(heartbeat.counted, false);
     assert.equal(afterIdle.counted, true);
     assert.equal(pool.sessions.length, 2);
-    assert.equal(afterIdle.totalCount, 2);
+    assert.equal(Object.hasOwn(afterIdle, 'totalCount'), false);
+    assert.equal(Object.hasOwn(afterIdle, 'todayCount'), false);
+    assert.equal(pool.queries.some(({ sql }) => sql.includes('visit-session:public-summary')), false);
     assert.equal(pool.sessions[0].active_key, null);
     assert.equal(pool.sessions[1].entry_path, '/questions');
 });

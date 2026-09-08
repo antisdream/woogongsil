@@ -3,6 +3,18 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
 }
 
+// [공통 릴리즈 버전] 웹과 Android는 저장소 VERSION을 함께 사용합니다.
+// minor/patch는 0..99로 제한하여 versionCode가 서로 겹치지 않게 합니다.
+val releaseVersion = rootProject.file("../VERSION").readText(Charsets.UTF_8).trim()
+val versionComponents = Regex("(0|[1-9]\\d*)\\.(0|[1-9]\\d?)\\.(0|[1-9]\\d?)")
+    .matchEntire(releaseVersion)?.groupValues?.drop(1)
+    ?: error("VERSION은 major.minor.patch 형식이고 minor/patch는 0..99여야 합니다.")
+val versionMajor = versionComponents[0].toIntOrNull()
+    ?: error("VERSION major가 Android 버전 범위를 벗어났습니다.")
+val releaseVersionCode = versionMajor.toLong() * 10000 +
+    versionComponents[1].toLong() * 100 + versionComponents[2].toLong()
+require(releaseVersionCode in 1..2100000000L) { "Android versionCode 범위를 벗어났습니다." }
+
 // [기기 UI 테스트] 명시적으로 전달한 웹 빌드만 Debug APK에 포함합니다.
 // 기본 Debug와 Internal/Release는 계속 운영 웹을 불러옵니다.
 val localWebAssetsPath = providers.gradleProperty("wgsLocalWebAssetsDir").orNull
@@ -47,8 +59,8 @@ android {
         applicationId = "site.woogongsil.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = releaseVersionCode.toInt()
+        versionName = releaseVersion
         manifestPlaceholders["appLabel"] = "우공실"
         buildConfigField("boolean", "LOCAL_WEB_BUNDLE", "false")
 
