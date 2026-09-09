@@ -98,10 +98,10 @@ function responseDouble() {
     };
 }
 
-function createFixture() {
+function createFixture(options = {}) {
     const pool = new FakePool();
     const user = {
-        id: 'admin1',
+        id: 'skn29',
         name: '관리자',
         email: 'admin@example.test',
         is_primary_admin: 1,
@@ -122,9 +122,33 @@ function createFixture() {
         normalizeAdminBool: (value) => value === true || value === 1 || value === '1',
         isAdminAccessUser: (candidate) => Boolean(candidate?.is_primary_admin || candidate?.is_operator),
         isPrimaryAdminUser: (candidate) => Boolean(candidate?.is_primary_admin),
+        verifyDevice: () => true,
+        ...options,
     });
     return { pool, service, user };
 }
+
+test('only skn29 can create a session and older operator sessions are revoked', async () => {
+    const { service, pool, user } = createFixture();
+    await assert.rejects(service.createSession('another-admin', {}), /account is not allowed/);
+    const created = await service.createSession(user.id, { headers: {} });
+    pool.sessions[0].user_id = 'another-admin';
+    const result = await service.authenticateRequest({ headers: { cookie: `${service.cookieName}=${created.rawToken}` } });
+    assert.equal(result.valid, false);
+    assert.equal(result.statusCode, 403);
+    assert.equal(pool.sessions[0].revoke_reason, 'account_not_allowed');
+});
+
+test('a valid administrator session cannot be used without an approved device', async () => {
+    let approved = true;
+    const { service, user } = createFixture({ verifyDevice: () => approved });
+    const created = await service.createSession(user.id, { headers: {} });
+    approved = false;
+    const result = await service.authenticateRequest({ headers: { cookie: `${service.cookieName}=${created.rawToken}` } });
+    assert.equal(result.valid, false);
+    assert.equal(result.statusCode, 404);
+    await assert.rejects(service.createSession(user.id, {}), /device is not allowed/);
+});
 
 test('cookie parser and timing-safe equality reject malformed or different values', () => {
     assert.deepEqual(parseCookies('a=1; admin=value%202; malformed'), { a: '1', admin: 'value 2' });

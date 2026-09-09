@@ -9,11 +9,13 @@ class VisitorHealthTests(unittest.TestCase):
         manifest = {"version": "2.4.1", "tag": "v2.4.1", "commit": "a" * 40}
         summary = {"success": True, "todayCount": 0, "totalCount": 375}
 
-        def request(path, *_args):
-            if path in ("/", "/manage/"):
+        def request(path, *_args, headers=None):
+            if path == "/":
                 return 200, b"html"
+            if path == "/manage/":
+                return (200 if headers else 404), b"html"
             if path == "/api/admin/auth/me":
-                return 401, b"{}"
+                return (401 if headers else 404), b"{}"
             if path == "/version.json":
                 return 200, json.dumps(manifest).encode()
             if path == "/api/online-users":
@@ -24,7 +26,8 @@ class VisitorHealthTests(unittest.TestCase):
                 return 200, json.dumps(summary).encode()
             raise AssertionError("Unexpected health request")
 
-        with patch.object(deploy, "request", request), patch.object(deploy.time, "sleep"):
+        with patch.object(deploy, "request", request), patch.object(deploy.time, "sleep"), \
+                patch.object(deploy, 'administrator_device_headers', return_value={'approved':'test'}):
             deploy.health(manifest)
             for invalid in (
                 {**summary, "users": []}, {**summary, "todayCount": -1},

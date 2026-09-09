@@ -543,7 +543,7 @@ test('password recovery and password change still require verified email and the
 
 test('administrator origin, credentials, role and separate session cookie checks remain enforced without CAPTCHA', async () => {
     const registry = createRouteRegistry();
-    const user = { id: 'unit-admin', password: 'unit-admin-hash', is_primary_admin: 1, is_operator: 1, is_suspended: 0 };
+    const user = { id: 'skn29', password: 'unit-admin-hash', is_primary_admin: 1, is_operator: 1, is_suspended: 0 };
     const adminSessionService = createAdminSessionService({
         pool: { async query(sql) {
             if (/^\s*CREATE TABLE IF NOT EXISTS wgs_admin_sessions/.test(String(sql))) return [{ affectedRows: 0 }];
@@ -551,6 +551,7 @@ test('administrator origin, credentials, role and separate session cookie checks
         } },
         crypto,
         env: { NODE_ENV: 'development', PUBLIC_SITE_URL: 'http://localhost:5000', ADMIN_CSRF_SECRET: 'unit-csrf-secret' },
+        verifyDevice: () => true,
         getAdminUserControl: async () => user, normalizeAdminBool: (value) => Boolean(Number(value)),
         isAdminAccessUser: (candidate) => Boolean(candidate?.is_primary_admin || candidate?.is_operator),
         isPrimaryAdminUser: (candidate) => Boolean(candidate?.is_primary_admin),

@@ -50,6 +50,9 @@ backend/logs/
 backend.env
 *.pem
 *.key
+*.p12
+*.pfx
+admin-device-policy.json
 frontend/public/ipep-img/
 _codex_ops/
 _codex_compare/

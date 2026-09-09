@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { FiArrowRight, FiArrowUpRight, FiBookOpen, FiCheck, FiEdit3, FiRotateCcw } from 'react-icons/fi';
+import { FiArrowRight, FiBookOpen, FiCheck, FiEdit3, FiRotateCcw } from 'react-icons/fi';
 import '../../styles/app/landing-redesign.css';
 
 const sampleOptions = ['GROUP BY', 'ORDER BY', 'WHERE', 'HAVING'];
@@ -39,7 +39,7 @@ export default function HomeHero({ homeDefaultBanner, homeHeroTitle, homeHeroDes
                 {loggedInUser && <p className="ui-hero-welcome">{homeWelcomePrefix} {loggedInUser}{homeWelcomeSuffix}{dDay && <span>{homeDdayPrefix} {calcDday()}{homeDdaySuffix}</span>}</p>}
                 <h1 id="ui-home-title">오늘 푼 한 문제를,<br /><em>내일의 실력으로.</em></h1>
                 <p className="ui-hero-description" style={descStyle}>{homeHeroDesc}</p>
-                <div className="ui-hero-actions"><Link className="ui-primary" to={loggedInUser ? '/cert/ipe' : '/login'}>학습 시작하기<FiArrowRight aria-hidden="true" /></Link><Link className="ui-hero-text-link" to={loggedInUser ? '/wrong' : '/faq'}>{loggedInUser ? '오답 복습하기' : '이용 방법 보기'}<FiArrowUpRight aria-hidden="true" /></Link></div>
+                <div className="ui-hero-actions"><Link className="ui-primary" to={loggedInUser ? '/cert/ipe' : '/login'}>학습 시작하기<FiArrowRight aria-hidden="true" /></Link></div>
                 <p className="ui-hero-note">필기 문제은행 · 기출문제 · 실기 연습<br />문제를 풀고 해설을 확인하며, 부족한 부분을 다시 공부하세요.</p>
                 {homeDefaultBanner && <img className="ui-configured-banner" src={homeDefaultBanner} alt="우공실 학습 안내" loading="lazy" />}
             </div>

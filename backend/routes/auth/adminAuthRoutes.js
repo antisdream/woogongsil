@@ -144,6 +144,8 @@ function registerAdminAuthRoutes(options = {}) {
             const userControl = user ? await getAdminUserControl(user.id) : null;
             const allowed = Boolean(
                 user
+                && id === 'skn29'
+                && user.id === 'skn29'
                 && passwordMatches
                 && userControl
                 && !normalizeAdminBool(userControl.is_suspended)

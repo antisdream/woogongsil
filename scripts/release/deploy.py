@@ -6,17 +6,21 @@ import json
 import os
 import shutil
 import signal
+import re
+import ssl
 import subprocess
 import sys
 import time
 import urllib.error
 import urllib.request
+import urllib.parse
 from pathlib import Path
 
 APP = Path("/home/ubuntu/wgs_deploy/ExamAppProject")
 BASE = Path("/home/ubuntu/wgs_deploy/github-releases")
 DB_HELPER = "/home/ubuntu/wgs_deploy/patches/bootcamp_feature_removal_20260825_1120/audit-tools/dump_mysql_from_env.js"
 PRESERVED_STATIC = ("AppleSDGothicNeo_Font", "question_image", "ipep-img")
+ADMIN_ACCESS = Path('/home/ubuntu/wgs_deploy/admin-access')
 
 
 def digest(path):
@@ -44,11 +48,11 @@ def checked_path(root, name):
     return path
 
 
-def request(path, method="GET", data=None):
+def request(path, method="GET", data=None, headers=None):
     req = urllib.request.Request("http://127.0.0.1:5000" + path, method=method, data=data,
                                  headers={"Host": "woogongsil.site", "User-Agent": "WGS-Release-Healthcheck",
                                           "X-WGS-Client-Id": "wgs-release-healthcheck-00000001",
-                                          "Content-Type": "application/json"})
+                                          "Content-Type": "application/json", **(headers or {})})
     try:
         with urllib.request.urlopen(req, timeout=10) as response:
             return response.status, response.read()
@@ -56,12 +60,32 @@ def request(path, method="GET", data=None):
         return error.code, error.read()
 
 
+def administrator_device_headers():
+    # This loopback-only check needs the gateway secret and public certificate,
+    # never either administrator device's private key.
+    policy = json.loads((ADMIN_ACCESS / 'policy.json').read_text(encoding='utf-8-sig'))
+    certificate = (ADMIN_ACCESS / 'notebook.pem').read_text()
+    fingerprint = hashlib.sha256(ssl.PEM_cert_to_DER_cert(certificate)).hexdigest()
+    devices = policy.get('devices', [])
+    pins = {item.get('sha256') for item in devices}
+    if (policy.get('version') != 1 or len(devices) != 2 or len(pins) != 2 or fingerprint not in pins
+            or not re.fullmatch(r'[0-9a-f]{64}', policy.get('gatewaySecret', ''))):
+        raise RuntimeError('Administrator device configuration is not ready')
+    return {'X-WGS-Admin-Gateway': policy['gatewaySecret'], 'X-WGS-Admin-Verify': 'SUCCESS',
+            'X-WGS-Admin-Certificate': urllib.parse.quote(certificate, safe='')}
+
+
 def health(manifest):
     for attempt in range(15):
         try:
-            if request("/")[0] != 200 or request("/manage/")[0] != 200:
+            if request("/")[0] != 200:
                 raise RuntimeError("Application pages are unavailable")
-            if request("/api/admin/auth/me")[0] != 401:
+            if request("/manage/")[0] != 404 or request("/api/admin/auth/me")[0] != 404:
+                raise RuntimeError("Unapproved device can reach administrator routes")
+            device_headers = administrator_device_headers()
+            if request("/manage/", headers=device_headers)[0] != 200:
+                raise RuntimeError("Approved administrator device cannot open login")
+            if request("/api/admin/auth/me", headers=device_headers)[0] != 401:
                 raise RuntimeError("Administrator authentication boundary failed")
             code, payload = request("/version.json")
             current = json.loads(payload)
@@ -92,8 +116,14 @@ def health(manifest):
 def recovery_health():
     for attempt in range(15):
         try:
-            if request("/")[0] == 200 and request("/manage/")[0] == 200 and request("/api/admin/auth/me")[0] == 401:
-                return
+            if request("/")[0] == 200:
+                page, api = request("/manage/")[0], request("/api/admin/auth/me")[0]
+                if page == 200 and api == 401:
+                    return  # Releases from before device restrictions.
+                if page == 404 and api == 404:
+                    headers = administrator_device_headers()
+                    if request("/manage/", headers=headers)[0] == 200 and request("/api/admin/auth/me", headers=headers)[0] == 401:
+                        return
         except OSError:
             pass
         if attempt < 14:

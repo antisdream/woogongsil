@@ -54,6 +54,7 @@ const {
     createAdminSessionService,
     isInternalApprovalBypassRequest,
 } = require('./services/adminSessionService');
+const { createAdminDeviceAccess } = require('./services/adminDeviceAccess');
 const { createJsonFileStores } = require('./services/jsonFileStores');
 const { createWrongNotesSchemaChecker } = require('./services/wrongNotesSchema');
 const { createStudyNoteSchemaChecker } = require('./services/studyNoteSchema');
@@ -73,6 +74,12 @@ app.disable('x-powered-by');
 
 const wgsCorsOptions = createWgsCorsOptions();
 app.use(createWgsSecurityHeaders());
+const adminDeviceAccess = createAdminDeviceAccess();
+// Verify the device before JSON handlers or static files can expose /manage.
+app.use((req, res, next) => {
+    if (String(req.originalUrl || '').startsWith('/api/admin/') && isApprovalBypassRequest(req)) return next();
+    return adminDeviceAccess.protect(req, res, next);
+});
 
 // HTTP 서버 + Socket.IO 서버 준비합니다
 // ------------------------------------------------------------
@@ -716,6 +723,7 @@ function isApprovalBypassRequest(req) {
 adminSessionService = createAdminSessionService({
     pool,
     crypto,
+    verifyDevice: (req) => Boolean(req.adminDevice || adminDeviceAccess.authenticate(req)),
     getAdminUserControl,
     normalizeAdminBool,
     isAdminAccessUser,

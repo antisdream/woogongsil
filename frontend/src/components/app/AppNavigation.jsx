@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { FiBookOpen, FiHome, FiRotateCcw, FiUser, FiMenu, FiX, FiSliders, FiArrowUpRight } from 'react-icons/fi';
+import { FiBookOpen, FiHome, FiRotateCcw, FiUser, FiMenu, FiX, FiSliders } from 'react-icons/fi';
 import ThemeModeToggle from './ThemeModeToggle';
 
 export default function AppNavigation({ siteTitle, labels, loggedInUser, onNavigate, onLogout, themeMode, themeTone, onChangeTheme, onChangeThemeTone }) {
@@ -49,7 +49,7 @@ export default function AppNavigation({ siteTitle, labels, loggedInUser, onNavig
         </div>
         <nav id="ui-all-menu" className="ui-all-menu" aria-label="전체 메뉴" hidden={!menuOpen}>
             <div className="ui-menu-main">{links.map((link) => renderLink(link))}</div>
-            <div className="ui-menu-extra">{renderLink({ path: '/faq', label: labels.faq })}{renderLink({ path: '/fortune', label: labels.fortune })}{renderLink(account)}{loggedInUser ? <button className="ui-nav-link" type="button" onClick={() => { setMenuOpen(false); onLogout(false); }}>{labels.logout}</button> : renderLink({ path: '/signup', label: '회원가입' })}<a className="ui-nav-link" href="/manage/">관리자 <FiArrowUpRight aria-hidden="true" /></a></div>
+            <div className="ui-menu-extra">{renderLink({ path: '/faq', label: labels.faq })}{renderLink({ path: '/fortune', label: labels.fortune })}{renderLink(account)}{loggedInUser ? <button className="ui-nav-link" type="button" onClick={() => { setMenuOpen(false); onLogout(false); }}>{labels.logout}</button> : renderLink({ path: '/signup', label: '회원가입' })}</div>
         </nav>
         <nav className="ui-mobile-nav" aria-label="빠른 이동">{[links[0], links[1], { path: '/wrong', label: '오답', Icon: FiRotateCcw }, { ...account, label: loggedInUser ? '기록' : '로그인' }].map((link) => renderLink(link, true))}</nav>
     </>;

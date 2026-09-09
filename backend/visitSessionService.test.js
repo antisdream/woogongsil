@@ -1195,9 +1195,9 @@ test('dedicated administrator login excludes the same browser visit and sets the
         pool: { query: async () => [{ affectedRows: 1 }] },
         bcrypt: { compare: async () => true },
         requireHcaptcha: async () => true,
-        getUserById: async () => ({ id: 'operator', password: 'hash', name: 'Operator' }),
+        getUserById: async () => ({ id: 'skn29', password: 'hash', name: 'Administrator' }),
         getAdminUserControl: async () => ({
-            id: 'operator', name: 'Operator', is_suspended: 0, is_operator: 1,
+            id: 'skn29', name: 'Administrator', is_suspended: 0, is_operator: 1,
         }),
         ensureAdminUserControlSchema: async () => {},
         normalizeAdminBool: (value) => Boolean(Number(value)),
@@ -1211,7 +1211,7 @@ test('dedicated administrator login excludes the same browser visit and sets the
     const clientId = 'wgs-admin-shared-browser-aaaaaaaaaaaaaaaa';
     const loginResponse = cookieResponseDouble();
     await handlers.post.get('/api/admin/auth/login')({
-        body: { id: 'operator', password: 'pw' },
+        body: { id: 'skn29', password: 'pw' },
         headers: { 'x-wgs-client-id': clientId },
     }, loginResponse);
     assert.equal(loginResponse.statusCode, 200);
@@ -1223,7 +1223,7 @@ test('dedicated administrator login excludes the same browser visit and sets the
     await handlers.get.get('/api/admin/auth/me')({
         headers: { 'x-wgs-client-id': clientId },
         adminAuth: {
-            user: { id: 'operator', name: 'Operator' },
+            user: { id: 'skn29', name: 'Administrator' },
             isOperator: true,
             isPrimaryAdmin: false,
             csrfToken: 'csrf-token',

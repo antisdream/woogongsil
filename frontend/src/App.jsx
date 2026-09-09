@@ -758,7 +758,7 @@ function App() {
                 </main>
                 <footer className="ui-footer">
                     <div className="ui-footer-brand"><strong>우공실</strong><span>한 문제씩 쌓아가는 나의 공부실</span><VisitorStats /></div>
-                    <div className="ui-footer-links"><a href="/faq" onClick={(event) => handleNavigation(event, '/faq')}>이용 안내</a><a href="/fortune" onClick={(event) => handleNavigation(event, '/fortune')}>오늘의 운세</a><a href="/terms" onClick={(event) => handleNavigation(event, '/terms')}>이용약관</a><a href="/privacy" onClick={(event) => handleNavigation(event, '/privacy')}>개인정보 처리 안내</a></div>
+                    <div className="ui-footer-links"><a href="/faq" onClick={(event) => handleNavigation(event, '/faq')}>이용 안내</a><a href="/terms" onClick={(event) => handleNavigation(event, '/terms')}>이용약관</a><a href="/privacy" onClick={(event) => handleNavigation(event, '/privacy')}>개인정보 처리 안내</a></div>
                 </footer>
             </div>
         </div>

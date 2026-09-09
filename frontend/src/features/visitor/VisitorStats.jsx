@@ -13,7 +13,7 @@ export default function VisitorStats() {
         <div><dt>오늘 방문</dt><dd>{count(summary?.todayCount)}</dd></div>
         <div><dt>누적 방문</dt><dd>{count(summary?.totalCount)}</dd></div>
       </dl>
-      <span className="ui-visitor-note">{summary ? '한국시간 기준' : '방문 통계 연결 중'}</span>
+      {!summary && <span className="ui-visitor-note">방문 통계 연결 중</span>}
     </div>
   );
 }
