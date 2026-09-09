@@ -551,7 +551,6 @@ test('administrator origin, credentials, role and separate session cookie checks
         } },
         crypto,
         env: { NODE_ENV: 'development', PUBLIC_SITE_URL: 'http://localhost:5000', ADMIN_CSRF_SECRET: 'unit-csrf-secret' },
-        verifyDevice: () => true,
         getAdminUserControl: async () => user, normalizeAdminBool: (value) => Boolean(Number(value)),
         isAdminAccessUser: (candidate) => Boolean(candidate?.is_primary_admin || candidate?.is_operator),
         isPrimaryAdminUser: (candidate) => Boolean(candidate?.is_primary_admin),

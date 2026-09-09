@@ -82,7 +82,6 @@ function createAdminSessionService(options = {}) {
     const isAdminAccessUser = options.isAdminAccessUser;
     const isPrimaryAdminUser = options.isPrimaryAdminUser;
     const env = options.env || process.env;
-    const verifyDevice = typeof options.verifyDevice === 'function' ? options.verifyDevice : () => false;
 
     if (!pool || typeof pool.query !== 'function') {
         throw new Error('createAdminSessionService requires a MySQL pool.');
@@ -214,7 +213,6 @@ function createAdminSessionService(options = {}) {
 
     async function createSession(userId, req) {
         if (userId !== 'skn29') throw new Error('Administrator account is not allowed');
-        if (!verifyDevice(req)) throw new Error('Administrator device is not allowed');
         await ensureSchema();
 
         const now = Date.now();
@@ -290,7 +288,6 @@ function createAdminSessionService(options = {}) {
     }
 
     async function authenticateRequest(req, options = {}) {
-        if (!verifyDevice(req)) return invalid('admin_device_not_allowed', 404);
         await ensureSchema();
 
         const cookies = parseCookies(req?.headers?.cookie || '');

@@ -61,7 +61,7 @@ def request(path, method="GET", data=None, headers=None):
 
 
 def administrator_device_headers():
-    # This loopback-only check needs the gateway secret and public certificate,
+    # Only rollback to v2.4.2 needs the gateway secret and public certificate,
     # never either administrator device's private key.
     policy = json.loads((ADMIN_ACCESS / 'policy.json').read_text(encoding='utf-8-sig'))
     certificate = (ADMIN_ACCESS / 'notebook.pem').read_text()
@@ -80,12 +80,9 @@ def health(manifest):
         try:
             if request("/")[0] != 200:
                 raise RuntimeError("Application pages are unavailable")
-            if request("/manage/")[0] != 404 or request("/api/admin/auth/me")[0] != 404:
-                raise RuntimeError("Unapproved device can reach administrator routes")
-            device_headers = administrator_device_headers()
-            if request("/manage/", headers=device_headers)[0] != 200:
-                raise RuntimeError("Approved administrator device cannot open login")
-            if request("/api/admin/auth/me", headers=device_headers)[0] != 401:
+            if request("/manage/")[0] != 200:
+                raise RuntimeError("Administrator login page is unavailable")
+            if request("/api/admin/auth/me")[0] != 401:
                 raise RuntimeError("Administrator authentication boundary failed")
             code, payload = request("/version.json")
             current = json.loads(payload)
@@ -119,7 +116,7 @@ def recovery_health():
             if request("/")[0] == 200:
                 page, api = request("/manage/")[0], request("/api/admin/auth/me")[0]
                 if page == 200 and api == 401:
-                    return  # Releases from before device restrictions.
+                    return  # Public login pages before v2.4.2 and from v2.4.3 onward.
                 if page == 404 and api == 404:
                     headers = administrator_device_headers()
                     if request("/manage/", headers=headers)[0] == 200 and request("/api/admin/auth/me", headers=headers)[0] == 401:

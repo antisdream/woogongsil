@@ -13,9 +13,9 @@ class VisitorHealthTests(unittest.TestCase):
             if path == "/":
                 return 200, b"html"
             if path == "/manage/":
-                return (200 if headers else 404), b"html"
+                return 200, b"html"
             if path == "/api/admin/auth/me":
-                return (401 if headers else 404), b"{}"
+                return 401, b"{}"
             if path == "/version.json":
                 return 200, json.dumps(manifest).encode()
             if path == "/api/online-users":
@@ -26,8 +26,7 @@ class VisitorHealthTests(unittest.TestCase):
                 return 200, json.dumps(summary).encode()
             raise AssertionError("Unexpected health request")
 
-        with patch.object(deploy, "request", request), patch.object(deploy.time, "sleep"), \
-                patch.object(deploy, 'administrator_device_headers', return_value={'approved':'test'}):
+        with patch.object(deploy, "request", request), patch.object(deploy.time, "sleep"):
             deploy.health(manifest)
             for invalid in (
                 {**summary, "users": []}, {**summary, "todayCount": -1},

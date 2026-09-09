@@ -3,21 +3,12 @@ import react from '@vitejs/plugin-react'
 import { fileURLToPath } from 'node:url'
 import { resolve } from 'node:path'
 import { realpathSync } from 'node:fs'
-import { createRequire } from 'node:module'
 
 const frontendRoot = fileURLToPath(new URL('.', import.meta.url))
-const { createAdminDeviceAccess, protectedAdminPath } = createRequire(import.meta.url)(resolve(frontendRoot, '../backend/services/adminDeviceAccess.js'))
 
 // Match the production nginx history fallback for the separate administrator app.
 const manageHistoryFallback = () => {
-    const deviceAccess = createAdminDeviceAccess()
-    const attach = (server) => { server.middlewares.use((request, response, next) => {
-        if (protectedAdminPath(request.url) && !deviceAccess.authenticate(request)) {
-            response.statusCode = 404
-            response.setHeader('Cache-Control', 'private, no-store, max-age=0')
-            response.end('Not Found')
-            return
-        }
+    const attach = (server) => { server.middlewares.use((request, _response, next) => {
         const [pathname, query] = (request.url || '').split('?')
         if (request.headers.accept?.includes('text/html')
             && (pathname === '/manage' || pathname.startsWith('/manage/'))
