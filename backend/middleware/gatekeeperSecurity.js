@@ -99,6 +99,7 @@ function wgsRouteGroup(req) {
   const method = String(req.method || 'GET').toUpperCase();
   if (path === '/api/gatekeeper/verify') return 'gatekeeper';
   if (path === '/api/admin/auth/login') return 'admin_login';
+  if (method === 'POST' && /^\/api\/admin\/auth\/otp\/(status|resend|verify)\/?$/i.test(path)) return 'admin_otp';
   if (path === '/api/login') return 'login';
   if (method === 'POST' && /^\/api\/error-report(?:\/send)?\/?$/i.test(path)) return 'error_report';
   if (method === 'POST' && path === '/api/visitors/visit') return 'visitor_visit';
@@ -207,6 +208,12 @@ function wgsRateSpecs(req, group) {
     }
     add('admin_login:account', username, wgsRateNumber(process.env.WGS_LIMIT_ACCOUNT_ADMIN_LOGIN_PER_15MIN, 8), 900);
     add('admin_login:ip', ip, wgsRateNumber(process.env.WGS_LIMIT_IP_ADMIN_LOGIN_PER_10MIN, 20), 600);
+  }
+
+  if (group === 'admin_otp') {
+    // DB-backed per-account send/attempt limits are enforced by the OTP service as well.
+    if (clientId !== 'missing-client-id') add('admin_otp:client', clientId, 30, 600);
+    add('admin_otp:ip', ip, 60, 600);
   }
 
   if (group === 'content_view') {

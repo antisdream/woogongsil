@@ -11,8 +11,12 @@ const {
 } = require('./services/adminSessionService');
 const registerAdminAuthRoutes = require('./routes/auth/adminAuthRoutes');
 
-class FakePool {
+const { AdminOtpPool } = require('./test-support/adminOtpPool');
+const { createAdminEmailOtpService } = require('./services/adminEmailOtpService');
+
+class FakePool extends AdminOtpPool {
     constructor() {
+        super();
         this.sessions = [];
         this.nextId = 1;
     }
@@ -20,10 +24,12 @@ class FakePool {
     async query(sql, params = []) {
         const normalized = String(sql).replace(/\s+/g, ' ').trim();
         if (normalized.startsWith('CREATE TABLE IF NOT EXISTS wgs_admin_sessions')) return [{ affectedRows: 0 }];
+        if (normalized.startsWith('CREATE TABLE IF NOT EXISTS wgs_admin_email_otp')) return super.query(normalized);
+        if (normalized.startsWith('SHOW COLUMNS')) return [[{ Field: 'email_otp_verified_at' }]];
         if (normalized.startsWith('INSERT INTO wgs_admin_operation_logs')) return [{ affectedRows: 1 }];
 
         if (normalized.startsWith('INSERT INTO wgs_admin_sessions')) {
-            const [sessionHash, userId, createdAt, lastSeenAt, idleExpiresAt, absoluteExpiresAt, ipHash, userAgentHash] = params;
+            const [sessionHash, userId, createdAt, lastSeenAt, idleExpiresAt, absoluteExpiresAt, ipHash, userAgentHash, emailOtpVerifiedAt] = params;
             const row = {
                 id: this.nextId++,
                 session_hash: sessionHash,
@@ -36,6 +42,7 @@ class FakePool {
                 revoke_reason: null,
                 ip_hash: ipHash,
                 user_agent_hash: userAgentHash,
+                email_otp_verified_at: emailOtpVerifiedAt,
             };
             this.sessions.push(row);
             return [{ affectedRows: 1, insertId: row.id }];
@@ -131,7 +138,7 @@ function createFixture(options = {}) {
 test('only skn29 can create a session and older operator sessions are revoked', async () => {
     const { service, pool, user } = createFixture();
     await assert.rejects(service.createSession('another-admin', {}), /account is not allowed/);
-    const created = await service.createSession(user.id, { headers: {} });
+    const created = await service.createSession(user.id, { headers: {} }, { emailOtpVerified: true });
     pool.sessions[0].user_id = 'another-admin';
     const result = await service.authenticateRequest({ headers: { cookie: `${service.cookieName}=${created.rawToken}` } });
     assert.equal(result.valid, false);
@@ -139,12 +146,14 @@ test('only skn29 can create a session and older operator sessions are revoked', 
     assert.equal(pool.sessions[0].revoke_reason, 'account_not_allowed');
 });
 
-test('HTTP admin login needs only skn29 credentials and retains session and CSRF protection', async (t) => {
+test('HTTP login requires password and email OTP before any administrator session exists', async (t) => {
     const express = require('express');
     const bcrypt = require('bcrypt');
     const { pool, service, user } = createFixture();
     const password = 'isolated-http-test-password';
     const passwordHash = await bcrypt.hash(password, 4);
+    const mails = [];
+    const otp = createAdminEmailOtpService({ pool, env: { NODE_ENV: 'development' }, sendEmail: async (to, subject, text) => { mails.push({ to, text }); return { success: true }; } });
     const users = [user, { ...user, id: 'another-admin' }, { ...user, id: 'SKN29' }];
     const app = express();
     app.use(express.json());
@@ -161,6 +170,7 @@ test('HTTP admin login needs only skn29 credentials and retains session and CSRF
         isAdminAccessUser: (candidate) => Boolean(candidate?.is_primary_admin || candidate?.is_operator),
         isPrimaryAdminUser: (candidate) => Boolean(candidate?.is_primary_admin),
         adminSessionService: service,
+        adminEmailOtpService: otp,
         visitSessionService: { excludeClientSession: async () => {} },
         visitorAnalyticsService: { createAdminExclusionCookie: () => 'qa_exclusion=1; Path=/; HttpOnly; SameSite=Strict' },
     });
@@ -195,10 +205,29 @@ test('HTTP admin login needs only skn29 credentials and retains session and CSRF
     assert.equal(pool.sessions.length, 0);
 
     const login = await post('/api/admin/auth/login', { id: 'skn29', password });
-    assert.equal(login.status, 200);
-    const data = await login.json();
+    assert.equal(login.status, 202);
+    const pending = await login.json();
+    assert.equal(pending.valid, false);
+    assert.equal(pending.admin, undefined);
+    assert.equal(pending.rawToken, undefined);
+    assert.equal(pool.sessions.length, 0);
+    assert.equal(mails.length, 1);
+    assert.equal(mails[0].to, user.email);
+    const pendingCookie = login.headers.getSetCookie().find(value => value.startsWith(otp.cookieName + '=')).split(';')[0];
+    assert.equal((await fetch(base + '/api/admin/auth/me', { headers: { cookie: pendingCookie } })).status, 401);
+    const otpCode = mails[0].text.match(/\b\d{6}\b/)[0];
+    const otpHeaders = { cookie: pendingCookie, 'x-csrf-token': pending.csrfToken };
+    assert.equal((await post('/api/admin/auth/otp/verify', { code: otpCode }, { cookie: pendingCookie })).status, 403);
+    assert.equal((await post('/api/admin/auth/otp/verify', { code: otpCode }, { ...otpHeaders, origin: 'https://evil.example' })).status, 403);
+    user.is_suspended = 1;
+    assert.equal((await post('/api/admin/auth/otp/verify', { code: otpCode }, otpHeaders)).status, 401);
+    user.is_suspended = 0;
+    const verified = await post('/api/admin/auth/otp/verify', { code: otpCode }, otpHeaders);
+    assert.equal(verified.status, 200);
+    const data = await verified.json();
     assert.equal(data.admin.id, 'skn29');
-    const sessionCookie = login.headers.getSetCookie().find((value) => value.startsWith(service.cookieName + '='));
+    assert.equal((await post('/api/admin/auth/otp/verify', { code: otpCode }, otpHeaders)).status, 401);
+    const sessionCookie = verified.headers.getSetCookie().find((value) => value.startsWith(service.cookieName + '='));
     assert.match(sessionCookie, /HttpOnly/);
     assert.match(sessionCookie, /SameSite=Strict/);
     const cookie = sessionCookie.split(';')[0];
@@ -248,7 +277,7 @@ test('admin session uses an HttpOnly cookie and authenticates without exposing t
     const created = await service.createSession(user.id, {
         headers: { 'user-agent': 'node-test' },
         ip: '127.0.0.1',
-    });
+    }, { emailOtpVerified: true });
     assert.ok(created.rawToken.length >= 40);
     assert.notEqual(created.rawToken, created.sessionHash);
 
@@ -272,7 +301,7 @@ test('admin session uses an HttpOnly cookie and authenticates without exposing t
 
 test('state-changing administrator requests require both exact Origin and CSRF token', async () => {
     const { service, user } = createFixture();
-    const created = await service.createSession(user.id, { headers: {}, ip: '127.0.0.1' });
+    const created = await service.createSession(user.id, { headers: {}, ip: '127.0.0.1' }, { emailOtpVerified: true });
     const cookie = `${service.cookieName}=${encodeURIComponent(created.rawToken)}`;
 
     const missingCsrfRes = responseDouble();
@@ -307,7 +336,7 @@ test('state-changing administrator requests require both exact Origin and CSRF t
 
 test('expired and revoked sessions fail closed', async () => {
     const { pool, service, user } = createFixture();
-    const created = await service.createSession(user.id, { headers: {}, ip: '127.0.0.1' });
+    const created = await service.createSession(user.id, { headers: {}, ip: '127.0.0.1' }, { emailOtpVerified: true });
     pool.sessions[0].idle_expires_at = new Date(Date.now() - 1000);
 
     const expired = await service.authenticateRequest({
@@ -317,7 +346,7 @@ test('expired and revoked sessions fail closed', async () => {
     assert.equal(expired.reason, 'admin_session_expired');
     assert.ok(pool.sessions[0].revoked_at);
 
-    const second = await service.createSession(user.id, { headers: {}, ip: '127.0.0.1' });
+    const second = await service.createSession(user.id, { headers: {}, ip: '127.0.0.1' }, { emailOtpVerified: true });
     await service.revokeSessionHash(second.sessionHash, 'test_revocation');
     const revoked = await service.authenticateRequest({
         headers: { cookie: `${service.cookieName}=${second.rawToken}` },
@@ -328,7 +357,7 @@ test('expired and revoked sessions fail closed', async () => {
 
 test('automatic administrator polls do not extend idle expiry', async () => {
     const { pool, service, user } = createFixture();
-    const created = await service.createSession(user.id, { headers: {}, ip: '127.0.0.1' });
+    const created = await service.createSession(user.id, { headers: {}, ip: '127.0.0.1' }, { emailOtpVerified: true });
     const cookie = `${service.cookieName}=${encodeURIComponent(created.rawToken)}`;
     const originalLastSeen = new Date(Date.now() - 2 * 60 * 1000);
     const originalIdleExpiry = new Date(Date.now() + 10 * 60 * 1000);
@@ -385,6 +414,7 @@ test('logout clears the browser cookie even when server-side revocation fails', 
         isAdminAccessUser: () => false,
         isPrimaryAdminUser: () => false,
         adminSessionService,
+        adminEmailOtpService: {},
     });
 
     const handler = registeredPosts.get('/api/admin/auth/logout');
@@ -406,4 +436,15 @@ test('logout clears the browser cookie even when server-side revocation fails', 
     assert.equal(res.statusCode, 500);
     assert.match(res.headers['set-cookie'], /Max-Age=0/);
     assert.equal(res.body.reason, 'admin_logout_error');
+});
+
+test('sessions from before the OTP release and direct password-only session creation are refused', async () => {
+    const { service, pool, user } = createFixture();
+    await assert.rejects(service.createSession(user.id, {}), /OTP verification is required/);
+    const created = await service.createSession(user.id, {}, { emailOtpVerified: true });
+    pool.sessions[0].email_otp_verified_at = null;
+    const auth = await service.authenticateRequest({ headers: { cookie: `${service.cookieName}=${created.rawToken}` } });
+    assert.equal(auth.valid, false);
+    assert.equal(auth.reason, 'admin_email_otp_required');
+    assert.equal(pool.sessions[0].revoke_reason, 'email_otp_required');
 });

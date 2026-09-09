@@ -337,3 +337,8 @@ body {
     padding-inline: 9px;
   }
 }
+.wgs-admin-otp-input { text-align: center; letter-spacing: .35em; font-variant-numeric: tabular-nums; }
+.wgs-admin-otp-help { margin: 0; color: var(--wgs-muted, #64748b); font-size: 14px; font-variant-numeric: tabular-nums; }
+.wgs-admin-otp-actions { display: grid; gap: 12px; }
+.wgs-admin-otp-actions button { min-height: 44px; padding: 10px; border: 1px solid var(--wgs-border, #cbd5e1); border-radius: 10px; background: transparent; color: var(--wgs-text, #334155); cursor: pointer; }
+.wgs-admin-otp-actions button:disabled { opacity: .6; cursor: default; }

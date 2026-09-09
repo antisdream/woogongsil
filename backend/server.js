@@ -45,6 +45,7 @@ const registerUserRoutes = require('./routes/userRoutes');
 const registerExamRoutes = require('./routes/examRoutes');
 const registerAuthRoutes = require('./routes/auth/authRoutes');
 const registerAdminAuthRoutes = require('./routes/auth/adminAuthRoutes');
+const { createAdminEmailOtpService } = require('./services/adminEmailOtpService');
 const registerAccountRecoveryRoutes = require('./routes/auth/accountRecoveryRoutes');
 const registerVisitorRoutes = require('./routes/visitorRoutes');
 const registerLegalRoutes = require('./routes/legalRoutes');
@@ -721,6 +722,7 @@ adminSessionService = createAdminSessionService({
     isAdminAccessUser,
     isPrimaryAdminUser,
 });
+const adminEmailOtpService = createAdminEmailOtpService({ pool, sendEmail });
 
 // 모든 관리자 업무 API를 일반 회원 세션과 분리된 관리자 쿠키로 먼저 보호합니다.
 // 결재 승인 서버 내부 재호출만 런타임 비밀 헤더로 통과시키며 브라우저 CORS에는 이 헤더를 공개하지 않습니다.
@@ -744,6 +746,7 @@ registerAdminAuthRoutes({
     adminSessionService,
     visitSessionService,
     visitorAnalyticsService,
+    adminEmailOtpService,
 });
 
 registerVisitorRoutes({
@@ -977,6 +980,7 @@ async function startServer() {
         // DB 스키마 차이로 로그인 SELECT 단계에서 Unknown column 오류가 발생하지 않도록 보정합니다.
         await ensureAdminUserControlSchema();
         await adminSessionService.ensureSchema();
+        await adminEmailOtpService.ensureSchema();
         await ensureVisitorAnalyticsSchema();
         await importDataFromJSON();
 

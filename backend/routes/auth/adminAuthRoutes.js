@@ -3,6 +3,7 @@
 
 const { createVisitSessionService } = require('../../services/visitSessionService');
 const { createVisitorAnalyticsService } = require('../../services/visitorAnalyticsService');
+const { AdminOtpError } = require('../../services/adminEmailOtpService');
 
 const DUMMY_BCRYPT_HASH = '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2uheWG/igi.';
 
@@ -17,6 +18,7 @@ function registerAdminAuthRoutes(options = {}) {
     const isAdminAccessUser = options.isAdminAccessUser;
     const isPrimaryAdminUser = options.isPrimaryAdminUser;
     const adminSessionService = options.adminSessionService;
+    const adminEmailOtpService = options.adminEmailOtpService;
     const visitSessionService = options.visitSessionService || createVisitSessionService({
         pool,
         env: options.env,
@@ -41,6 +43,7 @@ function registerAdminAuthRoutes(options = {}) {
         isAdminAccessUser,
         isPrimaryAdminUser,
         adminSessionService,
+        adminEmailOtpService,
     };
     const missing = Object.entries(required)
         .filter(([, value]) => value === undefined || value === null)
@@ -161,32 +164,11 @@ function registerAdminAuthRoutes(options = {}) {
                 });
             }
 
-            const created = await adminSessionService.createSession(user.id, req);
-            adminSessionService.setSessionCookie(res, created.rawToken);
-
-            const auth = {
-                user: {
-                    id: userControl.id,
-                    name: userControl.name || user.name || userControl.id,
-                    email: userControl.email || user.email || '',
-                },
-                isOperator: true,
-                isPrimaryAdmin: isPrimaryAdminUser(userControl),
-            };
-
-            await writeLoginAudit(user.id, 'login', req);
-            await safelyExcludeAdminVisitor(req, res);
-
-            return res.json({
-                success: true,
-                valid: true,
-                admin: publicAdmin(auth),
-                csrfToken: created.csrfToken,
-                idleExpiresAt: created.idleExpiresAt,
-                expiresAt: created.expiresAt,
-            });
+            adminSessionService.clearSessionCookie(res);
+            return sendPending(res, await adminEmailOtpService.begin(user));
         } catch (error) {
-            console.error('[admin auth login] error:', error);
+            if (error instanceof AdminOtpError) return sendOtpError(res, error);
+            console.error('[admin auth login] error:', error.code || 'unexpected_error');
             return res.status(500).json({
                 success: false,
                 reason: 'admin_login_error',
@@ -194,6 +176,61 @@ function registerAdminAuthRoutes(options = {}) {
             });
         }
     });
+
+    function sendOtpError(res, error) {
+        if (error.retryAfterSeconds) res.setHeader('Retry-After', String(error.retryAfterSeconds));
+        return res.status(error.statusCode).json({
+            success: false, valid: false, reason: error.reason, message: error.message,
+            retryAfterSeconds: error.retryAfterSeconds,
+        });
+    }
+
+    function sendPending(res, pending) {
+        const { rawToken, deliveryFailed, ...payload } = pending;
+        adminEmailOtpService.setCookie(res, rawToken);
+        return res.status(deliveryFailed ? 503 : 202).json({
+            ...payload, success: !deliveryFailed, valid: false,
+            message: deliveryFailed
+                ? '인증 메일을 보내지 못했습니다. 잠시 후 다시 요청해주세요.'
+                : '등록된 이메일로 인증번호를 보냈습니다.',
+        });
+    }
+
+    for (const action of ['status', 'resend', 'verify']) {
+        app.post(`/api/admin/auth/otp/${action}`, async (req, res) => {
+            setNoStore(res);
+            if (!adminSessionService.isAllowedOrigin(req)) {
+                return res.status(403).json({ success: false, reason: 'invalid_admin_origin', message: '허용되지 않은 관리자 요청 출처입니다.' });
+            }
+            try {
+                await ensureAdminUserControlSchema();
+                const user = await getUserById('skn29');
+                const control = await getAdminUserControl('skn29');
+                if (!user || !control || normalizeAdminBool(control.is_suspended) || !isAdminAccessUser(control)) {
+                    throw new AdminOtpError('admin_otp_restart', '관리자 계정 상태를 확인한 후 다시 로그인해주세요.');
+                }
+                const token = adminEmailOtpService.tokenFromRequest(req);
+                const csrf = String(req.headers['x-csrf-token'] || '');
+                if (action === 'status') return res.json({ success: true, valid: false, ...await adminEmailOtpService.status(token, user) });
+                if (action === 'resend') return sendPending(res, await adminEmailOtpService.resend(token, csrf, user));
+                const proof = await adminEmailOtpService.verify(token, csrf, req.body?.code, user);
+                const created = await adminSessionService.createSession(user.id, req, proof);
+                adminSessionService.setSessionCookie(res, created.rawToken);
+                adminEmailOtpService.setCookie(res, '');
+                await writeLoginAudit(user.id, 'login', req);
+                await safelyExcludeAdminVisitor(req, res);
+                return res.json({
+                    success: true, valid: true,
+                    admin: publicAdmin({ user: control, isOperator: true, isPrimaryAdmin: isPrimaryAdminUser(control) }),
+                    csrfToken: created.csrfToken, idleExpiresAt: created.idleExpiresAt, expiresAt: created.expiresAt,
+                });
+            } catch (error) {
+                if (error instanceof AdminOtpError) return sendOtpError(res, error);
+                console.error('[admin email otp] error:', error.code || 'unexpected_error');
+                return res.status(500).json({ success: false, valid: false, reason: 'admin_otp_error', message: '이메일 인증 처리 중 오류가 발생했습니다. 다시 로그인해주세요.' });
+            }
+        });
+    }
 
     app.get('/api/admin/auth/me', async (req, res) => {
         setNoStore(res);

@@ -7,9 +7,10 @@ const nodemailer = require('nodemailer');
 
 // transporter를 매번 새로 만들지 않기 위해 변수에 저장해둡니다.
 let transporter = null;
+let sensitiveTransporter = null;
 
 // 실제 메일 발송 객체를 만드는 함수.
-function getTransporter() {
+function getTransporter(sensitive = false) {
     const user = process.env.MAIL_USER;
     const pass = process.env.MAIL_APP_PASSWORD;
 
@@ -17,6 +18,14 @@ function getTransporter() {
         throw new Error('MAIL_USER 또는 MAIL_APP_PASSWORD가 .env에 설정되지 않았습니다.');
     }
 
+    if (sensitive) {
+        if (!sensitiveTransporter) sensitiveTransporter = nodemailer.createTransport({
+            host: 'smtp.gmail.com', port: 465, secure: true, auth: { user, pass },
+            connectionTimeout: 10000, greetingTimeout: 10000, socketTimeout: 15000,
+            logger: false, debug: false,
+        });
+        return sensitiveTransporter;
+    }
     if (!transporter) {
         transporter = nodemailer.createTransport({
             host: 'smtp.gmail.com',
@@ -30,9 +39,9 @@ function getTransporter() {
 }
 
 // 외부에서 사용하는 메일 발송 함수.
-async function sendEmail(to, subject, text) {
+async function sendEmail(to, subject, text, options = {}) {
     try {
-        const mailer = getTransporter();
+        const mailer = getTransporter(options.sensitive === true);
         const fromName = process.env.MAIL_FROM_NAME || '정보처리기사 스터디';
         const fromEmail = process.env.MAIL_USER;
 
@@ -43,10 +52,10 @@ async function sendEmail(to, subject, text) {
             text
         });
 
-        console.log('메일 전송 성공:', info.messageId);
+        if (!options.sensitive) console.log('메일 전송 성공:', info.messageId);
         return { success: true, messageId: info.messageId };
     } catch (error) {
-        console.error('메일 전송 실패:', error.message);
+        if (!options.sensitive) console.error('메일 전송 실패:', error.message);
         return { success: false, error };
     }
 }

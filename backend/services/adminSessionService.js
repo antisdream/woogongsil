@@ -195,12 +195,21 @@ function createAdminSessionService(options = {}) {
                 revoke_reason VARCHAR(80) NULL,
                 ip_hash CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NULL,
                 user_agent_hash CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NULL,
+                email_otp_verified_at DATETIME(3) NULL,
                 PRIMARY KEY (id),
                 UNIQUE KEY uq_wgs_admin_session_hash (session_hash),
                 KEY idx_wgs_admin_session_user_active (user_id, revoked_at, absolute_expires_at),
                 KEY idx_wgs_admin_session_expiry (idle_expires_at, absolute_expires_at)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-        `).then(() => {
+        `).then(async () => {
+            const [columns] = await pool.query("SHOW COLUMNS FROM wgs_admin_sessions LIKE 'email_otp_verified_at'");
+            if (!columns.length) {
+                try {
+                    await pool.query('ALTER TABLE wgs_admin_sessions ADD COLUMN email_otp_verified_at DATETIME(3) NULL');
+                } catch (error) {
+                    if (error.code !== 'ER_DUP_FIELDNAME') throw error;
+                }
+            }
             schemaReady = true;
         });
 
@@ -211,8 +220,9 @@ function createAdminSessionService(options = {}) {
         }
     }
 
-    async function createSession(userId, req) {
+    async function createSession(userId, req, proof = {}) {
         if (userId !== 'skn29') throw new Error('Administrator account is not allowed');
+        if (proof.emailOtpVerified !== true) throw new Error('Administrator email OTP verification is required');
         await ensureSchema();
 
         const now = Date.now();
@@ -227,8 +237,8 @@ function createAdminSessionService(options = {}) {
         await pool.query(
             `INSERT INTO wgs_admin_sessions
              (session_hash, user_id, created_at, last_seen_at, idle_expires_at, absolute_expires_at,
-              revoked_at, revoke_reason, ip_hash, user_agent_hash)
-             VALUES (?, ?, ?, ?, ?, ?, NULL, NULL, ?, ?)`,
+              revoked_at, revoke_reason, ip_hash, user_agent_hash, email_otp_verified_at)
+             VALUES (?, ?, ?, ?, ?, ?, NULL, NULL, ?, ?, ?)`,
             [
                 sessionHash,
                 String(userId),
@@ -238,6 +248,7 @@ function createAdminSessionService(options = {}) {
                 absoluteExpiresAt,
                 ipHash,
                 userAgentHash,
+                new Date(now),
             ]
         );
 
@@ -297,7 +308,7 @@ function createAdminSessionService(options = {}) {
         const sessionHash = hashValue(rawToken);
         const [rows] = await pool.query(
             `SELECT id, session_hash, user_id, created_at, last_seen_at, idle_expires_at,
-                    absolute_expires_at, revoked_at, revoke_reason
+                    absolute_expires_at, revoked_at, revoke_reason, email_otp_verified_at
              FROM wgs_admin_sessions
              WHERE session_hash = ?
              LIMIT 1`,
@@ -305,6 +316,10 @@ function createAdminSessionService(options = {}) {
         );
         const session = rows?.[0];
         if (!session || session.revoked_at) return invalid('invalid_admin_session');
+        if (!session.email_otp_verified_at) {
+            await revokeSessionHash(sessionHash, 'email_otp_required');
+            return invalid('admin_email_otp_required');
+        }
         if (session.user_id !== 'skn29') {
             await revokeSessionHash(sessionHash, 'account_not_allowed');
             return invalid('not_admin', 403);
@@ -372,7 +387,7 @@ function createAdminSessionService(options = {}) {
 
     async function protect(req, res, next) {
         const relativePath = String(req.path || '');
-        if (req.method === 'POST' && (relativePath === '/auth/login' || relativePath === '/auth/login/')) {
+        if (req.method === 'POST' && ['/auth/login', '/auth/otp/status', '/auth/otp/resend', '/auth/otp/verify'].includes(relativePath.replace(/\/$/, ''))) {
             return next();
         }
 

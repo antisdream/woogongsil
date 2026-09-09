@@ -1204,6 +1204,12 @@ test('dedicated administrator login excludes the same browser visit and sets the
         isAdminAccessUser: () => true,
         isPrimaryAdminUser: () => false,
         adminSessionService,
+        adminEmailOtpService: {
+            begin: async () => ({ rawToken: 'pending', otpRequired: true }),
+            tokenFromRequest: () => 'pending',
+            verify: async () => ({ emailOtpVerified: true }),
+            setCookie() {},
+        },
         visitSessionService,
         visitorAnalyticsService,
     });
@@ -1214,10 +1220,14 @@ test('dedicated administrator login excludes the same browser visit and sets the
         body: { id: 'skn29', password: 'pw' },
         headers: { 'x-wgs-client-id': clientId },
     }, loginResponse);
-    assert.equal(loginResponse.statusCode, 200);
+    assert.equal(loginResponse.statusCode, 202);
+    assert.deepEqual(excludedClientIds, []);
+    const verifiedResponse = cookieResponseDouble();
+    await handlers.post.get('/api/admin/auth/otp/verify')({ body: { code: '123456' }, headers: { 'x-wgs-client-id': clientId } }, verifiedResponse);
+    assert.equal(verifiedResponse.statusCode, 200);
     assert.equal(loginResponse.body.success, true);
     assert.deepEqual(excludedClientIds, [clientId]);
-    assert.equal(loginResponse.headers.get('Set-Cookie').length, 2);
+    assert.equal(verifiedResponse.headers.get('Set-Cookie').length, 2);
 
     const meResponse = cookieResponseDouble();
     await handlers.get.get('/api/admin/auth/me')({

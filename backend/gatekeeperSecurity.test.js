@@ -34,6 +34,17 @@ const RATE_ENV_KEYS = [
     'WGS_LIMIT_IP_API_WRITE_PER_MIN',
 ];
 
+test('OTP status, resend and verification aliases share the same pre-authentication IP quota', () => {
+    withRateEnv({ WGS_RATE_LIMIT_ENABLED: 'true' }, () => {
+        const middleware = createRateMiddleware();
+        const paths = ['/api/admin/auth/otp/status', '/api/admin/auth/otp/resend/', '/api/admin/auth/otp/verify'];
+        for (let i = 0; i < 60; i++) assert.equal(invokeRateMiddleware(middleware, {
+            path: paths[i % paths.length], clientId: `otp-client-${i}`, ip: '192.0.2.62',
+        }).nextCalled, true);
+        assert.equal(invokeRateMiddleware(middleware, { path: paths[0], clientId: 'otp-overflow', ip: '192.0.2.62' }).response.statusCode, 429);
+    });
+});
+
 function withRateEnv(values, callback) {
     const previous = new Map(RATE_ENV_KEYS.map((key) => [key, process.env[key]]));
     try {
@@ -547,6 +558,7 @@ test('administrator origin, credentials, role and separate session cookie checks
     const adminSessionService = createAdminSessionService({
         pool: { async query(sql) {
             if (/^\s*CREATE TABLE IF NOT EXISTS wgs_admin_sessions/.test(String(sql))) return [{ affectedRows: 0 }];
+            if (sql.startsWith('SHOW COLUMNS')) return [[{ Field: 'email_otp_verified_at' }]];
             assert.fail('rejected administrator requests must not create a session');
         } },
         crypto,
@@ -564,6 +576,7 @@ test('administrator origin, credentials, role and separate session cookie checks
         isAdminAccessUser: (candidate) => Boolean(candidate?.is_primary_admin || candidate?.is_operator),
         isPrimaryAdminUser: (candidate) => Boolean(candidate?.is_primary_admin), adminSessionService,
         visitSessionService: {}, visitorAnalyticsService: {},
+        adminEmailOtpService: { begin: async () => assert.fail('rejected password must not send email') },
     });
     const wrongOrigin = await registry.dispatch('POST', '/api/admin/auth/login', {
         headers: { origin: 'https://untrusted.example.test' }, body: { id: user.id, password: 'correct-admin-password' },
