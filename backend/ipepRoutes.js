@@ -20,6 +20,7 @@
 
 // Express 라우터를 만들기 위해 express를 불러온다.
 const express = require('express');
+const crypto = require('node:crypto');
 const { cleanText, parseRandomCsv, parseRandomIdCsv } = require('./services/ipepAnswerGrading');
 
 // 6. 문제 응답 정리 함수
@@ -240,7 +241,7 @@ function createIpepRouter(pool, learningAttempts) {
         const year = Number(req.query.year);
         const session = Number(req.query.session);
 
-        if (!year || !session) {
+        if (!Number.isInteger(year) || year < 1970 || year > 2100 || !Number.isInteger(session) || session < 1 || session > 10) {
             return res.status(400).json({
                 success: false,
                 msg: 'year와 session이 필요합니다.'
@@ -274,7 +275,7 @@ function createIpepRouter(pool, learningAttempts) {
             WHERE is_active = 1
               AND exam_year = ?
               AND exam_session = ?
-            ORDER BY question_no ASC
+            ORDER BY question_no ASC LIMIT 201
         `, [year, session]);
 
         const attemptId = rows.length ? await learningAttempts.issue(req, res, 'ipep_past', rows) : null;
@@ -338,9 +339,16 @@ function createIpepRouter(pool, learningAttempts) {
     // order=section 이면 Section/문제번호 오름차순, order=random 이면 섞어서 내려줍니다.
     // ------------------------------------------------------
     router.get('/three-week/questions', asyncHandler(async (req, res) => {
-        const weekNo = Math.min(3, Math.max(1, Number(req.query.weekNo || 1)));
+        const weekNo = Number(req.query.weekNo || 1);
+        const page = Number(req.query.page || 1);
+        const pageSize = 100;
+        if (!Number.isInteger(weekNo) || weekNo < 1 || weekNo > 3 || !Number.isInteger(page) || page < 1 || page > 1000) {
+            return res.status(400).json({ success: false, msg: '주차와 페이지를 확인해주세요.' });
+        }
         const sectionNo = cleanText(req.query.sectionNo || 'ALL').toUpperCase();
         const order = cleanText(req.query.order || 'section').toLowerCase() === 'random' ? 'random' : 'section';
+        const shuffleSeed = /^[a-zA-Z0-9_-]{1,64}$/.test(String(req.query.shuffleSeed || ''))
+            ? String(req.query.shuffleSeed) : crypto.randomBytes(12).toString('hex');
 
         const clauses = ['q.is_active = 1', 's.is_active = 1', 's.week_no = ?'];
         const params = [weekNo];
@@ -351,10 +359,10 @@ function createIpepRouter(pool, learningAttempts) {
         }
 
         const orderSql = order === 'random'
-            ? 'RAND()'
-            : 's.display_order ASC, q.question_no ASC, q.question_order ASC';
+            ? 'SHA2(CONCAT(q.question_id, ?),256), q.question_id'
+            : 's.display_order ASC, q.question_no ASC, q.question_order ASC, q.question_id ASC';
 
-        const [rows] = await pool.query(`SELECT
+        const [pageRows] = await pool.query(`SELECT
                 q.*,
                 s.week_no,
                 s.display_order AS section_display_order
@@ -363,13 +371,19 @@ function createIpepRouter(pool, learningAttempts) {
                 ON s.section_no = q.section_no
             WHERE ${clauses.join(' AND ')}
             ORDER BY ${orderSql}
-        `, params);
+            LIMIT ? OFFSET ?
+        `, [...params, ...(order === 'random' ? [shuffleSeed] : []), pageSize + 1, (page - 1) * pageSize]);
+        const rows = pageRows.slice(0, pageSize);
 
         const attemptId = rows.length ? await learningAttempts.issue(req, res, 'ipep_three_week', rows) : null;
         res.json({
             success: true,
             attemptId,
             weekNo,
+            page,
+            pageSize,
+            hasMore: pageRows.length > pageSize,
+            shuffleSeed,
             sectionNo,
             order,
             totalCount: rows.length,

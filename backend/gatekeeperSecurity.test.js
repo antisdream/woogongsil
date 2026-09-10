@@ -32,6 +32,9 @@ const RATE_ENV_KEYS = [
     'WGS_LIMIT_CLIENT_API_WRITE_PER_MIN',
     'WGS_LIMIT_USER_API_WRITE_PER_MIN',
     'WGS_LIMIT_IP_API_WRITE_PER_MIN',
+    'WGS_LIMIT_IP_API_READ_PER_MIN',
+    'WGS_LIMIT_IP_QUESTION_READ_PER_MIN',
+    'WGS_LIMIT_SESSION_QUESTION_READ_PER_MIN',
 ];
 
 test('OTP status, resend and verification aliases share the same pre-authentication IP quota', () => {
@@ -132,7 +135,7 @@ function invokeRateMiddleware(middleware, {
     return { nextCalled, response };
 }
 
-test('visitor visit rate group keeps GET unclassified and enforces 12/client and 600/IP defaults', () => {
+test('visitor visits have separate read and write quotas and enforce 12/client and 600/IP defaults', () => {
     withRateEnv({
         WGS_RATE_LIMIT_ENABLED: 'true',
         WGS_LIMIT_CLIENT_VISITOR_VISIT_PER_MIN: '',
@@ -615,12 +618,35 @@ test('new practical result writes keep the shared learning write rate limit', ()
         WGS_LIMIT_IP_API_WRITE_PER_MIN: '50',
     }, () => {
         const middleware = createRateMiddleware();
-        assert.equal(invokeRateMiddleware(middleware, { path: '/api/practice-results' }).nextCalled, true);
-        assert.equal(invokeRateMiddleware(middleware, { path: '/api/exam-results' }).nextCalled, true);
-        const limited = invokeRateMiddleware(middleware, { path: '/api/practical-results' });
+        assert.equal(invokeRateMiddleware(middleware, { path: '/api/learning-attempts/review' }).nextCalled, true);
+        assert.equal(invokeRateMiddleware(middleware, { path: '/api/learning-attempts/fixture/submit' }).nextCalled, true);
+        const limited = invokeRateMiddleware(middleware, { path: '/api/learning-attempts/fixture/submit' });
         assert.equal(limited.response.statusCode, 429);
         assert.equal(limited.nextCalled, false);
         assert.equal(invokeRateMiddleware(middleware, { path: '/api/online-users' }).nextCalled, true);
+    });
+});
+
+test('question GET and HEAD share a trusted-IP quota that header rotation cannot bypass', () => {
+    withRateEnv({ WGS_RATE_LIMIT_ENABLED:'true', WGS_LIMIT_IP_QUESTION_READ_PER_MIN:'3' }, () => {
+        const middleware = createRateMiddleware();
+        for (let i=0;i<3;i++) assert.equal(invokeRateMiddleware(middleware, {
+            path:'/api/random-question', method:i===2?'HEAD':'GET',clientId:'rotated-'+i,forwardedFor:'192.0.2.'+i,
+        }).nextCalled,true);
+        const rejected=invokeRateMiddleware(middleware,{path:'/api/ipep/past-exam',method:'GET',clientId:'other'});
+        assert.equal(rejected.response.statusCode,429);
+        assert.ok(Number(rejected.response.headers['retry-after'])>0);
+        assert.equal(invokeRateMiddleware(middleware,{path:'/assets/main.js',method:'GET'}).nextCalled,true);
+        assert.equal(invokeRateMiddleware(middleware,{path:'/api/random-question',method:'GET',ip:'198.51.100.2'}).nextCalled,true);
+    });
+});
+
+test('public read defaults allow 50 learners sharing one IP to each load several questions', () => {
+    withRateEnv({WGS_RATE_LIMIT_ENABLED:'true',WGS_LIMIT_IP_QUESTION_READ_PER_MIN:''},()=>{
+        const middleware=createRateMiddleware();
+        for(let learner=0;learner<50;learner++) for(let action=0;action<3;action++) {
+            assert.equal(invokeRateMiddleware(middleware,{method:'GET',path:'/api/random-question',clientId:'learner-'+learner}).nextCalled,true);
+        }
     });
 });
 

@@ -190,14 +190,17 @@ function registerExamRoutes(options = {}) {
 
 
     app.get('/api/past-exam', async (req, res) => {
-        const year = req.query.year;
-        const session = req.query.session;
+        const year = Number(req.query.year);
+        const session = Number(req.query.session);
+        if (!Number.isInteger(year) || year < 1970 || year > 2100 || !Number.isInteger(session) || session < 1 || session > 10) {
+            return res.status(400).json({ success: false, msg: '올바른 연도와 회차를 선택해주세요.' });
+        }
 
         try {
             const rows = await buildQuestionSelect(
                 ' WHERE q.year = ? AND q.session = ?',
                 [year, session],
-                ' ORDER BY q.info_id ASC, q.question_id ASC'
+                ' ORDER BY q.info_id ASC, q.question_id ASC LIMIT 201'
             );
 
             if (!rows.length) return res.json({ success: true, data: [] });

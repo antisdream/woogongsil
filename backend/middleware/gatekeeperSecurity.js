@@ -20,6 +20,8 @@ if (String(process.env.WGS_TRUST_PROXY || 'true').toLowerCase() !== 'false') {
 }
 
 const wgsRateLimitStore = new Map();
+const MAX_RATE_BUCKETS = 10000;
+let nextFullPruneAt = 0;
 
 function wgsRateBool(value, fallback = false) {
   if (value === undefined || value === null || value === '') return fallback;
@@ -71,6 +73,15 @@ function wgsTakeRate(key, max, windowMs) {
   const now = Date.now();
   const current = wgsRateLimitStore.get(key);
   if (!current || current.resetAt <= now) {
+    if (!current && wgsRateLimitStore.size >= MAX_RATE_BUCKETS) {
+      if (now >= nextFullPruneAt) {
+        for (const [oldKey, bucket] of wgsRateLimitStore) {
+          if (bucket.resetAt <= now) wgsRateLimitStore.delete(oldKey);
+        }
+        nextFullPruneAt = now + 5000;
+      }
+      if (wgsRateLimitStore.size >= MAX_RATE_BUCKETS) return { allowed: false, remaining: 0, retryAfter: 60 };
+    }
     wgsRateLimitStore.set(key, { count: 1, resetAt: now + windowMs });
     return { allowed: true, remaining: Math.max(0, max - 1), retryAfter: 0 };
   }
@@ -97,6 +108,10 @@ const WGS_RATE_LIMIT_ENABLED = wgsRateBool(process.env.WGS_RATE_LIMIT_ENABLED, t
 function wgsRouteGroup(req) {
   const path = req.path;
   const method = String(req.method || 'GET').toUpperCase();
+  if (['GET', 'HEAD'].includes(method) && path.startsWith('/api/')) {
+    if (/^\/api\/(?:random-question|past-exam|ipep\/(?:random-question|past-exam|three-week\/questions))\/?$/i.test(path)) return 'question_read';
+    return 'api_read';
+  }
   if (path === '/api/gatekeeper/verify') return 'gatekeeper';
   if (path === '/api/admin/auth/login') return 'admin_login';
   if (method === 'POST' && /^\/api\/admin\/auth\/otp\/(status|resend|verify)\/?$/i.test(path)) return 'admin_otp';
@@ -130,6 +145,7 @@ function wgsRouteGroup(req) {
       path === '/api/practice-results' ||
       path === '/api/exam-results' ||
       path === '/api/practical-results' ||
+      path.startsWith('/api/learning-attempts/') ||
       path === '/api/save-wrong' ||
       path === '/api/save-ipep-wrong' ||
       path === '/api/remove-wrong' ||
@@ -159,6 +175,15 @@ function wgsRateSpecs(req, group) {
   function add(name, keyValue, max, sec) {
     if (!keyValue) return;
     specs.push({ key: `wgs:${name}:${keyValue}`, max, windowMs: sec * 1000 });
+  }
+
+  if (group === 'question_read' || group === 'api_read') {
+    // The IP bucket is always enforced; rotating user-supplied headers cannot bypass it.
+    add('read:ip', ip, wgsRateNumber(process.env.WGS_LIMIT_IP_API_READ_PER_MIN, 1200), 60);
+    if (group === 'question_read') {
+      add('question_read:ip', ip, wgsRateNumber(process.env.WGS_LIMIT_IP_QUESTION_READ_PER_MIN, 600), 60);
+      if (sessionToken) add('question_read:session', sessionToken, wgsRateNumber(process.env.WGS_LIMIT_SESSION_QUESTION_READ_PER_MIN, 60), 60);
+    }
   }
 
   if (group === 'gatekeeper') {
@@ -248,7 +273,7 @@ function wgsRateSpecs(req, group) {
 }
 
 app.use((req, res, next) => {
-  if (!WGS_RATE_LIMIT_ENABLED || !['GET', 'POST', 'PUT', 'PATCH', 'DELETE'].includes(String(req.method || '').toUpperCase())) return next();
+  if (!WGS_RATE_LIMIT_ENABLED || !['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE'].includes(String(req.method || '').toUpperCase())) return next();
 
   const group = wgsRouteGroup(req);
   if (!group) return next();

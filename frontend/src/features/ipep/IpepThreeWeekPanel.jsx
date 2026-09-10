@@ -59,6 +59,10 @@ export default function IpepThreeWeekPanel({
     const [selectedSection, setSelectedSection] = useState('ALL');
     const [order, setOrder] = useState('section');
     const [questions, setQuestions] = useState([]);
+    const [page, setPage] = useState(1);
+    const [hasMore, setHasMore] = useState(false);
+    const [shuffleSeed, setShuffleSeed] = useState(() => Date.now().toString(36));
+    const requestSequence = useRef(0);
     const [currentIndex, setCurrentIndex] = useState(0);
     const [answers, setAnswers] = useState({});
     const [results, setResults] = useState({});
@@ -82,25 +86,29 @@ export default function IpepThreeWeekPanel({
     }, []);
 
     const fetchQuestions = useCallback(async () => {
+        const requestId = ++requestSequence.current;
         setLoadingQuestions(true);
         try {
             const params = new URLSearchParams({
                 weekNo: String(selectedWeek),
                 sectionNo: selectedSection,
                 order,
+                page: String(page),
+                shuffleSeed,
             });
             const res = await axios.get(`${API_BASE}/api/ipep/three-week/questions?${params.toString()}`, learningRequestOptions());
+            if (requestId !== requestSequence.current) return;
             setQuestions(Array.isArray(res.data?.data) ? res.data.data : []);
+            setHasMore(Boolean(res.data?.hasMore));
             setCurrentIndex(0);
-            setAnswers({});
-            setResults({});
         } catch (error) {
+            if (requestId !== requestSequence.current) return;
             console.error('3주 공략 문제 조회 실패:', error);
             setQuestions([]);
         } finally {
-            setLoadingQuestions(false);
+            if (requestId === requestSequence.current) setLoadingQuestions(false);
         }
-    }, [order, selectedSection, selectedWeek]);
+    }, [order, selectedSection, selectedWeek, page, shuffleSeed]);
 
     useEffect(() => {
         fetchOverview();
@@ -123,7 +131,7 @@ export default function IpepThreeWeekPanel({
     const currentQuestion = questions[currentIndex] || null;
     const currentAnswer = currentQuestion ? answers[currentQuestion.questionId] || '' : '';
     const currentResult = currentQuestion ? results[currentQuestion.questionId] : null;
-    const solvedCount = Object.keys(results).length;
+    const solvedCount = questions.filter(question => Object.hasOwn(results, question.questionId)).length;
     const selectedOrder = orderOptions.find((option) => option.value === order) || orderOptions[0];
     const currentQuestionKey = currentQuestion ? getQuestionKey(currentQuestion, currentIndex) : '';
 
@@ -215,6 +223,11 @@ export default function IpepThreeWeekPanel({
                 </div>
             </div>
 
+            {(page > 1 || hasMore) && <nav aria-label="문제 묶음" style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap', marginBottom: '16px' }}>
+                <button className="learning-secondary" type="button" disabled={page <= 1 || loadingQuestions} onClick={() => setPage(value => value - 1)}>이전 묶음</button>
+                <span>{(page - 1) * 100 + 1}~{(page - 1) * 100 + questions.length}번째 문제</span>
+                <button className="learning-secondary" type="button" disabled={!hasMore || loadingQuestions} onClick={() => setPage(value => value + 1)}>다음 묶음</button>
+            </nav>}
             <div
                 className="ipep-three-week-filters" style={{ ...filterBarStyle, display: 'grid', gridTemplateColumns: 'repeat(3, minmax(150px, 1fr))', alignItems: 'end' }}
             >
@@ -228,7 +241,7 @@ export default function IpepThreeWeekPanel({
                                 <button className="learning-secondary"
                                     key={weekNo}
                                     type="button"
-                                    aria-pressed={selectedWeek === weekNo} onClick={() => setSelectedWeek(weekNo)}
+                                    aria-pressed={selectedWeek === weekNo} onClick={() => { setAnswers({}); setResults({}); setPage(1); setSelectedWeek(weekNo); }}
                                     title={`${weekNo}주차 ${questionCount}문제`}
                                     style={{
                                         ...baseButtonStyle,
@@ -253,7 +266,7 @@ export default function IpepThreeWeekPanel({
                                 key={option.value}
                                 type="button"
                                 title={option.description}
-                                aria-pressed={order === option.value} onClick={() => setOrder(option.value)}
+                                aria-pressed={order === option.value} onClick={() => { setAnswers({}); setResults({}); setPage(1); setShuffleSeed(Date.now().toString(36)); setOrder(option.value); }}
                                 style={{
                                     ...baseButtonStyle,
                                     minHeight: '42px',
@@ -271,7 +284,7 @@ export default function IpepThreeWeekPanel({
                     Section
                     <select
                         value={selectedSection}
-                        onChange={(event) => setSelectedSection(event.target.value)}
+                        onChange={(event) => { setAnswers({}); setResults({}); setPage(1); setSelectedSection(event.target.value); }}
                         style={compactSelectStyle}
                     >
                         <option value="ALL">전체 Section</option>
