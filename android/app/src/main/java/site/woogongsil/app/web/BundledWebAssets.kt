@@ -51,6 +51,18 @@ class BundledWebAssets(private val assets: AssetManager) {
         "X-Wgs-Web-Bundle" to (manifest?.id ?: "unavailable"),
         "Cache-Control" to "no-store",
         "X-Content-Type-Options" to "nosniff",
+        // Bundled pages bypass the HTTP response, so carry the production policy here too.
+        "Content-Security-Policy" to listOf(
+            "default-src 'self'", "script-src 'self'", "script-src-attr 'none'",
+            "style-src 'self' 'unsafe-inline'", "img-src 'self' data: blob:",
+            "font-src 'self' data:", "media-src 'self' blob:",
+            "connect-src 'self' https://woogongsil.site wss://woogongsil.site https://www.woogongsil.site wss://www.woogongsil.site",
+            "frame-src 'self'", "object-src 'none'", "base-uri 'self'",
+            "form-action 'self'", "frame-ancestors 'none'",
+        ).joinToString("; "),
+        "X-Frame-Options" to "DENY",
+        "Referrer-Policy" to "strict-origin-when-cross-origin",
+        "Strict-Transport-Security" to "max-age=300",
     )
 
     private fun errorResponse(status: Int, reason: String, message: String): WebResourceResponse =
