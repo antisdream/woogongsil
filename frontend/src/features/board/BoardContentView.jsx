@@ -1,3 +1,5 @@
+import { useUploadResolver } from './useUploadResolver.js';
+import AttachmentDownloads from './AttachmentDownloads.jsx';
 import { useMemo } from 'react';
 import { useCreateBlockNote } from '@blocknote/react';
 import { BlockNoteView } from '@blocknote/mantine';
@@ -8,6 +10,7 @@ import { getBoardEditorInitialContent, parseBoardContentJson, getCleanContent } 
 import { boardBlockNoteDictionary } from './boardBlockNoteDictionary';
 
 function BoardContentView({ content, contentJson }) {
+    const { resolveFileUrl, downloadFile, fileError } = useUploadResolver();
     const hasBlockDocument = Boolean(parseBoardContentJson(contentJson));
     const initialContent = useMemo(
         () => getBoardEditorInitialContent(content, contentJson),
@@ -16,6 +19,7 @@ function BoardContentView({ content, contentJson }) {
 
     const editor = useCreateBlockNote({
         initialContent,
+        resolveFileUrl,
         dictionary: boardBlockNoteDictionary,
     }, [JSON.stringify(initialContent)]);
 
@@ -29,6 +33,7 @@ function BoardContentView({ content, contentJson }) {
 
     return (
         <div className="wgs-board-blocknote-view">
+            <AttachmentDownloads contentJson={contentJson} downloadFile={downloadFile} fileError={fileError} />
             <BlockNoteView
                 editor={editor}
                 theme="light"

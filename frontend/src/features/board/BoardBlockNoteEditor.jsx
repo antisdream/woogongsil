@@ -1,3 +1,5 @@
+import { useUploadResolver } from './useUploadResolver.js';
+import AttachmentDownloads from './AttachmentDownloads.jsx';
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useCreateBlockNote } from '@blocknote/react';
 import { BlockNoteView } from '@blocknote/mantine';
@@ -42,6 +44,7 @@ function BoardBlockNoteEditor({
     uploadUrl,
     onEditorChange,
 }) {
+    const { resolveFileUrl, downloadFile, fileError } = useUploadResolver();
     const uploadAuthRef = useRef(uploadAuth || {});
 
     useEffect(() => {
@@ -92,6 +95,7 @@ function BoardBlockNoteEditor({
     const editor = useCreateBlockNote({
         initialContent,
         uploadFile,
+        resolveFileUrl,
         dictionary: boardBlockNoteDictionary,
     }, [editorKey, uploadUrl]);
 
@@ -104,6 +108,7 @@ function BoardBlockNoteEditor({
 
     return (
         <div className="wgs-board-blocknote-shell">
+            <AttachmentDownloads contentJson={contentJson} downloadFile={downloadFile} fileError={fileError} />
             <BlockNoteView
                 editor={editor}
                 theme="light"

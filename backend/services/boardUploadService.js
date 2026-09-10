@@ -278,10 +278,18 @@ function createBoardUploadHandler(options = {}) {
             const filePath = path.join(uploadDir, fileName);
 
             await fs.promises.writeFile(filePath, buffer);
+            const url = `/uploads/${uploadBucket}/${safeUserId}/${fileName}`;
+            try {
+                if (options.uploadAccessService) await options.uploadAccessService.recordUpload({ url, ownerId: authUserId, mimeType, size: buffer.length });
+            } catch (error) {
+                // Only this request's newly created file is removed if metadata cannot be saved.
+                await fs.promises.unlink(filePath).catch(() => {});
+                throw error;
+            }
 
             return res.json({
                 success: true,
-                url: `/uploads/${uploadBucket}/${safeUserId}/${fileName}`,
+                url,
                 name: originalName,
                 size: buffer.length,
                 mimeType,

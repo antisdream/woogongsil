@@ -1,4 +1,5 @@
 'use strict';
+const { UploadAccessError } = require('../../services/uploadAccessService');
 
 const { normalizeBoardContentJson } = require('../../services/boardContentService');
 const {
@@ -95,6 +96,7 @@ function registerStudyDraftRoutes(options = {}) {
                 return res.status(400).json({ success: false, msg: '임시저장 에디터 데이터 형식이 올바르지 않습니다.' });
             }
 
+            await options.uploadAccessService.assertReferences(pool, { resourceType: 'study', resourceId: documentId, actorId: ownerId, content, contentJson });
             const summary = buildDraftSummary(title, content, contentJson);
             const wrongRefsJson = JSON.stringify(wrongRefs);
             const [result] = await pool.query(
@@ -107,6 +109,7 @@ function registerStudyDraftRoutes(options = {}) {
             const draft = await getStudyDraft(result.insertId, ownerId);
             return res.json({ success: true, id: result.insertId, draft });
         } catch (error) {
+            if (error instanceof UploadAccessError) return res.status(error.status).json({ success: false, msg: error.message });
             console.error('[학습노트] 임시저장 오류:', error);
             return res.status(500).json({ success: false, msg: '임시저장을 저장하지 못했습니다.' });
         }
@@ -151,6 +154,7 @@ function registerStudyDraftRoutes(options = {}) {
                 totalPages: Math.max(1, Math.ceil(total / pageSize)),
             });
         } catch (error) {
+            if (error instanceof UploadAccessError) return res.status(error.status).json({ success: false, msg: error.message });
             console.error('[학습노트] 임시저장 목록 오류:', error);
             return res.status(500).json({ success: false, msg: '임시저장 목록을 불러오지 못했습니다.' });
         }
@@ -170,6 +174,7 @@ function registerStudyDraftRoutes(options = {}) {
 
             return res.json({ success: true, draft });
         } catch (error) {
+            if (error instanceof UploadAccessError) return res.status(error.status).json({ success: false, msg: error.message });
             console.error('[학습노트] 임시저장 조회 오류:', error);
             return res.status(500).json({ success: false, msg: '임시저장을 불러오지 못했습니다.' });
         }
@@ -192,6 +197,7 @@ function registerStudyDraftRoutes(options = {}) {
 
             return res.json({ success: true });
         } catch (error) {
+            if (error instanceof UploadAccessError) return res.status(error.status).json({ success: false, msg: error.message });
             console.error('[학습노트] 임시저장 삭제 오류:', error);
             return res.status(500).json({ success: false, msg: '임시저장을 삭제하지 못했습니다.' });
         }

@@ -1,11 +1,13 @@
 'use strict';
 
+const { UploadAccessError } = require('../../services/uploadAccessService');
 const { normalizeBoardContentJson } = require('../../services/boardContentService');
 const { replaceStudyDocumentWrongRefs } = require('../../services/studyWrongRefService');
 
 function registerStudyDocumentRoutes(options = {}) {
     const app = options.app;
     const pool = options.pool;
+    const uploadAccessService = options.uploadAccessService;
     const requireSessionUser = options.requireSessionUser;
     const authUserId = options.authUserId;
     const normalizeId = options.normalizeId;
@@ -81,16 +83,21 @@ function registerStudyDocumentRoutes(options = {}) {
                 ? Number(sortRows?.[0]?.nextSortOrder || 10)
                 : normalizeSortOrder(req.body.sortOrder, 0);
 
-            const [result] = await pool.query(
+            const result = await uploadAccessService.mutateDocument({ resourceType: 'study', actorId: ownerId }, async db => {
+            const [result] = await db.query(
                 `INSERT INTO wgs_study_documents (ownerId, folderId, title, content, contentJson, visibility, docType, sortOrder)
                  VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
                 [ownerId, folderId, title, content, contentJson, visibility, docType, nextSortOrder]
             );
-            await replaceStudyDocumentWrongRefs(pool, result.insertId, ownerId, req.body.wrongRefs);
+            await replaceStudyDocumentWrongRefs(db, result.insertId, ownerId, req.body.wrongRefs);
+
+                return { resourceId: result.insertId, content, contentJson, result };
+            });
 
             const document = await getStudyDocument(result.insertId);
             return res.json({ success: true, id: result.insertId, document });
         } catch (error) {
+            if (error instanceof UploadAccessError) return res.status(error.status).json({ success: false, msg: error.message });
             console.error('[학습노트] 문서 생성 오류:', error);
             return res.status(500).json({ success: false, msg: '문서를 저장하지 못했습니다.' });
         }
@@ -122,6 +129,7 @@ function registerStudyDocumentRoutes(options = {}) {
 
             return res.json({ success: true, document: { ...document, wrongRefs } });
         } catch (error) {
+            if (error instanceof UploadAccessError) return res.status(error.status).json({ success: false, msg: error.message });
             console.error('[학습노트] 문서 조회 오류:', error);
             return res.status(500).json({ success: false, msg: '문서를 불러오지 못했습니다.' });
         }
@@ -154,17 +162,23 @@ function registerStudyDocumentRoutes(options = {}) {
                 return res.status(400).json({ success: false, msg: '문서 에디터 데이터 형식이 올바르지 않습니다.' });
             }
 
-            await pool.query(
+            await uploadAccessService.mutateDocument({ resourceType: 'study', resourceId: documentId, actorId: ownerId }, async (db, current) => {
+                if (!current || current.ownerId !== ownerId) throw new UploadAccessError('문서를 찾을 수 없습니다.', 404);
+            await db.query(
                 `UPDATE wgs_study_documents
                     SET folderId = ?, title = ?, content = ?, contentJson = ?, visibility = ?, docType = ?, sortOrder = ?
                   WHERE id = ? AND ownerId = ?`,
                 [folderId, title, content, contentJson, visibility, docType, normalizeSortOrder(req.body.sortOrder, document.sortOrder || 0), documentId, ownerId]
             );
-            await replaceStudyDocumentWrongRefs(pool, documentId, ownerId, req.body.wrongRefs);
+            await replaceStudyDocumentWrongRefs(db, documentId, ownerId, req.body.wrongRefs);
+
+                return { content, contentJson };
+            });
 
             const updatedDocument = await getStudyDocument(documentId);
             return res.json({ success: true, document: updatedDocument });
         } catch (error) {
+            if (error instanceof UploadAccessError) return res.status(error.status).json({ success: false, msg: error.message });
             console.error('[학습노트] 문서 수정 오류:', error);
             return res.status(500).json({ success: false, msg: '문서를 수정하지 못했습니다.' });
         }
@@ -205,6 +219,7 @@ function registerStudyDocumentRoutes(options = {}) {
             const updatedDocument = await getStudyDocument(documentId);
             return res.json({ success: true, document: updatedDocument });
         } catch (error) {
+            if (error instanceof UploadAccessError) return res.status(error.status).json({ success: false, msg: error.message });
             console.error('[학습노트] 문서 메타 수정 오류:', error);
             return res.status(500).json({ success: false, msg: '문서 정보를 수정하지 못했습니다.' });
         }
@@ -222,10 +237,15 @@ function registerStudyDocumentRoutes(options = {}) {
             const document = await getStudyDocument(documentId);
             if (!document || document.ownerId !== ownerId) return res.status(404).json({ success: false, msg: '문서를 찾을 수 없습니다.' });
 
-            await pool.query(`DELETE FROM wgs_study_document_wrong_refs WHERE documentId = ? AND ownerId = ?`, [documentId, ownerId]);
-            await pool.query(`DELETE FROM wgs_study_documents WHERE id = ? AND ownerId = ?`, [documentId, ownerId]);
+            await uploadAccessService.mutateDocument({ resourceType: 'study', resourceId: documentId, actorId: ownerId }, async (db, current) => {
+                if (!current || current.ownerId !== ownerId) throw new UploadAccessError('문서를 찾을 수 없습니다.', 404);
+            await db.query(`DELETE FROM wgs_study_document_wrong_refs WHERE documentId = ? AND ownerId = ?`, [documentId, ownerId]);
+            await db.query(`DELETE FROM wgs_study_documents WHERE id = ? AND ownerId = ?`, [documentId, ownerId]);
+                return {};
+            });
             return res.json({ success: true });
         } catch (error) {
+            if (error instanceof UploadAccessError) return res.status(error.status).json({ success: false, msg: error.message });
             console.error('[학습노트] 문서 삭제 오류:', error);
             return res.status(500).json({ success: false, msg: '문서를 삭제하지 못했습니다.' });
         }

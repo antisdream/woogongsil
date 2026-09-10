@@ -47,7 +47,7 @@ const registerAuthRoutes = require('./routes/auth/authRoutes');
 const registerAdminAuthRoutes = require('./routes/auth/adminAuthRoutes');
 const { createAdminEmailOtpService } = require('./services/adminEmailOtpService');
 const { createMemberEmailVerificationService } = require('./services/memberEmailVerificationService');
-const { createSafeUploadStatic } = require('./services/uploadContentSecurity');
+const { createUploadAccessService } = require('./services/uploadAccessService');
 const { createBoardPolicyService } = require('./services/boardPolicyService');
 const registerAccountRecoveryRoutes = require('./routes/auth/accountRecoveryRoutes');
 const registerVisitorRoutes = require('./routes/visitorRoutes');
@@ -144,7 +144,7 @@ ensureStudyNoteSchema();
 
 registerIpepFeature({ app, pool, backendDir: __dirname });
 
-app.use('/uploads', createSafeUploadStatic(path.join(__dirname, 'uploads')));
+
 // 예전 관리자 화면 정적 파일이 운영 dist에 남아 있어도 /admin은 항상 먼저 차단합니다.
 app.use((req, res, next) => {
     if (req.path === '/admin' || req.path.startsWith('/admin/')) {
@@ -152,11 +152,13 @@ app.use((req, res, next) => {
     }
     return next();
 });
-app.use(express.static(path.join(__dirname, '..', 'frontend', 'dist')));
 
 // 이메일 인증은 DB의 계정·용도·기한과 HttpOnly 브라우저 증명으로 검증합니다.
 const memberVerificationService = createMemberEmailVerificationService({ pool, sendEmail });
 const boardPolicyService = createBoardPolicyService({ pool });
+const uploadAccessService = createUploadAccessService({ pool, backendDir: __dirname });
+app.use('/uploads', uploadAccessService.serve(validateRealtimeSession));
+app.use(express.static(path.join(__dirname, '..', 'frontend', 'dist')));
 
 // 기존 저장 비밀번호 해시와 맞도록 bcrypt 비용 값을 유지합니다.
 const SALT_ROUNDS = 10;
@@ -428,15 +430,15 @@ async function refreshPostLikeCount(postId) {
     };
 }
 
-async function getPostWithChildren(postId) {
+async function getPostWithChildren(postId, viewerId = '') {
     const [postRows] = await pool.query('SELECT * FROM wgs_posts WHERE id = ?', [postId]);
     if (postRows.length === 0) return null;
 
     const post = postRows[0];
-    const likeInfo = await refreshPostLikeCount(post.id);
-
+    const [[likeInfo]] = await pool.query('SELECT COUNT(*) AS likes FROM wgs_post_likes WHERE postId = ?', [post.id]);
+    const [ownLike] = viewerId ? await pool.query('SELECT 1 FROM wgs_post_likes WHERE postId = ? AND userId = ?', [post.id, viewerId]) : [[]];
     post.likes = likeInfo.likes;
-    post.likedUsers = likeInfo.likedUsers;
+    post.likedUsers = ownLike.length ? [viewerId] : [];
     post.isNotice = Boolean(post.isNotice);
     // 프론트에서 공지 순서를 안정적으로 정렬할 수 있도록 숫자값으로 내려줍니다.
     post.noticeOrder = post.noticeOrder === null || post.noticeOrder === undefined ? null : Number(post.noticeOrder);
@@ -862,6 +864,7 @@ registerFortuneRoutes({
 });
 
 registerBoardRoutes({
+    uploadAccessService,
     app,
     pool,
     backendDir: __dirname,
@@ -876,6 +879,7 @@ registerBoardRoutes({
 });
 
 registerStudyRoutes({
+    uploadAccessService,
     app,
     pool,
     backendDir: __dirname,
@@ -992,6 +996,7 @@ async function startServer() {
         await boardPolicyService.ensureSchema();
         await ensureVisitorAnalyticsSchema();
         await importDataFromJSON();
+        await uploadAccessService.migrateLegacyFiles();
 
         const port = Number(process.env.PORT || 5000);
         const bindHost = String(

@@ -88,6 +88,7 @@ function createWgsSecurityHeaders() {
                 "style-src 'self' 'unsafe-inline'",
                 "img-src 'self' data: blob:",
                 "font-src 'self' data:",
+                "media-src 'self' blob:",
                 "connect-src 'self' ws: wss:",
                 "frame-src 'self'",
                 "object-src 'none'",

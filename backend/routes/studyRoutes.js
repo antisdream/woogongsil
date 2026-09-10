@@ -10,6 +10,8 @@ function registerStudyRoutes(options = {}) {
     const app = options.app;
     const pool = options.pool;
     const backendDir = options.backendDir;
+    const uploadAccessService = options.uploadAccessService;
+    if (!uploadAccessService) throw new Error('Study routes require attachment access service.');
     const validateRealtimeSession = options.validateRealtimeSession;
 
     if (!app || typeof app.get !== 'function') {
@@ -115,7 +117,7 @@ function registerStudyRoutes(options = {}) {
         return rows[0] || null;
     }
 
-    app.post('/api/study/upload-file', createBoardUploadHandler({ backendDir, requireSessionUser, uploadBucket: 'study' }));
+    app.post('/api/study/upload-file', createBoardUploadHandler({ backendDir, requireSessionUser, uploadBucket: 'study', uploadAccessService }));
 
     registerStudyFolderRoutes({
         app,
@@ -129,6 +131,7 @@ function registerStudyRoutes(options = {}) {
     });
 
     registerStudyDocumentRoutes({
+        uploadAccessService,
         app,
         pool,
         requireSessionUser,
@@ -144,6 +147,7 @@ function registerStudyRoutes(options = {}) {
     });
 
     registerStudyDraftRoutes({
+        uploadAccessService,
         app,
         pool,
         requireSessionUser,

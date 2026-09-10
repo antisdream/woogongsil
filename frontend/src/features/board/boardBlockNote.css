@@ -52,3 +52,7 @@
         padding: 12px;
     }
 }
+
+.board-attachment-downloads { list-style: none; display: flex; flex-wrap: wrap; gap: 8px; padding: 12px; margin: 0; }
+.board-attachment-downloads button { max-width: 100%; overflow-wrap: anywhere; }
+.board-attachment-error { color: #a32721; margin: 12px; }

@@ -1,6 +1,7 @@
 // 게시판 라우트 페이지 컴포넌트입니다.
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import axios from 'axios';
+import { memberRequestHeaders } from '../features/memberRequestHeaders.js';
 import { FiMessageSquare, FiSearch } from 'react-icons/fi';
 import '../styles/app/community-redesign.css';
 import { toast } from 'react-toastify';
@@ -88,6 +89,9 @@ const Board = () => {
     const [boardTab, setBoardTab] = useState(initialBoardRoute.boardTab);
 
     const [posts, setPosts] = useState([]);
+    const [serverTotal, setServerTotal] = useState(0);
+    const [activityData, setActivityData] = useState({ posts: [], comments: [], counts: { posts: 0, comments: 0 }, total: 0 });
+    const fetchVersion = useRef(0);
     const [currentPost, setCurrentPost] = useState(null);
     
     const [title, setTitle] = useState('');
@@ -179,19 +183,6 @@ const Board = () => {
     }, [LOGIN_REQUIRED_MESSAGE, activityTab, boardTab, isLoggedIn, location.pathname, navigate, routeSplat, view]);
 
     useEffect(() => {
-        // 게시판은 FAQ처럼 비로그인 사용자도 목록과 공지글을 확인할 수 있어야 합니다.
-        // 따라서 현재 방식과 동일하게 로그인하지 않았다고 홈으로 돌려보내지 않고, 게시글 목록은 항상 불러옵니다.
-        fetchPosts();
-
-        // 임시저장 불러오기는 사용자가 글쓰기 화면의 불러오기 버튼을 직접 눌렀을 때만 열립니다.
-        if (!userId) {
-            // 로그아웃 상태에서는 자유게시판을 볼 수 없으므로 공지게시판으로 되돌립니다.
-            setBoardTab(BOARD_NOTICE);
-            setSavedList([]);
-        }
-    }, [boardTab, userId]);
-
-    useEffect(() => {
         if (view !== 'write' && !isEditing) return;
 
         const autoSave = setInterval(() => {
@@ -242,26 +233,40 @@ const Board = () => {
         toast.success(t('draft.delete_success', '임시저장한 글이 삭제되었습니다.'));
     };
 
-    async function fetchPosts() {
+    async function refreshCurrentPost(postId = currentPost?.id) {
+        if (!postId) return null;
+        const response = await axios.get(`${API_BASE}/api/posts/${encodeURIComponent(postId)}`, { headers: memberRequestHeaders() });
+        setCurrentPost(response.data);
+        return response.data;
+    }
+
+    const fetchPosts = useCallback(async () => {
+        const version = ++fetchVersion.current;
         try {
-            const res = await axios.get(`${API_BASE}/api/posts`);
-            setPosts(res.data);
-        } catch (err) { console.error("게시글 불러오기 실패", err); }
-    };
+            const route = parseBoardRoute(routeSplat);
+            const headers = memberRequestHeaders();
+            if (view === 'myActivity') {
+                const response = await axios.get(`${API_BASE}/api/posts/my-activity`, { headers, params: { type: activityTab, page: currentPage, pageSize: postsPerPage } });
+                if (version === fetchVersion.current) setActivityData(response.data);
+            } else if (view === 'detail' || (view === 'write' && location.state?.editingPostId)) {
+                const id = route.postId || location.state?.editingPostId;
+                const response = await axios.get(`${API_BASE}/api/posts/${encodeURIComponent(id)}`, { headers });
+                if (version === fetchVersion.current) { setCurrentPost(response.data); if (view === 'detail') setBoardTab(getPostBoardType(response.data)); }
+            } else if (view === 'list') {
+                const response = await axios.get(`${API_BASE}/api/posts`, { headers, params: { boardType: boardTab, page: noticeOrderMode ? 1 : currentPage, pageSize: noticeOrderMode ? 100 : postsPerPage, scope: noticeOrderMode ? 'pinned' : undefined, q: searchTerm, sort: sortOrder } });
+                if (version === fetchVersion.current) { setPosts(response.data); setServerTotal(Number(response.headers['x-total-count'] || 0)); }
+            }
+        } catch (err) {
+            if (version !== fetchVersion.current) return;
+            console.error('게시글 불러오기 실패', err);
+            if ((view === 'detail' || view === 'write') && err.response?.status === 404) { toast.error('게시글을 볼 수 없습니다. 로그인 상태를 확인해주세요.'); navigate('/board/notice'); }
+        }
+    }, [activityTab, boardTab, currentPage, location.state, navigate, noticeOrderMode, routeSplat, searchTerm, sortOrder, view]);
 
     useEffect(() => {
-        const nextRoute = parseBoardRoute(routeSplat);
-        if (nextRoute.view !== 'detail' || !nextRoute.postId || posts.length === 0) return;
-
-        const matchedPost = posts.find((post) => String(post.id) === String(nextRoute.postId));
-        if (!matchedPost) return;
-
-        const targetBoard = getPostBoardType(matchedPost);
-        if (targetBoard !== boardTab) setBoardTab(targetBoard);
-        if (!currentPost || String(currentPost.id) !== String(matchedPost.id)) {
-            setCurrentPost(matchedPost);
-        }
-    }, [boardTab, currentPost, location.pathname, posts, routeSplat]);
+        fetchPosts();
+        if (!userId) { setBoardTab(BOARD_NOTICE); setSavedList([]); }
+    }, [fetchPosts, userId]);
 
     useEffect(() => {
         const nextRoute = parseBoardRoute(routeSplat);
@@ -277,8 +282,9 @@ const Board = () => {
             if (isEditing) setIsEditing(false);
             return;
         }
-        if (!isLoggedIn || posts.length === 0 || restoredEditorRouteRef.current === location.key) return;
-        const matchedPost = posts.find((post) => String(post.id) === String(editingPostId));
+        if (!isLoggedIn || !currentPost || restoredEditorRouteRef.current === location.key) return;
+        const matchedPost = String(currentPost?.id) === String(editingPostId) ? currentPost : null;
+        if (!matchedPost) return;
         if (!matchedPost || (userId !== matchedPost.authorId && !isAdmin)) {
             setIsEditing(false);
             navigate(getBoardListPath(nextRoute.boardTab), { replace: true });
@@ -290,7 +296,7 @@ const Board = () => {
             loadEditorState(getCleanTitle(matchedPost.title), getCleanContent(matchedPost.content), matchedPost.contentJson || '');
             setIsEditing(true);
         }
-    }, [currentPost, isAdmin, isEditing, isLoggedIn, loadEditorState, location.key, location.state, navigate, posts, routeSplat, userId]);
+    }, [currentPost, isAdmin, isEditing, isLoggedIn, loadEditorState, location.key, location.state, navigate, routeSplat, userId]);
 
     // 현재 탭 설명 문구를 화면에 표시합니다.
     const handleChangeBoardTab = (nextTab) => {
@@ -412,28 +418,12 @@ const Board = () => {
         if (!requireLogin()) return;
         if (!window.confirm(t('messages.post_delete_confirm', '정말 삭제를 진행하시겠습니까? 게시글을 삭제하면 복구를 할 수 없습니다.'))) return;
         try {
-            const res = await (requiresPostAdmin(posts.find(post => post.id === postId)) ? adminMutation : memberMutation)('delete', `/posts/${postId}`, { ...getSessionAuth(), userId });
+            const res = await (requiresPostAdmin((currentPost?.id === postId ? currentPost : [...posts, ...activityData.posts].find(post => post.id === postId))) ? adminMutation : memberMutation)('delete', `/posts/${postId}`, { ...getSessionAuth(), userId });
             if (res.data.success) {
                 alert(t('messages.delete_success', '삭제가 되었습니다.'));
                 fetchPosts(); navigate(getBoardListPath(boardTab)); setView('list');
             }
         } catch (err) { alert(err.response?.data?.msg || t('messages.delete_forbidden', '삭제 권한이 없습니다.')); }
-    };
-
-    //   이메일 알림 전송 헬퍼 함수
-    const sendNotificationEmail = async (type, targetUserId, targetUserName) => {
-        if (targetUserId === userId) return; // 본인이 자신의 글에 반응할 때는 알림을 보내지 않음
-        try {
-            await axios.post(`${API_BASE}/api/posts/notify-email`, {
-                ...getSessionAuth(),
-                targetUserId,
-                targetUserName,
-                actionUserName: userName,
-                type // 'like' 또는 'comment'
-            });
-        } catch (e) {
-            console.error("알림 이메일 전송 실패:", e);
-        }
     };
 
     const handleAddComment = async (e) => {
@@ -444,13 +434,8 @@ const Board = () => {
         try {
             await axios.post(`${API_BASE}/api/posts/${currentPost.id}/comments`, { ...getSessionAuth(), text: commentText, authorId: userId, authorName: userName });
             setCommentText('');
-            const res = await axios.get(`${API_BASE}/api/posts`);
-            setPosts(res.data); setCurrentPost(res.data.find(p => p.id === currentPost.id));
+            await refreshCurrentPost();
 
-            //   댓글 작성 시 원글 작성자에게 이메일 전송 요청
-            if (currentPost.authorId !== userId) {
-                sendNotificationEmail('comment', currentPost.authorId, currentPost.authorName);
-            }
         } catch (err) { alert(t('messages.comment_create_failed', '댓글 등록 실패')); }
     };
 
@@ -462,13 +447,8 @@ const Board = () => {
         try {
             await axios.post(`${API_BASE}/api/posts/${currentPost.id}/comments/${commentId}/replies`, { ...getSessionAuth(), text: replyText, authorId: userId, authorName: userName });
             setReplyText(''); setReplyingTo(null);
-            const res = await axios.get(`${API_BASE}/api/posts`);
-            setPosts(res.data); setCurrentPost(res.data.find(p => p.id === currentPost.id));
+            await refreshCurrentPost();
 
-            //   대댓글 작성 시 원글 작성자에게 이메일 전송 요청
-            if (currentPost.authorId !== userId) {
-                sendNotificationEmail('comment', currentPost.authorId, currentPost.authorName);
-            }
         } catch (err) { alert(t('messages.reply_create_failed', '답글 등록 실패')); }
     };
 
@@ -482,32 +462,22 @@ const Board = () => {
             const res = await (comment?.authorId !== userId || hasReplies ? adminMutation : memberMutation)('delete', `/posts/${currentPost.id}/comments/${commentId}`, { ...getSessionAuth(), userId });
             if (res.data.success) {
                 alert(t('messages.delete_success', '삭제가 되었습니다.'));
-                const updated = await axios.get(`${API_BASE}/api/posts`);
-                setPosts(updated.data); setCurrentPost(updated.data.find(p => p.id === currentPost.id));
+                await refreshCurrentPost();
             }
         } catch (err) { alert(err.response?.data?.msg || t('messages.delete_forbidden', '삭제 권한이 없습니다.')); }
     };
 
     const handleViewPost = async (post) => {
-        // 공지게시판 글은 누구나 열람 가능, 자유게시판 글은 로그인 사용자만 열람 가능
-        const targetBoard = getPostBoardType(post);
-        if (targetBoard === BOARD_FREE && !requireLogin()) return;
-
+        if (getPostBoardType(post) === BOARD_FREE && !requireLogin()) return;
         try {
-            await axios.post(`${API_BASE}/api/posts/${post.id}/view`);
-            fetchPosts();
-            // 상세 화면으로 들어갈 때도 해당 글의 실제 소속 탭을 맞춰둡니다.
-            setBoardTab(targetBoard);
-            setCurrentPost({ ...post, views: (post.views || 0) + 1 });
-        } catch (e) {
-            setBoardTab(targetBoard);
-            setCurrentPost(post);
-        } 
-        finally {
+            const detail = await refreshCurrentPost(post.id);
+            const response = await axios.post(`${API_BASE}/api/posts/${post.id}/view`, {}, { headers: memberRequestHeaders() });
+            setCurrentPost({ ...detail, views: response.data.views });
+            setBoardTab(getPostBoardType(detail));
             navigate(getBoardPostPath(post.id));
             setView('detail'); setIsEditing(false); setReplyingTo(null);
-            setReplyText(''); setCommentText(''); window.scrollTo(0, 0); 
-        }
+            setReplyText(''); setCommentText(''); window.scrollTo(0, 0);
+        } catch (error) { toast.error(error.response?.data?.msg || '게시글을 볼 수 없습니다.'); }
     };
 
     const handleToggleLike = async () => {
@@ -516,14 +486,9 @@ const Board = () => {
         try {
             const res = await axios.post(`${API_BASE}/api/posts/${currentPost.id}/like`, { ...getSessionAuth(), userId });
             if(res.data.success) {
-                const isNowLiked = res.data.likedUsers.includes(userId);
                 setCurrentPost({...currentPost, likes: res.data.likes, likedUsers: res.data.likedUsers});
                 fetchPosts(); 
                 
-                //   좋아요를 새로 눌렀을 때만 알림을 전송하고, 취소 시에는 전송하지 않습니다.
-                if (isNowLiked && currentPost.authorId !== userId) {
-                    sendNotificationEmail('like', currentPost.authorId, currentPost.authorName);
-                }
             }
         } catch(err) { alert(t('messages.like_failed', '추천 처리 실패')); }
     }
@@ -595,7 +560,9 @@ const Board = () => {
         if (!isAdmin) return;
 
         if (!noticeOrderMode) {
-            const currentNotices = posts.filter(post => getPostBoardType(post) === boardTab && post.isNotice).sort(compareNoticePosts);
+            const response = await axios.get(`${API_BASE}/api/posts`, { headers: memberRequestHeaders(), params: { boardType: boardTab, scope: 'pinned', pageSize: 100 } });
+            const currentNotices = response.data.sort(compareNoticePosts);
+            setPosts(currentNotices);
             if (currentNotices.length === 0) {
                 toast.info(t('admin.notice_order_empty', '순서를 정리할 공지글이 없습니다.'));
                 return;
@@ -662,13 +629,7 @@ const Board = () => {
             try {
                 const selectedPosts = posts.filter(post => selectedNoticeIds.includes(post.id));
                 for (const post of selectedPosts) {
-                    await adminMutation('put', `/posts/${post.id}`, {
-                        ...getSessionAuth(),
-                        userId,
-                        title: getCleanTitle(post.title),
-                        content: withBoardMarker(post.content, targetBoard),
-                        boardType: targetBoard
-                    });
+                    await adminMutation('put', `/posts/${post.id}/board-type`, { ...getSessionAuth(), boardType: targetBoard });
                 }
                 toast.success(formatSetting('admin.move_success', '{target}으로 이동했습니다.', { target: targetLabel }));
                 setNoticeMode('none');
@@ -688,34 +649,13 @@ const Board = () => {
         toast.info(formatSetting('admin.move_instruction', "이동할 게시글을 체크한 뒤 '{target}으로 이동' 버튼을 다시 눌러주세요.", { target: targetLabel }));
     };
 
-    const myPosts = posts.filter(p => p.authorId === userId);
-    const myComments = [];
-    posts.forEach(post => {
-        post.comments.forEach(c => {
-            if (c.authorId === userId && !c.text.includes("삭제한 댓글입니다.")) {
-                myComments.push({ uniqueId: `c_${c.id}`, type: 'comment', postId: post.id, postTitle: getCleanTitle(post.title), commentId: c.id, text: c.text, date: c.date, hasReplies: c.replies && c.replies.length >0 });
-            }
-            if (c.replies) {
-                c.replies.forEach(r => {
-                    if (r.authorId === userId && !r.text.includes("삭제한 답글입니다.")) {
-                        myComments.push({ uniqueId: `r_${r.id}`, type: 'reply', postId: post.id, postTitle: getCleanTitle(post.title), commentId: c.id, replyId: r.id, text: r.text, date: r.date, hasReplies: false });
-                    }
-                });
-            }
-        });
-    });
+    const myPosts = activityData.posts;
+    const myComments = activityData.comments;
 
-    const goToPostById = (postId) => {
-        const post = posts.find(p => p.id === postId);
-        if (post) {
-            // 내 활동에서 글로 이동할 때도 해당 글의 실제 게시판 탭을 맞춥니다.
-            setBoardTab(getPostBoardType(post));
-            handleViewPost(post);
-        }
-    };
+    const goToPostById = (postId) => { navigate(getBoardPostPath(postId)); setView('detail'); };
 
     const handleSelectAll = (currentItems) => {
-        if (checkedIds.length === currentItems.length && currentItems.length >0) setCheckedIds([]);
+        if (checkedIds.length === currentItems.length && currentItems.length > 0) setCheckedIds([]);
         else setCheckedIds(currentItems.map(item => item.uniqueId || item.id));
     };
 
@@ -731,7 +671,7 @@ const Board = () => {
         if (activityTab === 'posts') {
             if (window.confirm(t('activity.delete_confirm', '정말 삭제를 진행하시겠습니까?'))) {
                 try {
-                    for (let id of checkedIds) { await (requiresPostAdmin(posts.find(post => post.id === id)) ? adminMutation : memberMutation)('delete', `/posts/${id}`, { ...getSessionAuth(), userId }); }
+                    for (let id of checkedIds) { await (requiresPostAdmin([...posts, ...activityData.posts].find(post => post.id === id)) ? adminMutation : memberMutation)('delete', `/posts/${id}`, { ...getSessionAuth(), userId }); }
                     alert(t('messages.delete_success', '삭제가 되었습니다.')); setCheckedIds([]); fetchPosts();
                 } catch(err) { alert(t('activity.delete_posts_failed', '일부 게시글 삭제 실패')); }
             }
@@ -751,38 +691,18 @@ const Board = () => {
     };
 
     if (view === 'list') {
-        // 현재 선택한 탭의 소속 글만 먼저 걸러냅니다.
-        // - 공지 등록/해제는 isNotice만 바꾸므로 이 필터 결과에는 영향을 주지 않습니다.
-        // - 따라서 공지게시판 글은 공지 해제 후에도 공지게시판에 남고,
-        //  자유게시판 글은 공지 해제 후에도 자유게시판에 남습니다.
-        const boardScopedPosts = posts.filter(post => getPostBoardType(post) === boardTab);
-
-        const processedPosts = boardScopedPosts
-            .filter(post => {
-                const keyword = searchTerm.trim();
-                if (!keyword) return true;
-                return getCleanTitle(post.title).includes(keyword) || getCleanContent(post.content).includes(keyword);
-            })
-            .sort((a, b) => {
-                // 공지 강조(isNotice)는 "해당 탭 안에서 위에 고정"하는 역할만 합니다.
-                // 게시판 소속을 바꾸는 역할은 절대 하지 않습니다.
-                if (a.isNotice && b.isNotice) return compareNoticePosts(a, b);
-                if (a.isNotice !== b.isNotice) return a.isNotice ? -1 : 1;
-
-                const timeA = parseInt(a.id); const timeB = parseInt(b.id);
-                return sortOrder === 'desc'? timeB - timeA : timeA - timeB;
-            });
+        const processedPosts = posts;
 
         // 공지 순서 편집 모드에서는 현재 탭 안에서 공지로 등록된 글만 순서 조정합니다.
         const displayRows = noticeOrderMode
             ? noticeOrderIds.map(id => posts.find(post => post.id === id && getPostBoardType(post) === boardTab && post.isNotice)).filter(Boolean)
             : processedPosts;
 
-        const totalPages = Math.ceil(displayRows.length / postsPerPage) || 1;
+        const totalPages = Math.ceil(serverTotal / postsPerPage) || 1;
         const safeCurrentPage = Math.min(currentPage, totalPages);
         const idxLast = safeCurrentPage * postsPerPage;
         const idxFirst = idxLast - postsPerPage;
-        const currentPosts = noticeOrderMode ? displayRows : displayRows.slice(idxFirst, idxLast);
+        const currentPosts = displayRows;
         const pageTitle = formatSetting('list.page_title', ' {board}', { board: getBoardLabel(boardTab) });
         const targetMoveLabel = formatSetting('admin.move_button', '{target}으로 이동', { target: getBoardLabel(boardTab === BOARD_NOTICE ? BOARD_FREE : BOARD_NOTICE) });
         const boardGuideText = boardTab === BOARD_NOTICE
@@ -856,8 +776,8 @@ const Board = () => {
                             {currentPosts.length >0 ? currentPosts.map((post, idx) => {
                                 const displayNo = noticeOrderMode
                                     ? idx + 1
-                                    : (sortOrder === 'desc'? displayRows.length - (idxFirst + idx) : idxFirst + idx + 1);
-                                const totalComments = post.comments.reduce((acc, c) => acc + 1 + (c.replies ? c.replies.length : 0), 0);
+                                    : (sortOrder === 'desc'? serverTotal - (idxFirst + idx) : idxFirst + idx + 1);
+                                const totalComments = post.commentCount || 0;
                                 const isSelectableMode = noticeMode !== 'none';
                                 return (
                                     <tr key={post.id} className={`board-table-row ${post.isNotice ? 'is-notice' : ''}`}>
@@ -898,11 +818,9 @@ const Board = () => {
 
     if (view === 'myActivity') {
         const activeData = activityTab === 'posts'? myPosts : myComments;
-        const totalPagesAct = Math.ceil(activeData.length / postsPerPage) || 1;
+        const totalPagesAct = Math.ceil(activityData.total / postsPerPage) || 1;
         const safeCurrentPageAct = Math.min(currentPage, totalPagesAct);
-        const idxLast = safeCurrentPageAct * postsPerPage;
-        const idxFirst = idxLast - postsPerPage;
-        const currentItems = activeData.slice(idxFirst, idxLast);
+        const currentItems = activeData;
 
         return (
             <div className="board-page board-my-page wgs-typography-scope community-page community-board" data-board-type={boardTab}>
@@ -911,8 +829,8 @@ const Board = () => {
                     <div><p className="ui-eyebrow">나의 커뮤니티 기록</p><h1 className="board-page-title">{t('activity.title', '내가 작성한 활동')}</h1></div>
                 </div>
                 <div className="board-tab-grid">
-                    <button type="button" className={`board-tab-button ${activityTab === 'posts' ? 'is-active' : ''}`} onClick={() => { setActivityTab('posts'); setCheckedIds([]); setCurrentPage(1); navigate(getBoardActivityPath('posts')); }}>{formatSetting('activity.posts_tab', '내가 작성한 글 ({count})', { count: myPosts.length })}</button>
-                    <button type="button" className={`board-tab-button ${activityTab === 'comments' ? 'is-active' : ''}`} onClick={() => { setActivityTab('comments'); setCheckedIds([]); setCurrentPage(1); navigate(getBoardActivityPath('comments')); }}>{formatSetting('activity.comments_tab', '내가 작성한 댓글 ({count})', { count: myComments.length })}</button>
+                    <button type="button" className={`board-tab-button ${activityTab === 'posts' ? 'is-active' : ''}`} onClick={() => { setActivityTab('posts'); setCheckedIds([]); setCurrentPage(1); navigate(getBoardActivityPath('posts')); }}>{formatSetting('activity.posts_tab', '내가 작성한 글 ({count})', { count: activityData.counts.posts })}</button>
+                    <button type="button" className={`board-tab-button ${activityTab === 'comments' ? 'is-active' : ''}`} onClick={() => { setActivityTab('comments'); setCheckedIds([]); setCurrentPage(1); navigate(getBoardActivityPath('comments')); }}>{formatSetting('activity.comments_tab', '내가 작성한 댓글 ({count})', { count: activityData.counts.comments })}</button>
                 </div>
                 <div className="board-action-row">
                     <button type="button" className="board-button" onClick={() => handleSelectAll(currentItems)}>{t('activity.select_all_button', '전체선택')}</button>
@@ -957,6 +875,11 @@ const Board = () => {
     }
 
     if (view === 'write') {
+        if (location.state?.editingPostId && (!isEditing
+            || String(currentPost?.id) !== String(location.state.editingPostId)
+            || restoredEditorRouteRef.current !== location.key)) {
+            return <p role="status" className="board-page">수정할 게시글을 불러오고 있습니다.</p>;
+        }
         return (
             <BoardWriteView
                 t={t}
@@ -995,7 +918,7 @@ const Board = () => {
                     <div className="board-inline-actions">
                         {(userId === currentPost.authorId || isAdmin) && (
                             <>
-                                <button type="button" className="board-button board-button-success" onClick={() => { loadEditorState(getCleanTitle(currentPost.title), getCleanContent(currentPost.content), currentPost.contentJson || ''); setIsEditing(true); navigate(getBoardWritePath(getPostBoardType(currentPost)), { state: { editingPostId: currentPost.id } }); setView('write'); }}>{t('common.edit', '수정')}</button>
+                                <button type="button" className="board-button board-button-success" onClick={() => navigate(getBoardWritePath(getPostBoardType(currentPost)), { state: { editingPostId: currentPost.id } })}>{t('common.edit', '수정')}</button>
                                 <button type="button" className="board-button board-button-danger" onClick={() => handleDeletePost(currentPost.id)}>{t('common.delete', '삭제')}</button>
                             </>
                         )}
