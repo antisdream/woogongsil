@@ -75,12 +75,19 @@ function createWgsCorsOptions() {
     };
 }
 
-function createWgsSecurityHeaders() {
+function createWgsSecurityHeaders(env = process.env) {
     return function wgsSecurityHeaders(req, res, next) {
         res.setHeader('X-Content-Type-Options', 'nosniff');
         res.setHeader('X-Frame-Options', 'DENY');
         res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
         res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=(self), payment=(), usb=(), interest-cohort=()');
+        // Begin with five minutes. Extending browser retention is an explicit
+        // operator decision after HTTPS and certificate renewal are verified.
+        const production = String(env.NODE_ENV || '').toLowerCase() === 'production';
+        const configuredAge = env.WGS_HSTS_MAX_AGE_SECONDS;
+        const seconds = configuredAge === undefined || configuredAge === '' ? 300 : Number(configuredAge);
+        const maxAge = Number.isInteger(seconds) && seconds >= 0 ? Math.min(seconds, 31536000) : 300;
+        if (production && req.secure) res.setHeader('Strict-Transport-Security', `max-age=${maxAge}`);
         res.setHeader(
             'Content-Security-Policy',
             [
