@@ -1,9 +1,11 @@
 'use strict';
+const { runtimeSchemaGate } = require('./schemaRuntime');
 
 function createWrongNotesSchemaChecker({ pool } = {}) {
     if (!pool) throw new Error('createWrongNotesSchemaChecker requires mysql pool');
 
 async function ensureWrongNotesSchema() {
+        const runtime = runtimeSchemaGate(pool); if (runtime) return runtime;
     try {
         // 테이블이 아예 없는 경우를 대비한 안전 생성 코드.
         // 이미 존재하는 테이블은 변경하지 않는다.

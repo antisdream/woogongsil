@@ -1,4 +1,5 @@
 'use strict';
+const { runtimeSchemaGate } = require('./schemaRuntime');
 
 function createStudyNoteSchemaChecker(options = {}) {
     const pool = options.pool;
@@ -20,6 +21,7 @@ function createStudyNoteSchemaChecker(options = {}) {
     }
 
     async function ensureStudyNoteSchema() {
+        const runtime = runtimeSchemaGate(pool); if (runtime) return runtime;
         try {
             await pool.query(`
                 CREATE TABLE IF NOT EXISTS wgs_study_folders (

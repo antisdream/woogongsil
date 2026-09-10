@@ -1,4 +1,5 @@
 'use strict';
+const { runtimeSchemaGate } = require('./schemaRuntime');
 
 const crypto = require('node:crypto');
 const { parseCookies, safeEqual } = require('./adminSessionService');
@@ -35,6 +36,7 @@ function createAdminEmailOtpService({ pool, sendEmail, env = process.env, clock 
     let schemaPromise;
 
     function ensureSchema() {
+        const runtime = runtimeSchemaGate(pool); if (runtime) return runtime;
         if (!schemaPromise) {
             schemaPromise = pool.query(`CREATE TABLE IF NOT EXISTS wgs_admin_email_otp (
                 user_id VARCHAR(100) NOT NULL PRIMARY KEY,

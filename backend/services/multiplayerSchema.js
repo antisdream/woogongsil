@@ -1,4 +1,5 @@
 'use strict';
+const { runtimeSchemaGate } = require('./schemaRuntime');
 
 async function safeQuery(pool, sql) {
     try {
@@ -45,6 +46,7 @@ async function ensureMultiplayerIndex(pool, tableName, indexName, createSql) {
 }
 
 async function ensureMultiplayerSchema(pool) {
+        const runtime = runtimeSchemaGate(pool); if (runtime) return runtime;
     // DB 테이블 자동 생성/보정
     // ------------------------------------------------------------
     // 기존 DB를 삭제하지 않고 멀티플레이 테이블만 생성합니다.

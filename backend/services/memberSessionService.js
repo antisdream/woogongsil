@@ -1,4 +1,5 @@
 'use strict';
+const { runtimeSchemaGate } = require('./schemaRuntime');
 
 const crypto = require('node:crypto');
 const { EventEmitter } = require('node:events');
@@ -53,6 +54,7 @@ function createMemberSessionService({ pool, env = process.env, now = Date.now } 
     }
 
     function ensureSchema() {
+        const runtime = runtimeSchemaGate(pool); if (runtime) return runtime;
         if (!ready) ready = (async () => {
             await pool.query(`CREATE TABLE IF NOT EXISTS wgs_member_sessions (
                 token_hash CHAR(64) CHARACTER SET ascii COLLATE ascii_bin PRIMARY KEY,

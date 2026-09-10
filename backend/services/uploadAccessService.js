@@ -1,4 +1,5 @@
 'use strict';
+const { runtimeSchemaGate } = require('./schemaRuntime');
 
 const fs = require('node:fs/promises');
 const path = require('node:path');
@@ -70,6 +71,7 @@ function createUploadAccessService({ pool, backendDir, env = process.env }) {
     }
 
     function ensureSchema() {
+        const runtime = runtimeSchemaGate(pool); if (runtime) return runtime;
         if (!schemaPromise) schemaPromise = migrate().catch(error => { schemaPromise = undefined; throw error; });
         return schemaPromise;
     }

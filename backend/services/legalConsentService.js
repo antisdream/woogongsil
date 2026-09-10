@@ -1,4 +1,5 @@
 'use strict';
+const { runtimeSchemaGate } = require('./schemaRuntime');
 
 const crypto = require('crypto');
 const { LEGAL_DOCUMENTS } = require('./legalDocuments');
@@ -287,6 +288,7 @@ function createLegalConsentService(options = {}) {
     }
 
     async function ensureSchema() {
+        const runtime = runtimeSchemaGate(pool); if (runtime) return runtime;
         if (schemaReady) return;
         if (schemaPromise) return schemaPromise;
         schemaPromise = (async () => {
@@ -294,7 +296,6 @@ function createLegalConsentService(options = {}) {
             await ensureLegalTables();
             await ensureFortuneHistorySchema();
             await seedLegalDocuments();
-            await purgeExpiredRecords();
             schemaReady = true;
         })();
         try {

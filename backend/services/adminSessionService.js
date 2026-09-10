@@ -1,5 +1,6 @@
 // 일반 회원 세션과 분리된 관리자 전용 세션을 생성하고 검증합니다.
 'use strict';
+const { runtimeSchemaGate } = require('./schemaRuntime');
 
 const DEFAULT_IDLE_MINUTES = 30;
 const DEFAULT_ABSOLUTE_HOURS = 8;
@@ -179,6 +180,7 @@ function createAdminSessionService(options = {}) {
     }
 
     async function ensureSchema() {
+        const runtime = runtimeSchemaGate(pool); if (runtime) return runtime;
         if (schemaReady) return;
         if (schemaPromise) return schemaPromise;
 

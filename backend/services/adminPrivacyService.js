@@ -1,5 +1,6 @@
 // 관리자 화면에서 개인정보를 최소 노출하고 열람 이력을 별도로 남깁니다.
 'use strict';
+const { runtimeSchemaGate } = require('./schemaRuntime');
 
 const DEFAULT_PAGE_SIZE = 20;
 const MAX_PAGE_SIZE = 50;
@@ -114,6 +115,7 @@ function createAdminPrivacyService(options = {}) {
     }
 
     async function ensureSchema() {
+        const runtime = runtimeSchemaGate(pool); if (runtime) return runtime;
         if (!schemaPromise) {
             schemaPromise = pool.query(`CREATE TABLE IF NOT EXISTS wgs_admin_privacy_access_logs (
                 id BIGINT AUTO_INCREMENT PRIMARY KEY,

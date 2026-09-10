@@ -9,6 +9,8 @@ const bcrypt = require('bcrypt');
 const http = require('http');
 const { loadEnvFile } = require('./config/env');
 const { createDatabasePool } = require('./config/database');
+const { assertMigratedSchema, assertRuntimePrivileges } = require('./services/schemaRuntime');
+const { createAdminUserControlSchema } = require('./services/adminUserControlSchema');
 
 // Socket.IO 선택 로딩
 // ------------------------------------------------------------
@@ -61,10 +63,6 @@ const {
     isInternalApprovalBypassRequest,
 } = require('./services/adminSessionService');
 const { createJsonFileStores } = require('./services/jsonFileStores');
-const { createWrongNotesSchemaChecker } = require('./services/wrongNotesSchema');
-const { createStudyNoteSchemaChecker } = require('./services/studyNoteSchema');
-const { createSchemaCompatibilityChecker } = require('./services/schemaCompatibility');
-const { createJsonSqlImporter } = require('./services/jsonSqlImporter');
 const { createNoticeMailService } = require('./services/noticeMailService');
 const { createVisitorAnalyticsSchema } = require('./services/visitorAnalyticsSchema');
 const { createVisitorAnalyticsService } = require('./services/visitorAnalyticsService');
@@ -125,18 +123,7 @@ const visitSessionService = createVisitSessionService({
 
 registerMultiplayerFeature({ app, pool, io, memberSessionService });
 
-// 실기 오답노트 SQL 테이블 안전 점검
-// ----------------------------------------------------------
-// 기존 DB를 삭제하거나 초기화하지 않고, 필요한 컬럼만 없을 때 추가합니다.
-// 기존 wgs_wrong_notes 테이블에 subject 컬럼만 없는 경우에도
-// 서버 실행 시 자동으로 보완되도록 만들었다.
-const { ensureWrongNotesSchema } = createWrongNotesSchemaChecker({ pool });
-ensureWrongNotesSchema();
-
-// 학습노트/오답정리용 SQL 테이블 안전 점검
-// 기존 게시글/오답 원본 테이블은 건드리지 않고 학습문서 전용 테이블만 보완합니다.
-const { ensureStudyNoteSchema } = createStudyNoteSchemaChecker({ pool });
-ensureStudyNoteSchema();
+// Database structures are migrated before this runtime starts.
 
 // React 빌드 결과물을 Express가 정적 파일로 제공합니다.
 
@@ -164,6 +151,7 @@ const SALT_ROUNDS = 10;
 // 기본 관리자 계정 식별자입니다.
 // 운영자 권한은 계속 DB 기반 관리자 설정으로 확인합니다.
 const ADMIN_USER_ID = String(process.env.WGS_ADMIN_USER_ID || process.env.ADMIN_USER_ID || 'skn29').trim().toLowerCase();
+const { ensureAdminUserControlSchema, adminTableExists, adminColumnExists } = createAdminUserControlSchema({ pool, adminUserId: ADMIN_USER_ID });
 
 // 실시간 세션과 접속자 상태 도우미입니다.
 // 인스턴스 ID는 열린 브라우저 탭이 서버 재시작을 감지하고 다시 인증하도록 돕습니다.
@@ -296,22 +284,6 @@ const {
     isNoticeBoardCreateRequest,
     sendNoticePostEmailsInBackground,
 } = createNoticeMailService({ pool, sendEmail });
-
-const { ensureSchemaCompatibility } = createSchemaCompatibilityChecker({ pool });
-
-const { importDataFromJSON } = createJsonSqlImporter({
-    pool,
-    bcrypt,
-    saltRounds: SALT_ROUNDS,
-    userFile: USER_FILE,
-    postsFile: POSTS_FILE,
-    rankingRandomFile: RANKING_RANDOM_FILE,
-    rankingDataFile: RANKING_DATA_FILE,
-    rankingPastFile: RANKING_PAST_FILE,
-    readJSON,
-    normalizeToMysqlDateTime,
-    getBoardDateString
-});
 
 // 5. 공통 DB 조회 헬퍼
 async function getUserById(id) {
@@ -465,135 +437,6 @@ registerAuthRoutes({
 // 3) 게시글/댓글/오답 수는 관리자 화면 참고용 통계이며, 관련 테이블이 없거나 비어 있어도
 //  관리자 화면 전체가 영향을 받지 않도록 안전하게 0으로 처리합니다.
 // 4) 이번 단계는 DB 구조 변경 없이 조회 API만 추가합니다.
-async function adminTableExists(tableName) {
-    try {
-        const [rows] = await pool.query(
-            `SELECT COUNT(*) AS cnt
-             FROM information_schema.tables
-             WHERE table_schema = DATABASE() AND table_name = ?`,
-            [tableName]
-        );
-        return Number(rows?.[0]?.cnt || 0) >0;
-    } catch (error) {
-        console.warn(`관리자 테이블 존재 확인 실패(${tableName}):`, error.message);
-        return false;
-    }
-}
-
-async function adminColumnExists(tableName, columnName) {
-    try {
-        const [rows] = await pool.query(
-            `SELECT COUNT(*) AS cnt
-             FROM information_schema.columns
-             WHERE table_schema = DATABASE() AND table_name = ? AND column_name = ?`,
-            [tableName, columnName]
-        );
-        return Number(rows?.[0]?.cnt || 0) >0;
-    } catch (error) {
-        console.warn(`관리자 컬럼 존재 확인 실패(${tableName}.${columnName}):`, error.message);
-        return false;
-    }
-}
-
-
-let adminUserControlSchemaReady = false; // 사용자 제어 DB 구조를 1회 보정했는지 기억합니다.
-let adminUserControlSchemaPromise = null; // 동시에 여러 요청이 들어와도 ALTER가 중복 실행되지 않도록 잠금 역할을 합니다.
-
-async function ensureAdminUserControlSchema() {
-    // 사용자 접속 제한, 운영자, 결재 기능용 컬럼과 테이블을 개발·배포 환경에서 안전하게 보정합니다.
-    if (adminUserControlSchemaReady) return;
-    if (adminUserControlSchemaPromise) return adminUserControlSchemaPromise;
-
-    adminUserControlSchemaPromise = (async () => {
-    if (!(await adminTableExists("wgs_users"))) return;
-
-    const userColumns = [
-        ["created_at", "DATETIME NULL DEFAULT CURRENT_TIMESTAMP COMMENT '회원가입 일시'"],
-        ["is_suspended", "TINYINT(1) NOT NULL DEFAULT 0 COMMENT '관리자 임시정지 여부'"],
-        ["suspension_reason", "TEXT NULL COMMENT '임시정지 사유'"],
-        ["suspended_at", "DATETIME NULL COMMENT '임시정지/해제 처리 일시'"],
-        ["is_primary_admin", "TINYINT(1) NOT NULL DEFAULT 0 COMMENT '최고관리자 여부'"],
-        ["is_operator", "TINYINT(1) NOT NULL DEFAULT 0 COMMENT '운영자 권한 여부'"],
-        ["operator_reason", "TEXT NULL COMMENT '운영자 권한 변경 사유'"],
-        ["operator_updated_at", "DATETIME NULL COMMENT '운영자 권한 변경 일시'"],
-        ["operator_updated_by", "VARCHAR(100) NULL COMMENT '운영자 권한 변경 관리자'"],
-        ["last_login_at", "DATETIME NULL COMMENT '최근 로그인 일시'"],
-        ["last_logout_at", "DATETIME NULL COMMENT '최근 로그아웃 일시'"],
-    ];
-
-    for (const [columnName, definition] of userColumns) {
-        if (!(await adminColumnExists("wgs_users", columnName))) {
-            await pool.query(`ALTER TABLE wgs_users ADD COLUMN ${columnName} ${definition}`);
-        }
-    }
-
-    const [primaryAdminRows] = await pool.query('SELECT COUNT(*) AS cnt FROM wgs_users WHERE COALESCE(is_primary_admin, 0) = 1');
-    if (Number(primaryAdminRows?.[0]?.cnt || 0) === 0 && ADMIN_USER_ID) {
-        await pool.query('UPDATE wgs_users SET is_primary_admin = 1 WHERE LOWER(id) = ?', [ADMIN_USER_ID]);
-    }
-
-    await pool.query(`CREATE TABLE IF NOT EXISTS wgs_admin_approvals (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            requester_id VARCHAR(100) NOT NULL,
-            requester_name VARCHAR(100) NULL,
-            action_method VARCHAR(20) NOT NULL,
-            action_path TEXT NOT NULL,
-            action_title VARCHAR(255) NULL,
-            action_body LONGTEXT NULL,
-            action_preview LONGTEXT NULL,
-            status ENUM('PENDING','APPROVED','REJECTED') NOT NULL DEFAULT 'PENDING',
-            requested_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            reviewed_by VARCHAR(100) NULL,
-            reviewed_at DATETIME NULL,
-            reject_reason TEXT NULL,
-            apply_result LONGTEXT NULL,
-            hidden_from_primary TINYINT(1) NOT NULL DEFAULT 0,
-            hidden_from_requester TINYINT(1) NOT NULL DEFAULT 0,
-            INDEX idx_status_requested (status, requested_at),
-            INDEX idx_requester_requested (requester_id, requested_at),
-            INDEX idx_primary_hidden_requested (hidden_from_primary, requested_at),
-            INDEX idx_requester_hidden_requested (hidden_from_requester, requester_id, requested_at)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-    `);
-
-    // 전체 공지 발송과 점검 모드 변경은 운영자가 바로 적용하므로 별도의 공통 이력 테이블에 저장합니다.
-    await pool.query(`CREATE TABLE IF NOT EXISTS wgs_admin_operation_logs (
-            id BIGINT AUTO_INCREMENT PRIMARY KEY,
-            operation_type VARCHAR(40) NOT NULL,
-            action VARCHAR(40) NOT NULL,
-            title VARCHAR(200) NULL,
-            message TEXT NULL,
-            actor_id VARCHAR(80) NULL,
-            actor_name VARCHAR(100) NULL,
-            payload LONGTEXT NULL,
-            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            INDEX idx_admin_operation_type_created (operation_type, created_at),
-            INDEX idx_admin_operation_created (created_at)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-    `);
-
-    // 같은 결재 DB 행을 공유하면서 최고관리자 목록과 운영자 본인 목록은 각각 숨김 처리합니다.
-    // 실제 DELETE를 하지 않으므로 한쪽이 정리해도 다른 쪽의 확인/감사 목록에는 영향을 주지 않는다.
-    const approvalVisibilityColumns = [
-        ['hidden_from_primary', "TINYINT(1) NOT NULL DEFAULT 0 COMMENT '최고관리자 결재 목록 숨김 여부'"],
-        ['hidden_from_requester', "TINYINT(1) NOT NULL DEFAULT 0 COMMENT '요청자 본인 결재 목록 숨김 여부'"],
-    ];
-    for (const [columnName, definition] of approvalVisibilityColumns) {
-        if (!(await adminColumnExists('wgs_admin_approvals', columnName))) {
-            await pool.query(`ALTER TABLE wgs_admin_approvals ADD COLUMN ${columnName} ${definition}`);
-        }
-    }
-
-    adminUserControlSchemaReady = true;
-    })();
-
-    try {
-        await adminUserControlSchemaPromise;
-    } finally {
-        adminUserControlSchemaPromise = null;
-    }
-}
-
 function normalizeAdminBool(value) {
     if (value === true || value === 1 || value === "1") return true;
     if (typeof value === "number") return value >0;
@@ -938,23 +781,13 @@ app.use((req, res) => {
 });
 
 // 15. 서버 시작
-// - 서버 시작 전에 날짜 컬럼 보정과 JSON 자동 복구를 먼저 수행해.
+// - 배포 마이그레이션 완료와 제한된 실행 계정 권한을 확인한 뒤 요청을 받습니다.
 async function startServer() {
     try {
-        await ensureSchemaCompatibility();
-        await legalConsentService.ensureSchema();
-        // 사용자 관리에 필요한 컬럼과 결재 테이블을 서버 시작 시 확인합니다.
-        // DB 스키마 차이로 로그인 SELECT 단계에서 Unknown column 오류가 발생하지 않도록 보정합니다.
-        await ensureAdminUserControlSchema();
-        await adminSessionService.ensureSchema();
-        await adminEmailOtpService.ensureSchema();
-        await memberVerificationService.ensureSchema();
-        await memberSessionService.ensureSchema();
-        await boardPolicyService.ensureSchema();
-        await learningAttemptService.ensureSchema();
-        await ensureVisitorAnalyticsSchema();
-        await importDataFromJSON();
-        await uploadAccessService.migrateLegacyFiles();
+        await assertMigratedSchema(pool);
+        await assertRuntimePrivileges(pool);
+        // Existing privacy retention is a data operation, separate from DDL.
+        await legalConsentService.purgeExpiredRecords();
 
         const port = Number(process.env.PORT || 5000);
         const bindHost = String(

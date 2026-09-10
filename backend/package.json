@@ -5,6 +5,8 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
+    "migrate": "node scripts/migrate.js",
+    "db:provision-runtime": "node scripts/provision-runtime-db.js",
     "check": "node --check server.js && node --check config/env.js && node --check config/database.js && node --check multiplayerRoutes.js && node --check multiplayerSocket.js && node --check ipepRoutes.js && node --check mailer.js && npm run check:routes && npm run check:middleware && npm run check:services && npm run check:scripts",
     "check:routes": "node --check routes/errorReportRoutes.js && node --check routes/adminRoutes.js && node --check routes/admin/adminQuestionRoutes.js && node --check routes/admin/adminSignupRequestRoutes.js && node --check routes/admin/adminNoticeMaintenanceRoutes.js && node --check routes/admin/adminUserListRoutes.js && node --check routes/auth/authRoutes.js && node --check routes/auth/accountRecoveryRoutes.js && node --check routes/boardRoutes.js && node --check routes/studyRoutes.js && node --check routes/study/studyDocumentRoutes.js && node --check routes/study/studyDraftRoutes.js && node --check routes/study/studyFolderRoutes.js && node --check routes/study/studyWrongNoteRoutes.js && node --check routes/examRoutes.js && node --check routes/fortuneRoutes.js && node --check routes/practicalUserRoutes.js && node --check routes/multiplayer/multiplayerWrongRoutes.js && node --check routes/learningResultsRoutes.js && node --check routes/retiredFeatureRoutes.js && node --check routes/siteManagementRoutes.js && node --check routes/userRoutes.js",
     "check:middleware": "node --check middleware/gatekeeperSecurity.js",

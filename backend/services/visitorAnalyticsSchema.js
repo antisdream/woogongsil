@@ -1,4 +1,5 @@
 'use strict';
+const { runtimeSchemaGate } = require('./schemaRuntime');
 
 const TABLE_NAME = 'wgs_daily_visitors';
 const SESSION_TABLE_NAME = 'wgs_visit_sessions';
@@ -253,6 +254,7 @@ function createVisitorAnalyticsSchema({ pool } = {}) {
     }
 
     async function ensureVisitorAnalyticsSchema() {
+        const runtime = runtimeSchemaGate(pool); if (runtime) return runtime;
         if (schemaReady) return;
         if (schemaPromise) return schemaPromise;
 

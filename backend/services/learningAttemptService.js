@@ -1,4 +1,5 @@
 'use strict';
+const { runtimeSchemaGate } = require('./schemaRuntime');
 
 const crypto = require('node:crypto');
 const { gradeIpepQuestion } = require('./ipepQuestionGrader');
@@ -32,6 +33,7 @@ function createLearningAttemptService({ pool, validateRealtimeSession, env = pro
     }
 
     function ensureSchema() {
+        const runtime = runtimeSchemaGate(pool); if (runtime) return runtime;
         if (!ready) ready = (async () => {
             await pool.query(`CREATE TABLE IF NOT EXISTS wgs_learning_attempts (
                 id CHAR(64) CHARACTER SET ascii COLLATE ascii_bin PRIMARY KEY,

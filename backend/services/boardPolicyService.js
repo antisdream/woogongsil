@@ -1,4 +1,5 @@
 'use strict';
+const { runtimeSchemaGate } = require('./schemaRuntime');
 
 const crypto = require('node:crypto');
 const NOTICE_MARKER = '[[UGONGSIL_BOARD:NOTICE]]';
@@ -69,6 +70,7 @@ function createBoardPolicyService({ pool }) {
         if (columns[0]?.Null !== 'NO') await pool.query("ALTER TABLE wgs_posts MODIFY COLUMN boardType ENUM('notice','free') NOT NULL DEFAULT 'free'");
     }
     function ensureSchema() {
+        const runtime = runtimeSchemaGate(pool); if (runtime) return runtime;
         if (!schemaPromise) schemaPromise = migrate().catch(error => { schemaPromise = undefined; throw error; });
         return schemaPromise;
     }

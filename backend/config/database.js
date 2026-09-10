@@ -1,7 +1,8 @@
 // MySQL 연결 풀을 생성하고 공유합니다.
 const mysql = require('mysql2/promise');
+const { markRuntimePool } = require('../services/schemaRuntime');
 
-function createDatabasePool(env = process.env) {
+function createDatabasePool(env = process.env, { migration = false } = {}) {
     const pool = mysql.createPool({
         host: env.DB_HOST || '127.0.0.1',
         port: Number(env.DB_PORT || 3306),
@@ -18,7 +19,7 @@ function createDatabasePool(env = process.env) {
         pool.promise = () => pool;
     }
 
-    return pool;
+    return migration ? pool : markRuntimePool(pool);
 }
 
 module.exports = {

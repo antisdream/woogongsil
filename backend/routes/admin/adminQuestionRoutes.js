@@ -1,3 +1,4 @@
+const { assertMigratedSchema } = require('../../services/schemaRuntime');
 'use strict';
 
 function registerAdminQuestionRoutes(options = {}) {
@@ -92,19 +93,7 @@ function registerAdminQuestionRoutes(options = {}) {
     }
 
     async function ensureIpepAdminExplanationColumns() {
-        const targets = ['ipep_random_questions', 'ipep_past_questions'];
-
-        for (const tableName of targets) {
-            const tableOk = await adminTableExists(tableName);
-            if (!tableOk) continue;
-
-            const hasExplanationText = await adminColumnExists(tableName, 'explanation_text');
-            if (!hasExplanationText) {
-                // 실기 데이터에 해설 텍스트를 추가로 적어둘 수 있도록 NULL 허용 컬럼만 더합니다.
-                // 기존 문제 풀이/채점 로직은 이 컬럼을 필수로 사용하지 않으므로 안전하다.
-                await pool.query(`ALTER TABLE ${tableName} ADD COLUMN explanation_text TEXT NULL`);
-            }
-        }
+        await assertMigratedSchema(pool);
     }
 
     function buildWrittenQuestionWhere(query) {

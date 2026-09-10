@@ -1,4 +1,5 @@
 'use strict';
+const { runtimeSchemaGate } = require('./schemaRuntime');
 
 const crypto = require('node:crypto');
 const { parseCookies, safeEqual } = require('./adminSessionService');
@@ -36,6 +37,7 @@ function createMemberEmailVerificationService({ pool, sendEmail, env = process.e
     let schemaPromise;
 
     function ensureSchema() {
+        const runtime = runtimeSchemaGate(pool); if (runtime) return runtime;
         if (!schemaPromise) schemaPromise = pool.query(`CREATE TABLE IF NOT EXISTS wgs_member_email_verifications (
             email_hash CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL PRIMARY KEY,
             state JSON NOT NULL,
