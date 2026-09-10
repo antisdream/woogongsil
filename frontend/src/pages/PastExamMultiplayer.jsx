@@ -1,3 +1,4 @@
+import { preparePrintWindow } from '../features/printWindow.js';
 import { memberHeaders, memberCsrfToken } from '../features/memberSession.js';
 import '../styles/app/learning-redesign.css';
 // 멀티플레이 라우트 페이지 컴포넌트입니다.
@@ -553,6 +554,7 @@ function PastExamMultiplayerInner({ setIsExamActive, initialTab = 'play' }) {
         win.document.open();
         win.document.write(buildWrongHtml({ roomRecord, escapeHtml }));
         win.document.close();
+        preparePrintWindow(win);
     };
 
     const loadWrongGroups = useCallback(async () => {

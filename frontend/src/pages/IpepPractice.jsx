@@ -1,3 +1,4 @@
+import { preparePrintWindow } from '../features/printWindow.js';
 import '../styles/app/learning-redesign.css';
 // 정보처리기사 실기 라우트 페이지 컴포넌트입니다.
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -392,6 +393,7 @@ function IpepPractice({ setIsExamActive, initialMode = 'lobby' }) {
 
         const wrongRows = pastResults.filter(row => !row.isBlank && !row.requiresSelfCheck && Number(row.score || 0) < Number(row.maxScore || 5));
         const printWindow = window.open('', '_blank');
+        if (!printWindow) { alert('팝업을 허용한 뒤 다시 인쇄해주세요.'); return; }
         const blankAnswerText = getIpepScreenSetting('result.blank_answer', '(미입력)');
         const correctSymbol = getIpepScreenSetting('result.correct_symbol', 'O');
         const wrongSymbol = getIpepScreenSetting('result.wrong_symbol', 'X');
@@ -424,11 +426,11 @@ function IpepPractice({ setIsExamActive, initialMode = 'lobby' }) {
                     <div class="question-box">
                         <div class="q-meta">${escapeHtml(formatIpepSetting('pdf.question_meta', '{year}년 {session}회차 {number}번 · {policy}', { year: q.examYear || selectedExam?.examYear, session: q.examSession || selectedExam?.examSession, number: qNo, policy: q.gradingPolicy || '' }))}</div>
                         <h3>${escapeHtml(getIpepScreenSetting('pdf.question_prefix', 'Q. '))}${escapeHtml(q.questionText || '')}</h3>
-                        ${choiceImg ? `<img src="${choiceImg}" class="q-img" onerror=" this.style.display='none'" />` : ''}
+                        ${choiceImg ? `<img src="${escapeHtml(choiceImg)}" class="q-img" />` : ''}
                         <p><strong>${escapeHtml(getIpepScreenSetting('pdf.my_answer_label', '내 답안:'))}</strong> ${escapeHtml(row.userAnswer || blankAnswerText)}</p>
                         <p><strong>${escapeHtml(getIpepScreenSetting('pdf.correct_answer_label', '정답:'))}</strong> ${escapeHtml(row.correctAnswer || '')}</p>
                         <p><strong>${escapeHtml(getIpepScreenSetting('pdf.score_label', '획득 점수:'))}</strong> ${row.score} / ${row.maxScore}</p>
-                        ${explanationImg ? `<h4>${escapeHtml(getIpepScreenSetting('pdf.explanation_image_title', '해설 이미지'))}</h4><img src="${explanationImg}" class="q-img" onerror=" this.style.display='none'" />` : ''}
+                        ${explanationImg ? `<h4>${escapeHtml(getIpepScreenSetting('pdf.explanation_image_title', '해설 이미지'))}</h4><img src="${escapeHtml(explanationImg)}" class="q-img" />` : ''}
                     </div>
                 `;
             }).join('')
@@ -488,16 +490,12 @@ function IpepPractice({ setIsExamActive, initialMode = 'lobby' }) {
 
                 <h2 style="page-break-before: always;">${escapeHtml(pdfWrongTitle)}</h2>
                 ${wrongHtml}
-
-                <script>window.onload = function() {
-                        setTimeout(function() { window.print(); }, 500);
-                    };
-                </script>
             </body>
             </html>
         `);
 
         printWindow.document.close();
+        preparePrintWindow(printWindow, { autoPrint: true });
     }
 
     function resetPastToLobby() {

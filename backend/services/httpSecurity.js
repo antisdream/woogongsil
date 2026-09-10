@@ -85,7 +85,8 @@ function createWgsSecurityHeaders() {
             'Content-Security-Policy',
             [
                 "default-src 'self'",
-                "script-src 'self' 'unsafe-inline'",
+                "script-src 'self'",
+                "script-src-attr 'none'",
                 "style-src 'self' 'unsafe-inline'",
                 "img-src 'self' data: blob:",
                 "font-src 'self' data:",

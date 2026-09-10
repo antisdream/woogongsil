@@ -1,3 +1,4 @@
+import { preparePrintWindow } from '../features/printWindow.js';
 import '../styles/app/learning-redesign.css';
 // 필기 기출문제 라우트 페이지 컴포넌트입니다.
 import React, { useState, useEffect, useCallback, useRef } from 'react';
@@ -295,6 +296,7 @@ const PastExam = ({ isExamActive, setIsExamActive }) => {
         const pdfExplanationEmpty = t('explanation.empty', '해설이 아직 등록되어 있지 않습니다. DB에는 해설이 있어도 이 문구가 보이면 /api/past-exam 응답에 explanation_text가 포함되는지 확인해야 합니다.');
 
         const printWindow = window.open('', '_blank');
+        if (!printWindow) { alert('팝업을 허용한 뒤 다시 인쇄해주세요.'); return; }
         printWindow.document.write(`
             <!DOCTYPE html>
             <html lang="ko">
@@ -433,7 +435,7 @@ const PastExam = ({ isExamActive, setIsExamActive }) => {
                         <div class="info-row">${escapeHtml(formatSetting('pdf.actual_question_no', '실제 기출 번호: {number}번', { number: q.info_id || t('pdf.no_info', '정보 없음') }))}</div>
                         <div class="subject">${escapeHtml(getSubjectNameLabel(q.subject_id))}</div>
                         <div class="q-text">${escapeHtml(formatSetting('exam.question_prefix', 'Q. ', {}))}${escapeHtml(q.question_text || "")}</div>
-                        ${q.question_img ? `<img class="q-img" src="${window.location.origin}/question_image/${q.question_img}" onerror=" this.style.display='none'" />` : ''}
+                        ${q.question_img ? `<img class="q-img" src="${escapeHtml(window.location.origin + "/question_image/" + q.question_img)}" />` : ''}
                         <div class="options">
                             ${[1, 2, 3, 4].map(num => {
                                 const optText = q[`option_${num}`] || q[`option${num}`];
@@ -472,17 +474,11 @@ const PastExam = ({ isExamActive, setIsExamActive }) => {
                     <h3 style="color: #10b981;">${escapeHtml(pdfNoWrongTitle)}</h3>
                 </div>
                 `}
-                
-                <script>window.onload = function() {
-                        setTimeout(() => {
-                            window.print();
-                        }, 500);
-                    };
-                </script>
             </body>
             </html>
         `);
         printWindow.document.close();
+        preparePrintWindow(printWindow, { autoPrint: true });
     };
 
     if (step === 1) {
