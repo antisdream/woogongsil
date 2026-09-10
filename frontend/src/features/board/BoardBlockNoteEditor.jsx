@@ -19,7 +19,7 @@ const getUploadKind = (file) => {
     const mimeType = String(file?.type || '').toLowerCase();
     const name = String(file?.name || '').toLowerCase();
 
-    if (mimeType.startsWith('image/') || /\.(jpg|jpeg|png|gif|webp|svg)$/.test(name)) return 'image';
+    if (mimeType.startsWith('image/') || /\.(jpg|jpeg|png|gif|webp)$/.test(name)) return 'image';
     if (mimeType.startsWith('video/') || /\.mp4$/.test(name)) return 'video';
     if (mimeType.startsWith('audio/') || /\.(mp3|wav)$/.test(name)) return 'audio';
     return 'file';
@@ -54,6 +54,9 @@ function BoardBlockNoteEditor({
     );
 
     const uploadFile = useCallback(async (file) => {
+        if (/\.(svg|svgz)$/i.test(file.name || '') || String(file.type || '').toLowerCase().includes('svg')) {
+            throw new Error('SVG는 지원하지 않습니다. PNG·JPG·WebP 이미지로 변환해 올려주세요.');
+        }
         const uploadKind = getUploadKind(file);
         const uploadLimit = UPLOAD_LIMITS[uploadKind] || UPLOAD_LIMITS.file;
 
@@ -71,6 +74,10 @@ function BoardBlockNoteEditor({
         const response = await fetch(uploadUrl, {
             method: 'POST',
             credentials: 'include',
+            headers: {
+                'X-User-Id': String(uploadAuthRef.current.userId || uploadAuthRef.current.id || ''),
+                'X-Session-Token': String(uploadAuthRef.current.sessionToken || ''),
+            },
             body: formData,
         });
 

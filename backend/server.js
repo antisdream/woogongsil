@@ -47,6 +47,7 @@ const registerAuthRoutes = require('./routes/auth/authRoutes');
 const registerAdminAuthRoutes = require('./routes/auth/adminAuthRoutes');
 const { createAdminEmailOtpService } = require('./services/adminEmailOtpService');
 const { createMemberEmailVerificationService } = require('./services/memberEmailVerificationService');
+const { createSafeUploadStatic } = require('./services/uploadContentSecurity');
 const registerAccountRecoveryRoutes = require('./routes/auth/accountRecoveryRoutes');
 const registerVisitorRoutes = require('./routes/visitorRoutes');
 const registerLegalRoutes = require('./routes/legalRoutes');
@@ -142,7 +143,7 @@ ensureStudyNoteSchema();
 
 registerIpepFeature({ app, pool, backendDir: __dirname });
 
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/uploads', createSafeUploadStatic(path.join(__dirname, 'uploads')));
 // 예전 관리자 화면 정적 파일이 운영 dist에 남아 있어도 /admin은 항상 먼저 차단합니다.
 app.use((req, res, next) => {
     if (req.path === '/admin' || req.path.startsWith('/admin/')) {

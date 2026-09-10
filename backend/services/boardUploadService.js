@@ -4,6 +4,8 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const multer = require('multer');
+const { validateUploadContent, UploadContentError } = require('./uploadContentSecurity');
+let activeUploads = 0;
 
 const MB = 1024 * 1024;
 const GB = 1024 * MB;
@@ -41,33 +43,8 @@ const BOARD_UPLOAD_ALLOWED_MIME_TYPES = new Set([
     'application/haansofthwp',
 ]);
 
-const BOARD_UPLOAD_EXTENSION_BY_MIME = {
-    'image/jpeg': '.jpg',
-    'image/png': '.png',
-    'image/gif': '.gif',
-    'image/webp': '.webp',
-    'image/svg+xml': '.svg',
-    'video/mp4': '.mp4',
-    'audio/mpeg': '.mp3',
-    'audio/wav': '.wav',
-    'application/pdf': '.pdf',
-    'application/zip': '.zip',
-    'application/x-zip-compressed': '.zip',
-    'text/plain': '.txt',
-    'text/csv': '.csv',
-    'application/json': '.json',
-    'application/msword': '.doc',
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document': '.docx',
-    'application/vnd.ms-excel': '.xls',
-    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': '.xlsx',
-    'application/vnd.ms-powerpoint': '.ppt',
-    'application/vnd.openxmlformats-officedocument.presentationml.presentation': '.pptx',
-    'application/x-hwp': '.hwp',
-    'application/haansofthwp': '.hwp',
-};
-
 const BOARD_UPLOAD_ALLOWED_EXTENSIONS = new Set([
-    '.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg',
+    '.jpg', '.jpeg', '.png', '.gif', '.webp',
     '.mp4', '.mp3', '.wav',
     '.pdf', '.zip', '.txt', '.csv', '.json',
     '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.hwp',
@@ -99,15 +76,16 @@ function sanitizeUploadPathSegment(value) {
 
 function isBoardUploadMimeAllowed(mimeType) {
     if (!mimeType) return false;
-    if (mimeType.startsWith('image/') || mimeType.startsWith('video/') || mimeType.startsWith('audio/')) return true;
+    if (['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'video/mp4', 'audio/mpeg', 'audio/wav'].includes(mimeType)) return true;
     return BOARD_UPLOAD_ALLOWED_MIME_TYPES.has(mimeType);
 }
 
 function getBoardUploadKind(mimeType, originalName = '') {
     const normalizedMime = String(mimeType || '').toLowerCase();
     const extension = path.extname(String(originalName || '')).toLowerCase();
+    if (['.svg', '.svgz'].includes(extension) || normalizedMime.includes('svg')) return '';
 
-    if (normalizedMime.startsWith('image/') || ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg'].includes(extension)) {
+    if (normalizedMime.startsWith('image/') || ['.jpg', '.jpeg', '.png', '.gif', '.webp'].includes(extension)) {
         return 'image';
     }
     if (normalizedMime.startsWith('video/') || ['.mp4'].includes(extension)) {
@@ -123,12 +101,6 @@ function getBoardUploadKind(mimeType, originalName = '') {
         return 'file';
     }
     return '';
-}
-
-function getBoardUploadExtension(originalName, mimeType) {
-    const rawExt = path.extname(String(originalName || '')).toLowerCase().replace(/[^a-z0-9.]/g, '');
-    if (rawExt && rawExt.length <= 12 && BOARD_UPLOAD_ALLOWED_EXTENSIONS.has(rawExt)) return rawExt;
-    return BOARD_UPLOAD_EXTENSION_BY_MIME[mimeType] || '.bin';
 }
 
 function createUploadParser() {
@@ -224,7 +196,17 @@ function createBoardUploadHandler(options = {}) {
     return async function handleBoardUpload(req, res) {
         const auth = await requireSessionUser(req, res);
         if (!auth) return;
+        if (!getAuthUserId(auth)) return res.status(403).json({ success: false, msg: '로그인 정보를 확인해주세요.' });
+        if (activeUploads >= 2) {
+            res.setHeader('Retry-After', '2');
+            return res.status(503).json({ success: false, msg: '다른 파일을 처리 중입니다. 잠시 후 다시 올려주세요.' });
+        }
+        activeUploads++;
+        try { return await handleAuthenticatedUpload(req, res, auth); }
+        finally { activeUploads--; }
+    };
 
+    async function handleAuthenticatedUpload(req, res, auth) {
         const isMultipart = String(req.headers['content-type'] || '').toLowerCase().startsWith('multipart/form-data');
 
         try {
@@ -258,8 +240,8 @@ function createBoardUploadHandler(options = {}) {
         }
 
         const originalName = payload?.originalName || 'board-file';
-        const mimeType = payload?.mimeType || 'application/octet-stream';
-        const buffer = payload?.buffer;
+        let mimeType = payload?.mimeType || 'application/octet-stream';
+        let buffer = payload?.buffer;
         const uploadKind = getBoardUploadKind(mimeType, originalName);
         const uploadLimit = BOARD_UPLOAD_LIMITS[uploadKind] || 0;
 
@@ -272,6 +254,10 @@ function createBoardUploadHandler(options = {}) {
         }
 
         try {
+            const validated = await validateUploadContent({ buffer, originalName, mimeType }, BOARD_UPLOAD_LIMITS.image);
+            buffer = validated.buffer;
+            mimeType = validated.mimeType;
+            if (req.aborted) throw new UploadContentError('취소된 업로드입니다.');
             const uploadRootDir = path.join(backendDir, 'uploads');
             const safeUserId = sanitizeUploadPathSegment(authUserId);
             const userUploadSize = await getUserUploadSize(uploadRootDir, safeUserId);
@@ -287,7 +273,7 @@ function createBoardUploadHandler(options = {}) {
             const uploadDir = path.join(uploadRootDir, uploadBucket, safeUserId);
             await fs.promises.mkdir(uploadDir, { recursive: true });
 
-            const extension = getBoardUploadExtension(originalName, mimeType);
+            const extension = validated.extension;
             const fileName = `${Date.now()}_${crypto.randomBytes(8).toString('hex')}${extension}`;
             const filePath = path.join(uploadDir, fileName);
 
@@ -302,10 +288,11 @@ function createBoardUploadHandler(options = {}) {
                 kind: uploadKind,
             });
         } catch (error) {
-            console.error('게시판 파일 업로드 오류:', error);
+            if (error instanceof UploadContentError) return res.status(error.status).json({ success: false, msg: error.message });
+            console.error('게시판 파일 저장 실패:', error.code || 'unknown');
             return res.status(500).json({ success: false, msg: '파일 업로드 중 오류가 발생했습니다.' });
         }
-    };
+    }
 }
 
 module.exports = {
