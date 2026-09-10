@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { FiArrowRight, FiBookOpen, FiCheck, FiEdit3, FiRotateCcw } from 'react-icons/fi';
+import HomeHeroMotion from './HomeHeroMotion.jsx';
 import '../../styles/app/landing-redesign.css';
 
 const sampleOptions = ['GROUP BY', 'ORDER BY', 'WHERE', 'HAVING'];
@@ -43,7 +44,7 @@ export default function HomeHero({ homeDefaultBanner, homeHeroTitle, homeHeroDes
                 <p className="ui-hero-note">필기 문제은행 · 기출문제 · 실기 연습<br />문제를 풀고 해설을 확인하며, 부족한 부분을 다시 공부하세요.</p>
                 {homeDefaultBanner && <img className="ui-configured-banner" src={homeDefaultBanner} alt="우공실 학습 안내" loading="lazy" />}
             </div>
-            <LearningPreview />
+            <HomeHeroMotion><LearningPreview /></HomeHeroMotion>
         </section>
         <section className="ui-learning-journey" aria-labelledby="ui-journey-title">
             <div className="ui-journey-intro"><p className="ui-eyebrow">공부의 흐름을 이어가세요</p><h2 id="ui-journey-title">풀고, 이해하고,<br />다시 내 것으로.</h2></div>
