@@ -56,9 +56,7 @@ const Board = () => {
         isTruthySessionFlag(sessionStorage.getItem('is_primary_admin'))
     );
 
-    // - 기존 백엔드 API는 게시글의 게시판 소속값(boardType)을 따로 저장하지 않는 구조일 수 있습니다.
-    // - 그래서 프론트에서 content 끝에 보이지 않는 식별 마커를 붙여 공지게시판/자유게시판 소속을 안정적으로 구분합니다.
-    // - 화면에 보여줄 때는 getCleanContent()로 이 마커를 제거하므로 사용자는 볼 수 없습니다.
+    // 게시판 소속은 서버의 boardType으로만 판단합니다. 과거 본문 마커는 표시할 때만 정리합니다.
     const navigate = useNavigate();
     const location = useLocation();
     const routeParams = useParams();
@@ -643,7 +641,7 @@ const Board = () => {
     // 관리자 전용 게시판 이동 기능
     // - 공지 등록/해제는 상단 강조 여부만 바꾸고, 게시판 소속은 바꾸지 않습니다.
     // - 정말 소속을 바꿔야 할 때만 최고관리자가 이 기능으로 이동시킵니다.
-    // - 이동은 content 마커만 교체하므로 댓글/추천/조회수/작성자 정보는 그대로 유지됩니다.
+    // - 이동은 서버의 게시판 소속 필드만 바꾸며 댓글/추천/조회수/작성자는 유지합니다.
     const handleBoardMoveToggle = async () => {
         if (!isAdmin) return;
 
@@ -666,7 +664,8 @@ const Board = () => {
                         ...getSessionAuth(),
                         userId,
                         title: getCleanTitle(post.title),
-                        content: withBoardMarker(post.content, targetBoard)
+                        content: withBoardMarker(post.content, targetBoard),
+                        boardType: targetBoard
                     });
                 }
                 toast.success(formatSetting('admin.move_success', '{target}으로 이동했습니다.', { target: targetLabel }));

@@ -48,6 +48,7 @@ const registerAdminAuthRoutes = require('./routes/auth/adminAuthRoutes');
 const { createAdminEmailOtpService } = require('./services/adminEmailOtpService');
 const { createMemberEmailVerificationService } = require('./services/memberEmailVerificationService');
 const { createSafeUploadStatic } = require('./services/uploadContentSecurity');
+const { createBoardPolicyService } = require('./services/boardPolicyService');
 const registerAccountRecoveryRoutes = require('./routes/auth/accountRecoveryRoutes');
 const registerVisitorRoutes = require('./routes/visitorRoutes');
 const registerLegalRoutes = require('./routes/legalRoutes');
@@ -155,6 +156,7 @@ app.use(express.static(path.join(__dirname, '..', 'frontend', 'dist')));
 
 // 이메일 인증은 DB의 계정·용도·기한과 HttpOnly 브라우저 증명으로 검증합니다.
 const memberVerificationService = createMemberEmailVerificationService({ pool, sendEmail });
+const boardPolicyService = createBoardPolicyService({ pool });
 
 // 기존 저장 비밀번호 해시와 맞도록 bcrypt 비용 값을 유지합니다.
 const SALT_ROUNDS = 10;
@@ -987,6 +989,7 @@ async function startServer() {
         await adminSessionService.ensureSchema();
         await adminEmailOtpService.ensureSchema();
         await memberVerificationService.ensureSchema();
+        await boardPolicyService.ensureSchema();
         await ensureVisitorAnalyticsSchema();
         await importDataFromJSON();
 

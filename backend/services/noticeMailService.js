@@ -7,10 +7,8 @@ function createNoticeMailService({ pool, sendEmail } = {}) {
 // 2-1. 공지게시판 새 글 이메일 알림 헬퍼
 // - 목적: 최고관리자가 공지게시판에 새 글을 작성하면 가입 회원에게 안내 메일을 보냅니다.
 // - 주의: 기존 게시글 저장 로직을 막지 않기 위해 메일 발송은 백그라운드에서 실행합니다.
-// - 주의: 공지게시판 판별은 프론트가 보내는 boardType을 우선 사용하고,
-//  혹시 구버전 프론트가 접속해도 동작하도록 content의 숨김 마커도 함께 확인합니다.
+// - 공지게시판 소속과 작성 권한은 서버에서 검증된 값만 사용합니다.
 const BOARD_TYPE_NOTICE = 'notice';
-const BOARD_MARKER_NOTICE_FOR_MAIL = '[[UGONGSIL_BOARD:NOTICE]]';
 const NOTICE_MAIL_SUBJECT = '우공실 사이트 공지';
 
 // .env의 PUBLIC_SITE_URL 값으로 배포 주소와 개발 주소를 쉽게 전환할 수 있습니다.
@@ -19,13 +17,9 @@ function getPublicSiteUrl() {
     return process.env.PUBLIC_SITE_URL || 'https://www.woogongsil.co.kr/';
 }
 
-// 프론트의 boardType 또는 content 숨김 마커를 이용해 공지게시판 작성글인지 확인합니다.
-function isNoticeBoardCreateRequest(boardType, content) {
-    const normalizedBoardType = String(boardType || '').trim().toLowerCase();
-    const contentText = String(content || '');
-
-    if (normalizedBoardType === BOARD_TYPE_NOTICE) return true;
-    return contentText.includes(BOARD_MARKER_NOTICE_FOR_MAIL);
+// The route authorizes and persists this board type before requesting mail.
+function isNoticeBoardCreateRequest(boardType) {
+    return boardType === BOARD_TYPE_NOTICE;
 }
 
 // 메일 본문을 사용자 이름별로 만듭니다.

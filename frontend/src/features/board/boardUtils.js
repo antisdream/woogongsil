@@ -57,27 +57,11 @@ export const formatDateForList = (dateString) => {
 export const getCleanContent = (rawContent = '') => String(rawContent || '').replace(BOARD_MARKER_REGEX, '').trimEnd();
 export const getCleanTitle = (rawTitle = '') => String(rawTitle || '').replace(/^\s*\[공지\]\s*/, '');
 
-export const withBoardMarker = (rawContent, targetBoard) => {
-    const clean = getCleanContent(rawContent);
-    const marker = targetBoard === BOARD_FREE ? BOARD_MARKER_FREE : BOARD_MARKER_NOTICE;
-    return `${clean}\n${marker}`;
-};
+// Keep the old helper name for draft compatibility; new posts need no hidden marker.
+export const withBoardMarker = (rawContent) => getCleanContent(rawContent);
 
-export const getPostBoardType = (post) => {
-    const rawBoard = String(post?.boardType || post?.boardKind || post?.board || post?.category || '').toLowerCase();
-    if (['notice', 'official', 'admin'].includes(rawBoard)) return BOARD_NOTICE;
-    if (['free', 'general'].includes(rawBoard)) return BOARD_FREE;
-
-    const contentText = String(post?.content || '');
-    if (contentText.includes(BOARD_MARKER_NOTICE)) return BOARD_NOTICE;
-    if (contentText.includes(BOARD_MARKER_FREE)) return BOARD_FREE;
-
-    const noticeFlag = post?.isNotice ?? post?.is_notice;
-    if (noticeFlag === true || noticeFlag === 1 || noticeFlag === '1' || String(noticeFlag || '').toLowerCase() === 'true') return BOARD_NOTICE;
-    if (post?.authorName === '관리자') return BOARD_NOTICE;
-
-    return BOARD_FREE;
-};
+// A display name, pin flag or text marker can never promote a post to an official notice.
+export const getPostBoardType = (post) => post?.boardType === BOARD_NOTICE ? BOARD_NOTICE : BOARD_FREE;
 
 export const parseBoardContentJson = (rawContentJson) => {
     if (!rawContentJson) return null;

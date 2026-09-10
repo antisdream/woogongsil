@@ -2,6 +2,7 @@
 'use strict';
 
 const { normalizeBoardContentJson } = require('../services/boardContentService');
+const { parseBoardType, storedBoardType, BoardPolicyError } = require('../services/boardPolicyService');
 const { createBoardUploadHandler } = require('../services/boardUploadService');
 
 function registerBoardRoutes(options = {}) {
@@ -11,7 +12,6 @@ function registerBoardRoutes(options = {}) {
     const getPostWithChildren = options.getPostWithChildren;
     const refreshPostLikeCount = options.refreshPostLikeCount;
     const getBoardDateString = options.getBoardDateString;
-    const isNoticeBoardCreateRequest = options.isNoticeBoardCreateRequest;
     const sendNoticePostEmailsInBackground = options.sendNoticePostEmailsInBackground;
     const getUserById = options.getUserById;
     const sendEmail = options.sendEmail;
@@ -124,9 +124,12 @@ app.post('/api/posts', async (req, res) => {
     const authorId = authUserId(auth);
     const authorName = authUserName(auth);
 
-    // 프론트에서 현재 게시판 탭을 함께 보내면 공지게시판 작성 여부를 더 안정적으로 판단할 수 있습니다.
-    // - 기존 프론트 호환을 위해 body.boardType이 없어도 content의 숨김 마커로 다시 확인합니다.
-    const boardType = String(req.body.boardType || '').trim().toLowerCase();
+    let boardType;
+    try { boardType = parseBoardType(req.body.boardType); }
+    catch (error) { return res.status(error.status).json({ success: false, msg: error.message }); }
+    if (boardType === 'notice' && !(await isPrimaryAdminUserId(authorId))) {
+        return res.status(403).json({ success: false, msg: '공지게시판 글은 관리자만 작성할 수 있습니다.' });
+    }
 
     const id = Date.now().toString();
 
@@ -135,20 +138,18 @@ app.post('/api/posts', async (req, res) => {
     }
 
     try {
-        // 게시글 저장 방식은 기존과 동일합니다.
-        // - wgs_posts.isNotice는 기존 공지 고정/순서 기능에서 쓰는 값이므로 여기서 억지로 바꾸지 않습니다.
-        // - 공지게시판과 자유게시판 소속 구분은 content 숨김 마커와 프론트 필터를 기준으로 유지합니다.
+        // 게시판 소속은 서버 필드, 상단 고정은 isNotice로 각각 유지합니다.
         await pool.query(
-            `INSERT INTO wgs_posts (id, title, content, contentJson, authorId, authorName, date, views, likes, isNotice)
-             VALUES (?, ?, ?, ?, ?, ?, ?, 0, 0, 0)`,
-            [id, title, content, contentJson, authorId, authorName || authorId, getBoardDateString()]
+            `INSERT INTO wgs_posts (id, title, content, contentJson, authorId, authorName, date, boardType, views, likes, isNotice)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 0)`,
+            [id, title, content, contentJson, authorId, authorName || authorId, getBoardDateString(), boardType]
         );
 
         // 최고관리자가 공지게시판에 새 글을 작성한 경우에만 전체 회원에게 공지 메일을 예약합니다.
         // - 게시글 저장 성공 후 실행하므로 메일 서버 문제 때문에 게시글 작성 자체가 실패하지 않습니다.
         // - await 하지 않고 백그라운드로 보내서 사용자가 글쓰기 완료 응답을 오래 기다리지 않게 합니다.
         const authorIsPrimaryAdmin = await isPrimaryAdminUserId(authorId);
-        const shouldSendNoticeEmail = authorIsPrimaryAdmin && isNoticeBoardCreateRequest(boardType, content);
+        const shouldSendNoticeEmail = authorIsPrimaryAdmin && boardType === 'notice';
 
         if (shouldSendNoticeEmail) {
             sendNoticePostEmailsInBackground({ authorId, postId: id, title }).catch(error => {
@@ -269,19 +270,24 @@ app.put('/api/posts/:postId', async (req, res) => {
 
         const post = rows[0];
         const isPrimaryAdmin = await isPrimaryAdminUserId(userId);
+        const nextBoardType = parseBoardType(req.body.boardType, storedBoardType(post));
+        if (!isPrimaryAdmin && (storedBoardType(post) === 'notice' || nextBoardType !== storedBoardType(post))) {
+            return res.status(403).json({ success: false, msg: '게시판 이동과 공지 관리는 관리자만 할 수 있습니다.' });
+        }
         if (post.authorId !== userId && !isPrimaryAdmin) {
             return res.status(403).json({ success: false, msg: '수정 권한이 없습니다.' });
         }
 
         if (hasContentJson) {
-            await pool.query('UPDATE wgs_posts SET title = ?, content = ?, contentJson = ? WHERE id = ?', [title, content, contentJson, postId]);
+            await pool.query('UPDATE wgs_posts SET title = ?, content = ?, contentJson = ?, boardType = ? WHERE id = ?', [title, content, contentJson, nextBoardType, postId]);
         } else {
-            await pool.query('UPDATE wgs_posts SET title = ?, content = ? WHERE id = ?', [title, content, postId]);
+            await pool.query('UPDATE wgs_posts SET title = ?, content = ?, boardType = ? WHERE id = ?', [title, content, nextBoardType, postId]);
         }
 
         const updatedPost = await getPostWithChildren(postId);
         return res.json({ success: true, post: updatedPost });
     } catch (error) {
+        if (error instanceof BoardPolicyError) return res.status(error.status).json({ success: false, msg: error.message });
         console.error('게시글 수정 오류:', error);
         return res.status(500).json({ success: false, msg: '게시글 수정 중 오류가 발생했습니다.' });
     }
@@ -300,6 +306,7 @@ app.delete('/api/posts/:id', async (req, res) => {
 
         const post = rows[0];
         const isPrimaryAdmin = await isPrimaryAdminUserId(userId);
+        if (storedBoardType(post) === 'notice' && !isPrimaryAdmin) return res.status(403).json({ success: false, msg: '공지 관리는 관리자만 할 수 있습니다.' });
         if (post.authorId !== userId && !isPrimaryAdmin) {
             return res.status(403).json({ success: false, msg: '삭제 권한이 없습니다.' });
         }
