@@ -16,45 +16,44 @@ function wgsCsvEnv(value) {
 
 function wgsIsPrivateDevHost(hostname) {
     const host = String(hostname || '').trim().toLowerCase();
-    if (host === 'localhost' || host === '127.0.0.1' || host === '::1') return true;
+    if (host === 'localhost' || host === '127.0.0.1' || host === '::1' || host === '[::1]') return true;
     if (/^10\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(host)) return true;
     if (/^192\.168\.\d{1,3}\.\d{1,3}$/.test(host)) return true;
     if (/^172\.(1[6-9]|2\d|3[0-1])\.\d{1,3}\.\d{1,3}$/.test(host)) return true;
     return false;
 }
 
-function wgsAllowedCorsOrigin(origin) {
-    if (!origin) return true;
-
-    const defaults = [
-        'https://woogongsil.site',
-        'https://www.woogongsil.site',
-        'http://localhost:5000',
-        'http://127.0.0.1:5000',
-    ];
-    const allowedOrigins = new Set([
-        ...defaults,
-        ...wgsCsvEnv(process.env.PUBLIC_SITE_URL),
-        ...wgsCsvEnv(process.env.CORS_ALLOWED_ORIGINS),
-        ...wgsCsvEnv(process.env.WGS_ALLOWED_ORIGINS),
-    ].filter(Boolean));
-
-    if (allowedOrigins.has(origin)) return true;
-
-    try {
-        const parsed = new URL(origin);
-        if (wgsIsPrivateDevHost(parsed.hostname)) return true;
-    } catch (error) {
-        return false;
-    }
-
-    return false;
+function configuredOrigins(env) {
+    const production = String(env.NODE_ENV || '').toLowerCase() === 'production';
+    return new Set([
+        'https://woogongsil.site', 'https://www.woogongsil.site',
+        ...wgsCsvEnv(env.PUBLIC_SITE_URL), ...wgsCsvEnv(env.CORS_ALLOWED_ORIGINS), ...wgsCsvEnv(env.WGS_ALLOWED_ORIGINS),
+    ].filter(value => {
+        try {
+            const parsed = new URL(value);
+            return value === parsed.origin && !parsed.hostname.includes('*') && ['http:', 'https:'].includes(parsed.protocol)
+                && (!production || (parsed.protocol === 'https:' && !wgsIsPrivateDevHost(parsed.hostname)));
+        } catch { return false; }
+    }));
 }
 
-function createWgsCorsOptions() {
+function wgsAllowedCorsOrigin(origin, env = process.env) {
+    // Requests without Origin (health probes/native clients) still use normal
+    // route authentication. A browser's opaque "null" origin is not trusted.
+    if (origin === undefined || origin === '') return true;
+    try {
+        const parsed = new URL(origin);
+        if (origin !== parsed.origin || !['http:', 'https:'].includes(parsed.protocol)) return false;
+        if (configuredOrigins(env).has(origin)) return true;
+        return String(env.NODE_ENV || '').toLowerCase() !== 'production'
+            && wgsBoolEnv(env.WGS_ALLOW_PRIVATE_DEV_ORIGINS, true) && wgsIsPrivateDevHost(parsed.hostname);
+    } catch { return false; }
+}
+
+function createWgsCorsOptions(env = process.env) {
     return {
         origin(origin, callback) {
-            callback(null, wgsAllowedCorsOrigin(origin));
+            callback(null, wgsAllowedCorsOrigin(origin, env));
         },
         credentials: true,
         methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
@@ -72,6 +71,13 @@ function createWgsCorsOptions() {
             'X-Wgs-Member-Csrf',
         ],
         maxAge: 600,
+    };
+}
+
+function createWgsSocketOptions(env = process.env) {
+    return {
+        allowRequest(req, callback) { callback(null, wgsAllowedCorsOrigin(req.headers.origin, env)); },
+        cors: { origin(origin, callback) { callback(null, wgsAllowedCorsOrigin(origin, env)); }, methods: ['GET', 'POST'], credentials: true },
     };
 }
 
@@ -98,7 +104,9 @@ function createWgsSecurityHeaders(env = process.env) {
                 "img-src 'self' data: blob:",
                 "font-src 'self' data:",
                 "media-src 'self' blob:",
-                "connect-src 'self' ws: wss:",
+                production
+                    ? `connect-src 'self' ${[...configuredOrigins(env)].flatMap(origin => [origin, origin.replace(/^https:/, 'wss:')]).join(' ')}`
+                    : "connect-src 'self' ws: wss:",
                 "frame-src 'self'",
                 "object-src 'none'",
                 "base-uri 'self'",
@@ -126,6 +134,7 @@ function registerRobotsTxt(app) {
 module.exports = {
     wgsAllowedCorsOrigin,
     createWgsCorsOptions,
+    createWgsSocketOptions,
     createWgsSecurityHeaders,
     registerRobotsTxt,
 };

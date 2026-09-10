@@ -70,7 +70,7 @@ const { createVisitorAnalyticsSchema } = require('./services/visitorAnalyticsSch
 const { createVisitorAnalyticsService } = require('./services/visitorAnalyticsService');
 const { createVisitSessionService } = require('./services/visitSessionService');
 const { createLegalConsentService } = require('./services/legalConsentService');
-const { wgsAllowedCorsOrigin, createWgsCorsOptions, createWgsSecurityHeaders, registerRobotsTxt } = require('./services/httpSecurity');
+const { createWgsCorsOptions, createWgsSocketOptions, createWgsSecurityHeaders, registerRobotsTxt } = require('./services/httpSecurity');
 const { registerMultiplayerFeature } = require('./services/multiplayerFeatureMount');
 const { registerIpepFeature } = require('./services/ipepFeatureMount');
 
@@ -85,15 +85,8 @@ app.use(createWgsSecurityHeaders());
 // 기존 app.listen 대신 server.listen을 사용해야 같은 포트에서
 // Express API와 Socket.IO가 함께 동작합니다.
 const server = http.createServer(app);
-const io = SocketIOServer ? new SocketIOServer(server, {
-    cors: {
-        origin(origin, callback) {
-            callback(null, wgsAllowedCorsOrigin(origin));
-        },
-        methods: ['GET', 'POST'],
-        credentials: true
-    }
-}) : null;
+// Share the HTTP policy with polling and WebSocket handshakes.
+const io = SocketIOServer ? new SocketIOServer(server, createWgsSocketOptions()) : null;
 
 // 프론트에서 API 요청을 보낼 수 있도록 CORS 허용합니다
 app.use(cors(wgsCorsOptions));
