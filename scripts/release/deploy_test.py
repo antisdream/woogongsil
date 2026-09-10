@@ -2,9 +2,12 @@ import hashlib
 import importlib.util
 import io
 import json
+import os
+import subprocess
 import tarfile
 import tempfile
 import unittest
+from unittest import mock
 from pathlib import Path
 
 
@@ -21,6 +24,28 @@ package = module("package")
 
 
 class ReleaseSafetyTests(unittest.TestCase):
+    def test_private_db_environment_can_resolve_existing_backend_dependencies(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            app, base, release, _calls, _runner = self.fixture(root)
+            dependency = app / 'backend/node_modules/dotenv/index.js'
+            dependency.parent.mkdir(parents=True)
+            dependency.write_text("module.exports = { ready: true };", encoding='utf-8')
+            private = root / 'private'
+            private.mkdir()
+            environment_file = private / 'db-migration.env'
+            environment_file.write_text('synthetic-db-settings', encoding='utf-8')
+            helper = root / 'legacy-dump.cjs'
+            helper.write_text("const path=require('path');const location=require.resolve('dotenv',{paths:[path.dirname(process.argv[2])]});if(!require(location).ready)process.exit(2);console.log('dependency_loaded');", encoding='utf-8')
+            arguments = ['node', str(helper), str(environment_file)]
+            without_context = subprocess.run(arguments, env={**os.environ, 'NODE_PATH': ''}, capture_output=True)
+            self.assertNotEqual(without_context.returncode, 0)
+            task = deploy.Deployment(app, base, release)
+            with mock.patch.object(deploy, 'DB_HELPER', str(helper)):
+                task.run(arguments)
+            self.assertEqual((release / 'deployment-private.log').read_text().strip(), 'dependency_loaded')
+            self.assertEqual(environment_file.read_text(), 'synthetic-db-settings')
+
     def test_archive_rejects_traversal_links_duplicates_and_environment(self):
         valid = [tarfile.TarInfo("release-manifest.json"), tarfile.TarInfo("scripts/release/deploy.py")]
         receive.validate_members(valid)

@@ -174,8 +174,13 @@ class Deployment:
         self.migration_marker = base / "notice-v2.4.0-applied.json"
 
     def run(self, args, cwd=None):
+        environment = None
+        if len(args) > 1 and args[0] == "node" and args[1] == DB_HELPER:
+            # The protected DB environment lives outside backend. The legacy
+            # dump helper resolves dotenv relative to that environment file.
+            environment = {**os.environ, "NODE_PATH": str(self.app / "backend/node_modules")}
         with (self.release / "deployment-private.log").open("ab") as log:
-            subprocess.run(args, cwd=cwd, stdout=log, stderr=log, check=True, timeout=300)
+            subprocess.run(args, cwd=cwd, stdout=log, stderr=log, env=environment, check=True, timeout=300)
 
     def validate(self):
         if self.app.is_symlink() or self.app.resolve() != self.app:
