@@ -6,7 +6,7 @@ const { runtimeLog } = require('./runtimeLog');
 
 const EVENTS = new Set(['member.login', 'member.logout', 'member.session', 'member.verification', 'member.password',
     'member.signup', 'admin.login', 'admin.otp', 'admin.logout', 'admin.change', 'attachment.access', 'learning.submit',
-    'request.denied', 'request.error', 'session.revoked', 'log.limited']);
+    'request.denied', 'request.error', 'session.revocation', 'log.limited']);
 const OUTCOMES = new Set(['success', 'pending', 'rejected', 'error']);
 const METHODS = new Set(['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']);
 const FILE = /^events-(\d{4}-\d{2}-\d{2})-(\d{6})\.jsonl$/;

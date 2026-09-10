@@ -114,7 +114,8 @@ app.use('/api/error-report', errorReportRoutes);
 // - 기존 프로젝트 기본값은 유지하되, .env가 있으면 .env 값을 우선 사용해.
 const pool = createDatabasePool();
 const memberSessionService = createMemberSessionService({ pool });
-memberSessionService.events.on('revoked', ({ userId }) => securityEventLog.record({ event: 'session.revoked', outcome: 'success', actorId: userId }));
+// A surrounding DB transaction may still roll back, so this is a request event.
+memberSessionService.events.on('revoked', ({ userId }) => securityEventLog.record({ event: 'session.revocation', outcome: 'pending', actorId: userId }));
 app.use(memberSessionService.middleware);
 const learningAttemptService = createLearningAttemptService({ pool, validateRealtimeSession });
 const legalConsentService = createLegalConsentService({ pool });
