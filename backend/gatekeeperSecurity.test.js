@@ -537,12 +537,17 @@ test('password recovery and password change still require verified email and the
     registerAccountRecoveryRoutes({
         app: fixture.app, pool: fixture.pool, bcrypt: fixture.bcrypt,
         getUserById: fixture.getUserById, getUserByEmail: async () => null,
-        verificationCodes: fixture.verificationCodes, saltRounds: 10,
+        memberVerificationService: require('./services/memberEmailVerificationService').createMemberEmailVerificationService({
+            pool: fixture.pool, sendEmail: async () => assert.fail('no mail should be sent'), env: { NODE_ENV: 'development' },
+        }),
+        validateRealtimeSession: fixture.validateRealtimeSession,
+        sendEmail: async () => assert.fail('no mail should be sent'), saltRounds: 10,
         revokeAdminSessionsForUser: async () => assert.fail('unverified requests must not revoke sessions'),
     });
     for (const routePath of ['/api/find-pw/reset', '/api/user/change-pw']) {
         const response = await fixture.dispatch('POST', routePath, {
-            body: { id: fixture.user.id, newPassword: 'replacement', newPw: 'replacement' },
+            headers: { origin: 'http://localhost:5000' },
+            body: { id: fixture.user.id, sessionToken: fixture.user.sessionToken, newPassword: 'Test_1234', newPw: 'Test_1234' },
         });
         assert.equal(response.statusCode, 400);
         assert.match(response.body.msg, /이메일 인증/);

@@ -2,6 +2,8 @@
 'use strict';
 
 const crypto = require('crypto');
+const registerMemberEmailVerificationRoutes = require('./memberEmailVerificationRoutes');
+const { createMemberEmailVerificationService, MemberVerificationError, assertPassword } = require('../../services/memberEmailVerificationService');
 const { createVisitSessionService } = require('../../services/visitSessionService');
 const { createVisitorAnalyticsService } = require('../../services/visitorAnalyticsService');
 const { createLegalConsentService } = require('../../services/legalConsentService');
@@ -11,7 +13,7 @@ function registerAuthRoutes(options = {}) {
     const pool = options.pool;
     const bcrypt = options.bcrypt;
     const sendEmail = options.sendEmail;
-    const verificationCodes = options.verificationCodes;
+    const memberVerificationService = options.memberVerificationService || createMemberEmailVerificationService({ pool, sendEmail, env: options.env, clock: options.clock });
     const getUserByEmail = options.getUserByEmail;
     const getUserById = options.getUserById;
     const getKSTDateTime = options.getKSTDateTime;
@@ -38,7 +40,7 @@ function registerAuthRoutes(options = {}) {
         options.signupAdminNotifyEmail || process.env.SIGNUP_ADMIN_NOTIFY_EMAIL || ''
     ).trim();
     const required = {
-        app, pool, bcrypt, sendEmail, verificationCodes, getUserByEmail,
+        app, pool, bcrypt, sendEmail, getUserByEmail,
         getUserById, getKSTDateTime, ensureAdminUserControlSchema, normalizeAdminBool,
         getAdminMaintenanceState, isAdminAccessUser, adminColumnExists, touchActiveUser,
         removeActiveUser, formatDateOnly, isPrimaryAdminUser, validateAdminSession,
@@ -208,126 +210,8 @@ function registerAuthRoutes(options = {}) {
         ].join('\n');
     }
 
-    // 6. 이메일 인증 API
-    app.post('/api/auth/send-code', async (req, res) => {
-
-        const email = String(req.body.email || '').trim().toLowerCase();
-        const type = req.body.type;
-
-        if (!email || !email.includes('@')) {
-            return res.status(400).json({ success: false, msg: '올바른 이메일을 입력해주세요.' });
-        }
-
-        try {
-            const user = await getUserByEmail(email);
-
-            if (type === 'signup' && user) {
-                return res.status(400).json({ success: false, msg: '기존에 가입한 아이디에 사용한 이메일입니다.' });
-            }
-
-            if ((type === 'find' || type === 'change') && !user) {
-                return res.status(400).json({ success: false, msg: '가입되지 않은 이메일입니다.' });
-            }
-
-            const code = Math.floor(100000 + Math.random() * 900000).toString();
-            const expiresAt = Date.now() + 120 * 1000;
-
-            verificationCodes[email] = { code, expiresAt, verified: false };
-
-            const result = await sendEmail(
-                email,
-                '[ SKN_우공실] 보안 인증번호 발송',
-                `요청하신 인증번호는 [ ${code} ] 입니다. 2분 이내에 입력해주세요.`
-            );
-
-            if (!result.success) {
-                return res.status(500).json({ success: false, msg: '메일 전송에 실패했습니다. 이메일 설정을 확인해주세요.' });
-            }
-
-            return res.json({ success: true });
-        } catch (error) {
-            console.error('인증번호 전송 오류:', error);
-            return res.status(500).json({ success: false, msg: '인증번호 전송 중 서버 오류가 발생했습니다.' });
-        }
-    });
-
-    app.post('/api/auth/verify-code', (req, res) => {
-        const email = String(req.body.email || '').trim().toLowerCase();
-        const inputCode = String(req.body.code || '').trim();
-        const record = verificationCodes[email];
-
-        if (!record) return res.status(400).json({ success: false, msg: '인증 요청 내역이 없습니다.' });
-
-        if (Date.now() >record.expiresAt) {
-            delete verificationCodes[email];
-            return res.status(400).json({ success: false, msg: '만료된 인증번호입니다.' });
-        }
-
-        if (record.code !== inputCode) {
-            return res.status(400).json({ success: false, msg: '인증번호가 일치하지 않습니다.' });
-        }
-
-        verificationCodes[email].verified = true;
-        return res.json({ success: true });
-    });
-
-    // 예전 프론트/테스트 코드가 남아 있을 경우를 위한 호환 API.
-    // 현재 프론트는 /api/auth/send-code를 쓰지만, 과거 코드가 /api/send-verification을 부를 수도 있어 남겨둡니다.
-    app.post('/api/send-verification', async (req, res) => {
-
-        const email = String(req.body.email || '').trim().toLowerCase();
-        const type = req.body.type || 'find';
-
-        if (!email || !email.includes('@')) {
-            return res.status(400).json({ success: false, msg: '올바른 이메일을 입력해주세요.' });
-        }
-
-        try {
-            const user = await getUserByEmail(email);
-
-            if (type === 'signup' && user) {
-                return res.status(400).json({ success: false, msg: '기존에 가입한 아이디에 사용한 이메일입니다.' });
-            }
-
-            if ((type === 'find-id' || type === 'find-pw' || type === 'change-pw' || type === 'find' || type === 'change') && !user) {
-                return res.status(400).json({ success: false, msg: '가입되지 않은 이메일입니다.' });
-            }
-
-            const code = Math.floor(100000 + Math.random() * 900000).toString();
-            const expiresAt = Date.now() + 120 * 1000;
-            verificationCodes[email] = { code, expiresAt, verified: false };
-
-            const result = await sendEmail(
-                email,
-                '[ SKN_우공실] 보안 인증번호 발송',
-                `요청하신 인증번호는 [ ${code} ] 입니다. 2분 이내에 입력해주세요.`
-            );
-
-            if (!result.success) return res.status(500).json({ success: false, msg: '메일 전송에 실패했습니다.' });
-            return res.json({ success: true });
-        } catch (error) {
-            console.error('구버전 인증번호 전송 오류:', error);
-            return res.status(500).json({ success: false, msg: '인증번호 전송 중 서버 오류가 발생했습니다.' });
-        }
-    });
-
-    app.post('/api/verify-code', (req, res) => {
-        const email = String(req.body.email || '').trim().toLowerCase();
-        const inputCode = String(req.body.code || '').trim();
-        const record = verificationCodes[email];
-
-        if (!record) return res.status(400).json({ success: false, msg: '인증 요청 내역이 없습니다.' });
-
-        if (Date.now() >record.expiresAt) {
-            delete verificationCodes[email];
-            return res.status(400).json({ success: false, msg: '만료된 인증번호입니다.' });
-        }
-
-        if (record.code !== inputCode) return res.status(400).json({ success: false, msg: '인증번호가 일치하지 않습니다.' });
-
-        verificationCodes[email].verified = true;
-        return res.json({ success: true });
-    });
+    registerMemberEmailVerificationRoutes({ app, memberVerificationService, getUserById, getUserByEmail,
+        validateRealtimeSession: options.validateRealtimeSession });
 
     // 7. 회원가입 / 로그인 / 계정 찾기
     app.post('/api/check-id', async (req, res) => {
@@ -361,12 +245,9 @@ function registerAuthRoutes(options = {}) {
             return res.status(400).json({ success: false, msg: '회원가입 정보가 부족합니다.' });
         }
 
-        const record = verificationCodes[email];
-        if (!record || !record.verified) {
-            return res.status(400).json({ success: false, msg: '이메일 인증이 완료되지 않았습니다.' });
-        }
-
         try {
+            memberVerificationService.assertOrigin(req);
+            assertPassword(password);
             const consentService = getLegalConsentService();
             const legalValidation = await consentService.validateAcceptanceBundle(
                 req.body?.legal,
@@ -390,9 +271,7 @@ function registerAuthRoutes(options = {}) {
             }
 
             const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
-            const connection = await pool.getConnection();
-            try {
-                await connection.beginTransaction();
+            await memberVerificationService.consume(req, 'signup', { email }, async (connection) => {
                 const [insertResult] = await connection.query(
                     `INSERT INTO wgs_signup_requests
                      (login_id, password_hash, name, email, status, request_ip, user_agent)
@@ -404,15 +283,8 @@ function registerAuthRoutes(options = {}) {
                     age14Confirmed: legalValidation.age14Confirmed,
                     acceptedDocuments: legalValidation.acceptedDocuments,
                 });
-                await connection.commit();
-            } catch (transactionError) {
-                try { await connection.rollback(); } catch {}
-                throw transactionError;
-            } finally {
-                connection.release();
-            }
-
-            delete verificationCodes[email];
+            });
+            memberVerificationService.clearCookie(res);
 
             const adminNoticeResult = await sendEmail(
                 SIGNUP_ADMIN_NOTIFY_EMAIL,
@@ -430,7 +302,8 @@ function registerAuthRoutes(options = {}) {
                 msg: '회원가입 신청이 접수되었습니다. 관리자 승인 후 로그인할 수 있습니다.',
             });
         } catch (error) {
-            console.error('회원가입 오류:', error);
+            if (error instanceof MemberVerificationError) return memberVerificationService.respondError(res, error);
+            console.error('회원가입 처리 실패:', error.code || 'unknown');
             if (error?.status && error?.code) {
                 return res.status(Number(error.status)).json({
                     success: false,

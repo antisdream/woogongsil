@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import useScreenSettings from '../useScreenSettings';
+import { verificationConfig } from '../features/memberVerification';
 import LegalConsentBlock from '../components/LegalConsentBlock';
 import '../styles/app/community-redesign.css';
 
@@ -34,6 +35,7 @@ const Signup = ({ embedded = false, afterSignupPath = '/' }) => {
 
     const [isEmailSent, setIsEmailSent] = useState(false);
     const [isEmailVerified, setIsEmailVerified] = useState(false);
+    const [verificationCsrf, setVerificationCsrf] = useState('');
     const [timer, setTimer] = useState(0); 
     const [resendTimer, setResendTimer] = useState(0); 
     const [signupStep, setSignupStep] = useState(1);
@@ -122,9 +124,10 @@ const Signup = ({ embedded = false, afterSignupPath = '/' }) => {
 
         try {
             //  타입 지정: 회원가입 용도
-            const res = await axios.post(`${API_BASE}/api/auth/send-code`, { email: form.email, type: 'signup' });
+            const res = await axios.post(`${API_BASE}/api/auth/send-code`, { email: form.email, type: 'signup' }, verificationConfig());
             if (res.data.success) {
                 alert(isEmailSent ? getSetting('messages.code_resent', '인증번호가 재전송되었습니다. 메일함을 확인해주세요.') : getSetting('messages.code_sent', '인증번호가 전송되었습니다. (유효시간 2분)'));
+                setVerificationCsrf(res.data.csrfToken);
                 setIsEmailSent(true);
                 setTimer(120);       
                 setResendTimer(30);  
@@ -140,8 +143,8 @@ const Signup = ({ embedded = false, afterSignupPath = '/' }) => {
 
         try {
             const res = await axios.post(`${API_BASE}/api/auth/verify-code`, { 
-                email: form.email, code: form.verificationCode 
-            });
+                email: form.email, code: form.verificationCode, type: 'signup'
+            }, verificationConfig(verificationCsrf));
             if (res.data.success) {
                 alert(getSetting('messages.email_verified', '이메일 인증이 완료되었습니다.'));
                 setIsEmailVerified(true);
@@ -189,7 +192,7 @@ const Signup = ({ embedded = false, afterSignupPath = '/' }) => {
                 name: form.name,
                 email: form.email,
                 legal: { age14Confirmed: true, acceptances: acceptedDocuments },
-            });
+            }, verificationConfig(verificationCsrf));
             
             if (res.status === 200 || res.status === 201 || res.status === 202 || res.data.success) {
                 alert(res.data?.msg || getSetting('messages.signup_success', '회원가입 신청이 접수되었습니다. 관리자 승인 후 로그인할 수 있습니다.'));

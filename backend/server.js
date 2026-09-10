@@ -46,6 +46,7 @@ const registerExamRoutes = require('./routes/examRoutes');
 const registerAuthRoutes = require('./routes/auth/authRoutes');
 const registerAdminAuthRoutes = require('./routes/auth/adminAuthRoutes');
 const { createAdminEmailOtpService } = require('./services/adminEmailOtpService');
+const { createMemberEmailVerificationService } = require('./services/memberEmailVerificationService');
 const registerAccountRecoveryRoutes = require('./routes/auth/accountRecoveryRoutes');
 const registerVisitorRoutes = require('./routes/visitorRoutes');
 const registerLegalRoutes = require('./routes/legalRoutes');
@@ -151,8 +152,8 @@ app.use((req, res, next) => {
 });
 app.use(express.static(path.join(__dirname, '..', 'frontend', 'dist')));
 
-// 이메일 인증번호는 메모리에 보관하며 서버 재시작 시 초기화됩니다.
-const verificationCodes = {};
+// 이메일 인증은 DB의 계정·용도·기한과 HttpOnly 브라우저 증명으로 검증합니다.
+const memberVerificationService = createMemberEmailVerificationService({ pool, sendEmail });
 
 // 기존 저장 비밀번호 해시와 맞도록 bcrypt 비용 값을 유지합니다.
 const SALT_ROUNDS = 10;
@@ -461,7 +462,8 @@ registerAuthRoutes({
     pool,
     bcrypt,
     sendEmail,
-    verificationCodes,
+    memberVerificationService,
+    validateRealtimeSession,
     getUserByEmail,
     getUserById,
     getKSTDateTime,
@@ -805,8 +807,10 @@ registerAccountRecoveryRoutes({
     bcrypt,
     getUserById,
     getUserByEmail,
-    verificationCodes,
-    revokeAdminSessionsForUser: (userId, reason) => adminSessionService.revokeAllForUser(userId, reason),
+    memberVerificationService,
+    validateRealtimeSession,
+    sendEmail,
+    revokeAdminSessionsForUser: (userId, reason, db) => adminSessionService.revokeAllForUser(userId, reason, db),
     saltRounds: SALT_ROUNDS,
 });
 
@@ -981,6 +985,7 @@ async function startServer() {
         await ensureAdminUserControlSchema();
         await adminSessionService.ensureSchema();
         await adminEmailOtpService.ensureSchema();
+        await memberVerificationService.ensureSchema();
         await ensureVisitorAnalyticsSchema();
         await importDataFromJSON();
 

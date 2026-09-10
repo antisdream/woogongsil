@@ -272,10 +272,10 @@ function createAdminSessionService(options = {}) {
         );
     }
 
-    async function revokeAllForUser(userId, reason = 'logout_all') {
+    async function revokeAllForUser(userId, reason = 'logout_all', executor = pool) {
         if (!userId) return 0;
-        await ensureSchema();
-        const [result] = await pool.query(
+        if (executor === pool) await ensureSchema();
+        const [result] = await executor.query(
             `UPDATE wgs_admin_sessions
              SET revoked_at = COALESCE(revoked_at, NOW(3)), revoke_reason = COALESCE(revoke_reason, ?)
              WHERE user_id = ? AND revoked_at IS NULL`,

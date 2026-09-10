@@ -4,6 +4,7 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
 import useScreenSettings from '../useScreenSettings';
+import { verificationConfig, memberVerificationIdentity } from '../features/memberVerification';
 import '../styles/app/community-redesign.css';
 
 const API_BASE = '';
@@ -26,6 +27,7 @@ const ChangePW = () => {
     const [isEmailVerified, setIsEmailVerified] = useState(false);
     const [authChecked, setAuthChecked] = useState(false);
     const [timer, setTimer] = useState(0);
+    const [verificationCsrf, setVerificationCsrf] = useState('');
 
     useEffect(() => {
         if (authChecked) return;
@@ -62,11 +64,13 @@ const ChangePW = () => {
         try {
             const res = await axios.post(`${API_BASE}/api/auth/send-code`, {
                 email: form.email,
-                type: 'change'
-            });
+                type: 'change-pw',
+                ...memberVerificationIdentity()
+            }, verificationConfig());
 
             if (res.data.success) {
                 alert(t('messages.code_sent', '인증번호가 발송되었습니다. 유효시간 2분 안에 입력해주세요.'));
+                setVerificationCsrf(res.data.csrfToken);
                 setIsEmailSent(true);
                 setTimer(120);
             }
@@ -88,8 +92,8 @@ const ChangePW = () => {
         try {
             const res = await axios.post(`${API_BASE}/api/auth/verify-code`, {
                 email: form.email,
-                code: form.verificationCode
-            });
+                code: form.verificationCode, type: 'change-pw'
+            }, verificationConfig(verificationCsrf));
 
             if (res.data.success) {
                 alert(t('messages.email_verified', '본인 인증이 완료되었습니다. 새 비밀번호를 설정해주세요.'));
@@ -122,9 +126,9 @@ const ChangePW = () => {
 
         try {
             const res = await axios.post(`${API_BASE}/api/user/change-pw`, {
-                id: userId,
+                ...memberVerificationIdentity(),
                 newPw: form.newPw
-            });
+            }, verificationConfig(verificationCsrf));
 
             if (res.data.success) {
                 alert(t('messages.update_success', '비밀번호가 안전하게 변경되었습니다. 새로운 비밀번호로 다시 로그인해주세요.'));

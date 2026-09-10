@@ -4,6 +4,7 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
 import useScreenSettings from '../useScreenSettings';
+import { verificationConfig } from '../features/memberVerification';
 import '../styles/app/community-redesign.css';
 
 const API_BASE = '';
@@ -24,6 +25,7 @@ const FindAuth = ({ embedded = false, loginPath = '/login' }) => {
     });
     const [verificationCode, setVerificationCode] = useState('');
     const [foundId, setFoundId] = useState('');
+    const [verificationCsrf, setVerificationCsrf] = useState('');
     const [isEmailSent, setIsEmailSent] = useState(false);
     const [timer, setTimer] = useState(0);
 
@@ -31,6 +33,7 @@ const FindAuth = ({ embedded = false, loginPath = '/login' }) => {
         setActiveTab(targetTab);
         setStep(1);
         setFoundId('');
+        setVerificationCsrf('');
         setIsEmailSent(false);
         setTimer(0);
         setVerificationCode('');
@@ -68,11 +71,13 @@ const FindAuth = ({ embedded = false, loginPath = '/login' }) => {
         try {
             const res = await axios.post(`${API_BASE}/api/auth/send-code`, {
                 email: form.email,
-                type: 'find'
-            });
+                type: activeTab === 'id' ? 'find-id' : 'find-pw',
+                id: form.id, name: form.name
+            }, verificationConfig());
 
             if (res.data.success) {
                 alert(t('messages.code_sent', '인증번호가 발송되었습니다. 2분 안에 입력해주세요.'));
+                setVerificationCsrf(res.data.csrfToken);
                 setIsEmailSent(true);
                 setTimer(120);
             }
@@ -86,7 +91,7 @@ const FindAuth = ({ embedded = false, loginPath = '/login' }) => {
             const res = await axios.post(`${API_BASE}/api/find-id`, {
                 name: form.name,
                 email: form.email
-            });
+            }, verificationConfig(verificationCsrf));
 
             if (res.data.success) {
                 setFoundId(res.data.id);
@@ -111,8 +116,9 @@ const FindAuth = ({ embedded = false, loginPath = '/login' }) => {
         try {
             const res = await axios.post(`${API_BASE}/api/auth/verify-code`, {
                 email: form.email,
-                code: verificationCode
-            });
+                code: verificationCode,
+                type: activeTab === 'id' ? 'find-id' : 'find-pw'
+            }, verificationConfig(verificationCsrf));
 
             if (res.data.success) {
                 setTimer(0);
@@ -145,7 +151,7 @@ const FindAuth = ({ embedded = false, loginPath = '/login' }) => {
             const res = await axios.post(`${API_BASE}/api/find-pw/reset`, {
                 id: form.id,
                 newPassword: form.newPassword
-            });
+            }, verificationConfig(verificationCsrf));
 
             if (res.data.success) {
                 alert(t('messages.reset_success', '비밀번호가 성공적으로 변경되었습니다. 새로운 비밀번호로 로그인해주세요.'));

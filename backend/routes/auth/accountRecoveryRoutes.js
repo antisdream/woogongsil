@@ -1,119 +1,61 @@
-// 계정 조회와 비밀번호 재설정 API를 제공합니다.
 'use strict';
 
-function registerAccountRecoveryRoutes(options = {}) {
-    const app = options.app;
-    const pool = options.pool;
-    const bcrypt = options.bcrypt;
-    const getUserById = options.getUserById;
-    const getUserByEmail = options.getUserByEmail;
-    const verificationCodes = options.verificationCodes;
-    const revokeAdminSessionsForUser = options.revokeAdminSessionsForUser;
-    const SALT_ROUNDS = options.saltRounds;
+const { MemberVerificationError, assertPassword } = require('../../services/memberEmailVerificationService');
 
-    const required = { app, pool, bcrypt, getUserById, getUserByEmail, verificationCodes, revokeAdminSessionsForUser, SALT_ROUNDS };
-    const missing = Object.entries(required).filter(([, value]) => value === undefined || value === null).map(([key]) => key);
-    if (missing.length >0) {
-        throw new Error(`registerAccountRecoveryRoutes missing dependencies: ${missing.join(', ')}`);
-    }
+function registerAccountRecoveryRoutes({ app, bcrypt, memberVerificationService, validateRealtimeSession, revokeAdminSessionsForUser, sendEmail, saltRounds }) {
+    const service = memberVerificationService;
 
     app.post('/api/find-id', async (req, res) => {
-        const name = String(req.body.name || '').trim();
-        const email = String(req.body.email || '').trim().toLowerCase();
-
-        const record = verificationCodes[email];
-        if (!record || !record.verified) {
-            return res.status(400).json({ success: false, msg: '이메일 인증이 완료되지 않았습니다.' });
-        }
-
+        res.setHeader('Cache-Control', 'no-store');
         try {
-            const [rows] = await pool.query(
-                'SELECT id FROM wgs_users WHERE name = ? AND LOWER(email) = ?',
-                [name, email]
-            );
-
-            if (rows.length === 0) {
-                return res.status(400).json({ success: false, msg: '입력하신 이름과 이메일에 일치하는 계정이 없습니다.' });
-            }
-
-            delete verificationCodes[email];
-            return res.json({ success: true, id: rows[0].id });
-        } catch (error) {
-            console.error('아이디 찾기 오류:', error);
-            return res.status(500).json({ success: false, msg: '아이디 찾기 중 서버 오류가 발생했습니다.' });
-        }
+            const id = await service.consume(req, 'find-id', { email: req.body.email }, async (_db, state) => {
+                if (state.user.name !== String(req.body.name || '').trim()) {
+                    throw new MemberVerificationError('verification_account_mismatch', '입력한 회원 정보를 확인해주세요.');
+                }
+                return state.userId;
+            });
+            service.clearCookie(res);
+            return res.json({ success: true, id });
+        } catch (error) { return service.respondError(res, error); }
     });
 
-    app.post('/api/find-pw/reset', async (req, res) => {
-
-        const id = String(req.body.id || '').trim();
-        const newPassword = String(req.body.newPassword || '');
-
+    const changePassword = purpose => async (req, res) => {
+        res.setHeader('Cache-Control', 'no-store');
         try {
-            const user = await getUserById(id);
-            if (!user) return res.status(404).json({ success: false, msg: '계정을 찾을 수 없습니다.' });
-
-            const email = String(user.email || '').trim().toLowerCase();
-            const record = verificationCodes[email];
-
-            if (!record || !record.verified) {
-                return res.status(400).json({ success: false, msg: '이메일 인증이 완료되지 않았습니다.' });
+            const userId = String(req.body.id || '').trim();
+            const password = String(purpose === 'find-pw' ? req.body.newPassword || '' : req.body.newPw || '');
+            assertPassword(password);
+            let session;
+            if (purpose === 'change-pw') {
+                session = await validateRealtimeSession(req);
+                if (!session?.valid || String(session.user.id) !== userId) {
+                    throw new MemberVerificationError('member_login_required', '로그인 후 다시 진행해주세요.', 401);
+                }
             }
-
-            const hashedPassword = await bcrypt.hash(newPassword, SALT_ROUNDS);
-
-            await pool.query('UPDATE wgs_users SET password = ?, sessionToken = NULL WHERE id = ?', [hashedPassword, id]);
-            await revokeAdminSessionsForUser(id, 'password_reset');
-
-            delete verificationCodes[email];
-
-            return res.json({ success: true, msg: '비밀번호가 성공적으로 변경되었습니다.' });
-        } catch (error) {
-            console.error('비밀번호 재설정 오류:', error);
-            return res.status(500).json({ success: false, msg: '비밀번호 변경 실패' });
-        }
-    });
-
-    // 본인확인 없이 이메일만으로 비밀번호를 바꾸던 구형 경로는 즉시 폐쇄합니다.
-    app.post('/api/reset-pw', (req, res) => {
-        return res.status(410).json({
-            success: false,
-            error: 'LEGACY_PASSWORD_RESET_DISABLED',
-            msg: '지원이 종료된 비밀번호 재설정 경로입니다.',
-        });
-    });
-
-    app.post('/api/user/change-pw', async (req, res) => {
-
-        const id = String(req.body.id || '').trim();
-        const newPw = String(req.body.newPw || '');
-
-        try {
-            const user = await getUserById(id);
-            if (!user) return res.status(404).json({ success: false, msg: '사용자를 찾을 수 없습니다.' });
-
-            const email = String(user.email || '').trim().toLowerCase();
-            const record = verificationCodes[email];
-
-            if (!record || !record.verified) {
-                return res.status(400).json({ success: false, msg: '이메일 인증이 완료되지 않았습니다.' });
-            }
-
-            const hashedPassword = await bcrypt.hash(newPw, SALT_ROUNDS);
-
-            await pool.query('UPDATE wgs_users SET password = ?, sessionToken = NULL WHERE id = ?', [hashedPassword, id]);
-            await revokeAdminSessionsForUser(id, 'password_changed');
-
-            delete verificationCodes[email];
-
+            const email = await service.consume(req, purpose, { userId }, async (db, state) => {
+                if (session && session.user.sessionToken !== state.user.sessionToken) {
+                    throw new MemberVerificationError('member_login_required', '로그인이 변경되었습니다. 다시 진행해주세요.', 401);
+                }
+                const hashedPassword = await bcrypt.hash(password, saltRounds);
+                await db.query('UPDATE wgs_users SET password = ?, sessionToken = NULL WHERE id = ?', [hashedPassword, state.userId]);
+                await revokeAdminSessionsForUser(state.userId, purpose === 'find-pw' ? 'password_reset' : 'password_changed', db);
+                return state.email;
+            });
+            service.clearCookie(res);
+            // Notification failure must not turn a committed password change into a retry.
+            try {
+                await sendEmail(email, '[우공실] 비밀번호 변경 안내',
+                    '계정의 비밀번호가 변경되어 기존 로그인이 종료되었습니다. 새 비밀번호로 로그인해주세요.\n본인이 변경하지 않았다면 계정 복구를 진행하고 관리자에게 알려주세요.', { sensitive: true });
+            } catch (_) { /* No password, address, code or SMTP error is logged. */ }
             return res.json({ success: true, msg: '비밀번호가 안전하게 변경되었습니다. 다시 로그인해주세요.' });
-        } catch (error) {
-            console.error('마이페이지 비밀번호 변경 오류:', error);
-            return res.status(500).json({ success: false, msg: '비밀번호 변경 처리 중 오류 발생' });
-        }
-    });
+        } catch (error) { return service.respondError(res, error); }
+    };
 
-
+    app.post('/api/find-pw/reset', changePassword('find-pw'));
+    app.post('/api/user/change-pw', changePassword('change-pw'));
+    app.post('/api/reset-pw', (_req, res) => res.status(410).json({
+        success: false, error: 'LEGACY_PASSWORD_RESET_DISABLED', msg: '지원이 종료된 비밀번호 재설정 경로입니다.',
+    }));
 }
 
 module.exports = registerAccountRecoveryRoutes;
