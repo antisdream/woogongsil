@@ -27,18 +27,10 @@ function registerBoardRoutes(options = {}) {
         throw new Error('registerBoardRoutes requires validateRealtimeSession.');
     }
 
-    function normalizeAdminBool(value) {
-        if (value === true || value === 1 || value === '1') return true;
-        if (typeof value === 'number') return value >0;
-        if (typeof value === 'string') return ['true', '1', 'y', 'yes', 'on'].includes(value.trim().toLowerCase());
-        return false;
-    }
-
-    async function isPrimaryAdminUserId(userId) {
-        const id = String(userId || '').trim();
-        if (!id || typeof getUserById !== 'function') return false;
-        const user = await getUserById(id);
-        return Boolean(user && !normalizeAdminBool(user.is_suspended) && normalizeAdminBool(user.is_primary_admin));
+    // Only middleware-verified OTP sessions on the dedicated admin cookie path authorize moderation.
+    function hasBoardAdminAuthority(req) {
+        return req.path.startsWith('/api/admin/board/') && req.adminAuth?.valid === true
+            && req.adminAuth.isPrimaryAdmin === true;
     }
 
     function authUserId(auth) {
@@ -50,7 +42,10 @@ function registerBoardRoutes(options = {}) {
     }
 
     async function requireSessionUser(req, res, expectedId = '') {
-        const auth = await validateRealtimeSession(req);
+        const administrativePath = req.path.startsWith('/api/admin/board/');
+        const auth = administrativePath
+            ? (hasBoardAdminAuthority(req) ? req.adminAuth : { valid: false, reason: 'admin_email_otp_required' })
+            : await validateRealtimeSession(req);
         if (!auth.valid) {
             res.status(401).json({
                 success: false,
@@ -107,7 +102,7 @@ app.get('/api/posts', async (req, res) => {
     }
 });
 
-app.post('/api/posts', async (req, res) => {
+app.post(['/api/posts', '/api/admin/board/posts'], async (req, res) => {
     const title = String(req.body.title || '').trim();
     const content = String(req.body.content || '').trim();
     let contentJson = null;
@@ -127,7 +122,7 @@ app.post('/api/posts', async (req, res) => {
     let boardType;
     try { boardType = parseBoardType(req.body.boardType); }
     catch (error) { return res.status(error.status).json({ success: false, msg: error.message }); }
-    if (boardType === 'notice' && !(await isPrimaryAdminUserId(authorId))) {
+    if (boardType === 'notice' && !(hasBoardAdminAuthority(req))) {
         return res.status(403).json({ success: false, msg: '공지게시판 글은 관리자만 작성할 수 있습니다.' });
     }
 
@@ -148,7 +143,7 @@ app.post('/api/posts', async (req, res) => {
         // 최고관리자가 공지게시판에 새 글을 작성한 경우에만 전체 회원에게 공지 메일을 예약합니다.
         // - 게시글 저장 성공 후 실행하므로 메일 서버 문제 때문에 게시글 작성 자체가 실패하지 않습니다.
         // - await 하지 않고 백그라운드로 보내서 사용자가 글쓰기 완료 응답을 오래 기다리지 않게 합니다.
-        const authorIsPrimaryAdmin = await isPrimaryAdminUserId(authorId);
+        const authorIsPrimaryAdmin = hasBoardAdminAuthority(req);
         const shouldSendNoticeEmail = authorIsPrimaryAdmin && boardType === 'notice';
 
         if (shouldSendNoticeEmail) {
@@ -168,7 +163,7 @@ app.post('/api/posts', async (req, res) => {
     }
 });
 
-app.put('/api/posts/notice', async (req, res) => {
+app.put(['/api/posts/notice', '/api/admin/board/posts/notice'], async (req, res) => {
     const auth = await requireSessionUser(req, res, req.body.userId || req.body.id);
     if (!auth) return;
 
@@ -176,7 +171,7 @@ app.put('/api/posts/notice', async (req, res) => {
     const postIds = Array.isArray(req.body.postIds) ? req.body.postIds : [];
     const isNotice = req.body.isNotice ? 1 : 0;
 
-    if (!(await isPrimaryAdminUserId(userId))) return res.status(403).json({ success: false, msg: '관리자만 접근 가능합니다.' });
+    if (!(hasBoardAdminAuthority(req))) return res.status(403).json({ success: false, msg: '관리자만 접근 가능합니다.' });
 
     try {
         // 공지 등록 시 noticeOrder를 함께 부여합니다.
@@ -213,14 +208,14 @@ app.put('/api/posts/notice', async (req, res) => {
 // 관리자 공지 노출 순서 저장 API
 // - Board.jsx의 '공지 순서' 버튼에서 보낸 orderedPostIds 순서대로 noticeOrder를 재부여합니다.
 // - 기존 게시글/댓글/추천 로직은 변경하지 않고 공지 정렬값만 수정합니다.
-app.put('/api/posts/notice-order', async (req, res) => {
+app.put(['/api/posts/notice-order', '/api/admin/board/posts/notice-order'], async (req, res) => {
     const auth = await requireSessionUser(req, res, req.body.userId || req.body.id);
     if (!auth) return;
 
     const userId = authUserId(auth);
     const orderedPostIds = Array.isArray(req.body.orderedPostIds) ? req.body.orderedPostIds.map(id => String(id)) : [];
 
-    if (!(await isPrimaryAdminUserId(userId))) return res.status(403).json({ success: false, msg: '관리자만 접근 가능합니다.' });
+    if (!(hasBoardAdminAuthority(req))) return res.status(403).json({ success: false, msg: '관리자만 접근 가능합니다.' });
     if (orderedPostIds.length === 0) return res.status(400).json({ success: false, msg: '저장할 공지 순서가 없습니다.' });
 
     const connection = await pool.getConnection();
@@ -245,7 +240,7 @@ app.put('/api/posts/notice-order', async (req, res) => {
     }
 });
 
-app.put('/api/posts/:postId', async (req, res) => {
+app.put(['/api/posts/:postId', '/api/admin/board/posts/:postId'], async (req, res) => {
     const postId = String(req.params.postId || '').trim();
     const auth = await requireSessionUser(req, res, req.body.userId || req.body.id);
     if (!auth) return;
@@ -269,7 +264,7 @@ app.put('/api/posts/:postId', async (req, res) => {
         if (rows.length === 0) return res.status(404).json({ success: false, msg: '게시글을 찾을 수 없습니다.' });
 
         const post = rows[0];
-        const isPrimaryAdmin = await isPrimaryAdminUserId(userId);
+        const isPrimaryAdmin = hasBoardAdminAuthority(req);
         const nextBoardType = parseBoardType(req.body.boardType, storedBoardType(post));
         if (!isPrimaryAdmin && (storedBoardType(post) === 'notice' || nextBoardType !== storedBoardType(post))) {
             return res.status(403).json({ success: false, msg: '게시판 이동과 공지 관리는 관리자만 할 수 있습니다.' });
@@ -293,7 +288,7 @@ app.put('/api/posts/:postId', async (req, res) => {
     }
 });
 
-app.delete('/api/posts/:id', async (req, res) => {
+app.delete(['/api/posts/:id', '/api/admin/board/posts/:id'], async (req, res) => {
     const postId = String(req.params.id || '').trim();
     const auth = await requireSessionUser(req, res, req.body.userId || req.body.id);
     if (!auth) return;
@@ -305,7 +300,7 @@ app.delete('/api/posts/:id', async (req, res) => {
         if (rows.length === 0) return res.status(404).json({ success: false, msg: '게시글을 찾을 수 없습니다.' });
 
         const post = rows[0];
-        const isPrimaryAdmin = await isPrimaryAdminUserId(userId);
+        const isPrimaryAdmin = hasBoardAdminAuthority(req);
         if (storedBoardType(post) === 'notice' && !isPrimaryAdmin) return res.status(403).json({ success: false, msg: '공지 관리는 관리자만 할 수 있습니다.' });
         if (post.authorId !== userId && !isPrimaryAdmin) {
             return res.status(403).json({ success: false, msg: '삭제 권한이 없습니다.' });
@@ -395,7 +390,7 @@ app.post('/api/posts/:id/comments', async (req, res) => {
     }
 });
 
-app.put('/api/posts/:postId/comments/:commentId', async (req, res) => {
+app.put(['/api/posts/:postId/comments/:commentId', '/api/admin/board/posts/:postId/comments/:commentId'], async (req, res) => {
     const commentId = String(req.params.commentId || '').trim();
     const auth = await requireSessionUser(req, res, req.body.userId || req.body.id);
     if (!auth) return;
@@ -404,11 +399,11 @@ app.put('/api/posts/:postId/comments/:commentId', async (req, res) => {
     const text = String(req.body.text || '').trim();
 
     try {
-        const [rows] = await pool.query('SELECT * FROM wgs_comments WHERE id = ?', [commentId]);
+        const [rows] = await pool.query('SELECT * FROM wgs_comments WHERE id = ? AND postId = ?', [commentId, req.params.postId]);
         if (rows.length === 0) return res.status(404).json({ success: false, msg: '댓글을 찾을 수 없습니다.' });
 
         const comment = rows[0];
-        const isPrimaryAdmin = await isPrimaryAdminUserId(userId);
+        const isPrimaryAdmin = hasBoardAdminAuthority(req);
         if (comment.authorId !== userId && !isPrimaryAdmin) return res.status(403).json({ success: false, msg: '수정 권한이 없습니다.' });
 
         await pool.query('UPDATE wgs_comments SET text = ? WHERE id = ?', [text, commentId]);
@@ -420,7 +415,7 @@ app.put('/api/posts/:postId/comments/:commentId', async (req, res) => {
     }
 });
 
-app.delete('/api/posts/:postId/comments/:commentId', async (req, res) => {
+app.delete(['/api/posts/:postId/comments/:commentId', '/api/admin/board/posts/:postId/comments/:commentId'], async (req, res) => {
     const commentId = String(req.params.commentId || '').trim();
     const auth = await requireSessionUser(req, res, req.body.userId || req.body.id);
     if (!auth) return;
@@ -428,14 +423,14 @@ app.delete('/api/posts/:postId/comments/:commentId', async (req, res) => {
     const userId = authUserId(auth);
 
     try {
-        const [rows] = await pool.query('SELECT * FROM wgs_comments WHERE id = ?', [commentId]);
+        const [rows] = await pool.query('SELECT * FROM wgs_comments WHERE id = ? AND postId = ?', [commentId, req.params.postId]);
         if (rows.length === 0) return res.status(404).json({ success: false, msg: '댓글을 찾을 수 없습니다.' });
 
         const comment = rows[0];
         const [replies] = await pool.query('SELECT id FROM wgs_replies WHERE commentId = ? LIMIT 1', [commentId]);
         const hasReplies = replies.length >0;
 
-        const isPrimaryAdmin = await isPrimaryAdminUserId(userId);
+        const isPrimaryAdmin = hasBoardAdminAuthority(req);
         if (hasReplies && !isPrimaryAdmin) {
             return res.status(403).json({ success: false, msg: '대댓글이 달린 댓글은 관리자만 삭제할 수 있습니다.' });
         }
@@ -467,7 +462,7 @@ app.post('/api/posts/:postId/comments/:commentId/replies', async (req, res) => {
     if (!text) return res.status(400).json({ success: false, msg: '답글을 입력해주세요.' });
 
     try {
-        const [commentRows] = await pool.query('SELECT id FROM wgs_comments WHERE id = ?', [commentId]);
+        const [commentRows] = await pool.query('SELECT id FROM wgs_comments WHERE id = ? AND postId = ?', [commentId, req.params.postId]);
         if (commentRows.length === 0) return res.status(404).json({ success: false, msg: '댓글을 찾을 수 없습니다.' });
 
         await pool.query(
@@ -483,7 +478,7 @@ app.post('/api/posts/:postId/comments/:commentId/replies', async (req, res) => {
     }
 });
 
-app.put('/api/posts/:postId/comments/:commentId/replies/:replyId', async (req, res) => {
+app.put(['/api/posts/:postId/comments/:commentId/replies/:replyId', '/api/admin/board/posts/:postId/comments/:commentId/replies/:replyId'], async (req, res) => {
     const replyId = String(req.params.replyId || '').trim();
     const auth = await requireSessionUser(req, res, req.body.userId || req.body.id);
     if (!auth) return;
@@ -492,11 +487,11 @@ app.put('/api/posts/:postId/comments/:commentId/replies/:replyId', async (req, r
     const text = String(req.body.text || '').trim();
 
     try {
-        const [rows] = await pool.query('SELECT * FROM wgs_replies WHERE id = ?', [replyId]);
+        const [rows] = await pool.query('SELECT r.* FROM wgs_replies r JOIN wgs_comments c ON c.id = r.commentId WHERE r.id = ? AND r.commentId = ? AND c.postId = ?', [replyId, req.params.commentId, req.params.postId]);
         if (rows.length === 0) return res.status(404).json({ success: false, msg: '답글을 찾을 수 없습니다.' });
 
         const reply = rows[0];
-        const isPrimaryAdmin = await isPrimaryAdminUserId(userId);
+        const isPrimaryAdmin = hasBoardAdminAuthority(req);
         if (reply.authorId !== userId && !isPrimaryAdmin) return res.status(403).json({ success: false, msg: '수정 권한이 없습니다.' });
 
         await pool.query('UPDATE wgs_replies SET text = ? WHERE id = ?', [text, replyId]);
@@ -508,7 +503,7 @@ app.put('/api/posts/:postId/comments/:commentId/replies/:replyId', async (req, r
     }
 });
 
-app.delete('/api/posts/:postId/comments/:commentId/replies/:replyId', async (req, res) => {
+app.delete(['/api/posts/:postId/comments/:commentId/replies/:replyId', '/api/admin/board/posts/:postId/comments/:commentId/replies/:replyId'], async (req, res) => {
     const replyId = String(req.params.replyId || '').trim();
     const auth = await requireSessionUser(req, res, req.body.userId || req.body.id);
     if (!auth) return;
@@ -516,11 +511,11 @@ app.delete('/api/posts/:postId/comments/:commentId/replies/:replyId', async (req
     const userId = authUserId(auth);
 
     try {
-        const [rows] = await pool.query('SELECT * FROM wgs_replies WHERE id = ?', [replyId]);
+        const [rows] = await pool.query('SELECT r.* FROM wgs_replies r JOIN wgs_comments c ON c.id = r.commentId WHERE r.id = ? AND r.commentId = ? AND c.postId = ?', [replyId, req.params.commentId, req.params.postId]);
         if (rows.length === 0) return res.status(404).json({ success: false, msg: '답글을 찾을 수 없습니다.' });
 
         const reply = rows[0];
-        const isPrimaryAdmin = await isPrimaryAdminUserId(userId);
+        const isPrimaryAdmin = hasBoardAdminAuthority(req);
         if (reply.authorId !== userId && !isPrimaryAdmin) return res.status(403).json({ success: false, msg: '삭제 권한이 없습니다.' });
 
         const deletedText = isPrimaryAdmin ? '관리자가 삭제한 답글입니다.' : '작성자가 삭제한 답글입니다.';

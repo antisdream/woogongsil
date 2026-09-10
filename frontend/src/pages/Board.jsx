@@ -6,6 +6,8 @@ import '../styles/app/community-redesign.css';
 import { toast } from 'react-toastify';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import useScreenSettings from '../useScreenSettings';
+import { BoardAdminSessionProvider } from '../features/board/BoardAdminSession.jsx';
+import { useBoardAdminSession } from '../features/board/boardAdminContext.js';
 import BoardWriteView from '../features/board/BoardWriteView.jsx';
 import BoardContentView from '../features/board/BoardContentView.jsx';
 import '../features/board/boardPage.css';
@@ -41,6 +43,7 @@ const Board = () => {
         replaceSettingTokens(t(key, fallback), values)
     ), [t]);
 
+    const { adminMutation } = useBoardAdminSession();
     const userId = sessionStorage.getItem('userId');
     const userName = sessionStorage.getItem('userName');
     const getSessionAuth = useCallback(() => ({
@@ -320,6 +323,9 @@ const Board = () => {
         }
     };
 
+    const memberMutation = (method, route, data) => axios({ method, url: `${API_BASE}/api${route}`, data });
+    const requiresPostAdmin = (post) => getPostBoardType(post) === BOARD_NOTICE || post?.authorId !== userId;
+
     const handleCreatePost = async (e) => {
         e.preventDefault();
         // 비로그인 사용자는 게시글 등록 불가
@@ -333,11 +339,9 @@ const Board = () => {
 
         if (!title.trim() || !getBoardContentTextForValidation(content)) return alert(t('messages.need_title_content', '제목과 내용을 모두 입력해주세요.'));
         try {
-            // 핵심: 새 글은 현재 선택한 탭(boardTab)을 content 마커로 저장합니다.
-            // - 최고관리자가 자유게시판에서 작성하면 FREE 마커가 붙으므로 공지게시판으로 자동 이동하지 않습니다.
-            // - 최고관리자가 공지게시판에서 작성하면 NOTICE 마커가 붙으므로 공지 해제 후에도 공지게시판에 남습니다.
+            // 게시판 종류와 원문은 별도 값으로 전송합니다.
             const finalContent = withBoardMarker(content, boardTab);
-            const res = await axios.post(`${API_BASE}/api/posts`, {
+            const res = await (boardTab === BOARD_NOTICE ? adminMutation : memberMutation)('post', '/posts', {
                 ...getSessionAuth(),
                 title: getCleanTitle(title),
                 content: finalContent,
@@ -345,9 +349,6 @@ const Board = () => {
                 authorId: userId,
                 authorName: userName,
 
-                // 백엔드가 새 공지글 작성 여부를 안정적으로 판단할 수 있도록 현재 게시판 탭을 함께 보냅니다.
-                // - 기존 content 숨김 마커 방식은 그대로 유지합니다.
-                // - 이 값은 공지메일 발송 조건 판단에만 사용되며 게시글/댓글/추천 로직은 유지합니다.
                 boardType: boardTab
             });
             if (res.data.success) {
@@ -370,7 +371,7 @@ const Board = () => {
             // - 공지 등록/해제 또는 수정 때문에 게시판 탭이 바뀌는 것을 방지합니다.
             const originalBoard = getPostBoardType(currentPost) || boardTab;
             const finalContent = withBoardMarker(content, originalBoard);
-            const res = await axios.put(`${API_BASE}/api/posts/${currentPost.id}`, {
+            const res = await (requiresPostAdmin(currentPost) ? adminMutation : memberMutation)('put', `/posts/${currentPost.id}`, {
                 ...getSessionAuth(),
                 userId,
                 title: getCleanTitle(title),
@@ -411,7 +412,7 @@ const Board = () => {
         if (!requireLogin()) return;
         if (!window.confirm(t('messages.post_delete_confirm', '정말 삭제를 진행하시겠습니까? 게시글을 삭제하면 복구를 할 수 없습니다.'))) return;
         try {
-            const res = await axios.delete(`${API_BASE}/api/posts/${postId}`, { data: { ...getSessionAuth(), userId } });
+            const res = await (requiresPostAdmin(posts.find(post => post.id === postId)) ? adminMutation : memberMutation)('delete', `/posts/${postId}`, { ...getSessionAuth(), userId });
             if (res.data.success) {
                 alert(t('messages.delete_success', '삭제가 되었습니다.'));
                 fetchPosts(); navigate(getBoardListPath(boardTab)); setView('list');
@@ -477,7 +478,8 @@ const Board = () => {
         if (hasReplies && !isAdmin) return alert(t('messages.comment_with_reply_delete_blocked', '대댓글이 달린 경우 삭제 할 수 없습니다.'));
         if (!window.confirm(t('messages.comment_delete_confirm', '정말 삭제를 진행하시겠습니까? 댓글을 삭제 하면 복구를 할 수 없습니다.'))) return;
         try {
-            const res = await axios.delete(`${API_BASE}/api/posts/${currentPost.id}/comments/${commentId}`, { data: { ...getSessionAuth(), userId } });
+            const comment = currentPost.comments?.find(item => item.id === commentId);
+            const res = await (comment?.authorId !== userId || hasReplies ? adminMutation : memberMutation)('delete', `/posts/${currentPost.id}/comments/${commentId}`, { ...getSessionAuth(), userId });
             if (res.data.success) {
                 alert(t('messages.delete_success', '삭제가 되었습니다.'));
                 const updated = await axios.get(`${API_BASE}/api/posts`);
@@ -531,7 +533,7 @@ const Board = () => {
             if (selectedNoticeIds.length === 0) { toast.error(t('messages.no_selected_posts', '선택된 게시글이 없습니다.')); setNoticeMode('none'); return; }
             if (window.confirm(t('admin.notice_register_confirm', '체크한 게시글을 공지사항으로 등록하시겠습니까?'))) {
                 try {
-                    await axios.put(`${API_BASE}/api/posts/notice`, { ...getSessionAuth(), userId, postIds: selectedNoticeIds, isNotice: true });
+                    await adminMutation('put', '/posts/notice', { ...getSessionAuth(), userId, postIds: selectedNoticeIds, isNotice: true });
                     toast.success(t('admin.notice_register_success', '공지사항을 등록하였습니다.'));
                     fetchPosts(); setNoticeMode('none'); setSelectedNoticeIds([]);
                 } catch (e) { toast.error(t('admin.notice_register_failed', '공지사항 등록 오류')); }
@@ -550,7 +552,7 @@ const Board = () => {
             if (selectedNoticeIds.length === 0) { toast.error(t('messages.no_selected_posts', '선택된 게시글이 없습니다.')); setNoticeMode('none'); return; }
             if (window.confirm(t('admin.notice_unregister_confirm', '체크한 게시글의 공지를 해제하시겠습니까?'))) {
                 try {
-                    await axios.put(`${API_BASE}/api/posts/notice`, { ...getSessionAuth(), userId, postIds: selectedNoticeIds, isNotice: false });
+                    await adminMutation('put', '/posts/notice', { ...getSessionAuth(), userId, postIds: selectedNoticeIds, isNotice: false });
                     toast.success(t('admin.notice_unregister_success', '공지사항이 해제 되었습니다.'));
                     fetchPosts(); setNoticeMode('none'); setSelectedNoticeIds([]);
                 } catch (e) { toast.error(t('admin.notice_unregister_failed', '공지 해제 오류')); }
@@ -611,7 +613,7 @@ const Board = () => {
         if (!window.confirm(t('admin.notice_order_save_confirm', '현재 공지 노출 순서를 저장하시겠습니까?'))) return;
 
         try {
-            await axios.put(`${API_BASE}/api/posts/notice-order`, {
+            await adminMutation('put', '/posts/notice-order', {
                 ...getSessionAuth(),
                 userId,
                 orderedPostIds: noticeOrderIds
@@ -660,7 +662,7 @@ const Board = () => {
             try {
                 const selectedPosts = posts.filter(post => selectedNoticeIds.includes(post.id));
                 for (const post of selectedPosts) {
-                    await axios.put(`${API_BASE}/api/posts/${post.id}`, {
+                    await adminMutation('put', `/posts/${post.id}`, {
                         ...getSessionAuth(),
                         userId,
                         title: getCleanTitle(post.title),
@@ -729,7 +731,7 @@ const Board = () => {
         if (activityTab === 'posts') {
             if (window.confirm(t('activity.delete_confirm', '정말 삭제를 진행하시겠습니까?'))) {
                 try {
-                    for (let id of checkedIds) { await axios.delete(`${API_BASE}/api/posts/${id}`, { data: { ...getSessionAuth(), userId } }); }
+                    for (let id of checkedIds) { await (requiresPostAdmin(posts.find(post => post.id === id)) ? adminMutation : memberMutation)('delete', `/posts/${id}`, { ...getSessionAuth(), userId }); }
                     alert(t('messages.delete_success', '삭제가 되었습니다.')); setCheckedIds([]); fetchPosts();
                 } catch(err) { alert(t('activity.delete_posts_failed', '일부 게시글 삭제 실패')); }
             }
@@ -1046,4 +1048,6 @@ const Board = () => {
     return null;
 };
 
-export default Board;
+export default function BoardPage() {
+    return <BoardAdminSessionProvider><Board /></BoardAdminSessionProvider>;
+}
