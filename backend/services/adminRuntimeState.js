@@ -1,3 +1,4 @@
+const { runtimeLog: wgsRuntimeLog } = require("./runtimeLog");
 const fs = require('fs');
 
 const DEFAULT_NOTICE_MAX_HISTORY = 30;
@@ -38,7 +39,7 @@ function createAdminRuntimeState(options = {}) {
             const rawText = fs.readFileSync(maintenanceFile, 'utf8');
             adminMaintenanceState = normalizeMaintenanceState(JSON.parse(rawText || '{}'));
         } catch (error) {
-            console.warn('[admin maintenance warning] Failed to read maintenance state file. Using defaults:', error.message);
+            wgsRuntimeLog("warn", "services/adminRuntimeState.js:41", '[admin maintenance warning] Failed to read maintenance state file. Using defaults:', error.message);
             adminMaintenanceState = normalizeMaintenanceState();
         }
     }

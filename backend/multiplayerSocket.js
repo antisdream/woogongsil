@@ -1,3 +1,4 @@
+const { runtimeLog: wgsRuntimeLog } = require("./services/runtimeLog");
 // Socket.IO로 멀티플레이 대기방 상태를 동기화합니다.
 const createMultiplayerRouter = require('./multiplayerRoutes');
 const { createMemberSessionService } = require('./services/memberSessionService');
@@ -80,7 +81,7 @@ async function getRoomDetail(pool, roomCode) {
 
 function attachMultiplayerSocket({ io, pool, memberSessionService = createMemberSessionService({ pool }) }) {
     if (!io || !pool) {
-        console.warn('WARN: Socket.IO server is not ready. Multiplayer realtime update is disabled.');
+        wgsRuntimeLog("warn", "multiplayerSocket.js:83", 'WARN: Socket.IO server is not ready. Multiplayer realtime update is disabled.');
         return;
     }
 
@@ -128,7 +129,7 @@ function attachMultiplayerSocket({ io, pool, memberSessionService = createMember
         socket.on('disconnect', () => clearInterval(timer));
     });
 
-    console.log('OK: Socket.IO multiplayer realtime handler attached');
+    wgsRuntimeLog("info", "multiplayerSocket.js:131", 'OK: Socket.IO multiplayer realtime handler attached');
 }
 
 module.exports = { attachMultiplayerSocket };

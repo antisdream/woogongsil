@@ -1,5 +1,7 @@
 // 로그인, 회원가입, 세션 API를 제공합니다.
 'use strict';
+const { runtimeLog: wgsRuntimeLog } = require("../../services/runtimeLog");
+
 
 const crypto = require('crypto');
 const { createMemberSessionService } = require('../../services/memberSessionService');
@@ -98,19 +100,19 @@ function registerAuthRoutes(options = {}) {
             });
         } catch (error) {
             // Analytics must never turn a valid credential flow into a failed login.
-            console.error('[visit sessions] login linkage failed:', error.message);
+            wgsRuntimeLog("error", "routes/auth/authRoutes.js:101", '[visit sessions] login linkage failed:', error.message);
         }
         if (isExcluded) {
             try {
                 appendSetCookie(res, visitorAnalyticsService.createAdminExclusionCookie());
             } catch (error) {
-                console.error('[visit sessions] admin exclusion cookie failed:', error.message);
+                wgsRuntimeLog("error", "routes/auth/authRoutes.js:107", '[visit sessions] admin exclusion cookie failed:', error.message);
             }
         } else {
             try {
                 appendSetCookie(res, visitorAnalyticsService.createAdminExclusionClearCookie());
             } catch (error) {
-                console.error('[visit sessions] admin exclusion cookie clear failed:', error.message);
+                wgsRuntimeLog("error", "routes/auth/authRoutes.js:113", '[visit sessions] admin exclusion cookie clear failed:', error.message);
             }
         }
     }
@@ -125,7 +127,7 @@ function registerAuthRoutes(options = {}) {
             });
         } catch (error) {
             // Session validation remains authoritative even if analytics is unavailable.
-            console.error('[visit sessions] session linkage failed:', error.message);
+            wgsRuntimeLog("error", "routes/auth/authRoutes.js:128", '[visit sessions] session linkage failed:', error.message);
         }
     }
 
@@ -232,7 +234,7 @@ function registerAuthRoutes(options = {}) {
 
             return res.json({ success: true, msg: '사용 가능한 아이디입니다.' });
         } catch (error) {
-            console.error('아이디 중복 확인 오류:', error);
+            wgsRuntimeLog("error", "routes/auth/authRoutes.js:235", '아이디 중복 확인 오류:', error);
             return res.status(500).json({ success: false, msg: '아이디 확인 중 서버 오류가 발생했습니다.' });
         }
     });
@@ -296,7 +298,7 @@ function registerAuthRoutes(options = {}) {
             );
 
             if (adminNoticeResult?.success === false) {
-                console.warn('[signup approval] admin notice email failed:', adminNoticeResult.error?.message || adminNoticeResult.error);
+                wgsRuntimeLog("warn", "routes/auth/authRoutes.js:299", '[signup approval] admin notice email failed:', adminNoticeResult.error?.message || adminNoticeResult.error);
             }
 
             return res.status(202).json({
@@ -306,7 +308,7 @@ function registerAuthRoutes(options = {}) {
             });
         } catch (error) {
             if (error instanceof MemberVerificationError) return memberVerificationService.respondError(res, error);
-            console.error('회원가입 처리 실패:', error.code || 'unknown');
+            wgsRuntimeLog("error", "routes/auth/authRoutes.js:309", '회원가입 처리 실패:', error.code || 'unknown');
             if (error?.status && error?.code) {
                 return res.status(Number(error.status)).json({
                     success: false,
@@ -435,7 +437,7 @@ function registerAuthRoutes(options = {}) {
             });
         } catch (error) {
             if (error.status) return res.status(error.status).json({ success: false, reason: error.reason, msg: error.message });
-            console.error('로그인 오류:', error.code || 'login_failed');
+            wgsRuntimeLog("error", "routes/auth/authRoutes.js:438", '로그인 오류:', error.code || 'login_failed');
             return res.status(500).json({ success: false, msg: '로그인 시스템 오류' });
         }
     });

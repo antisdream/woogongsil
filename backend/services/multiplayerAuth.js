@@ -1,4 +1,6 @@
 'use strict';
+const { runtimeLog: wgsRuntimeLog } = require("./runtimeLog");
+
 const { createMemberSessionService } = require('./memberSessionService');
 
 function createMultiplayerAuth({ pool, memberSessionService = createMemberSessionService({ pool }) } = {}) {
@@ -20,7 +22,7 @@ function createMultiplayerAuth({ pool, memberSessionService = createMemberSessio
             req.wgsUser = sessionUser;
             return next();
         } catch (error) {
-            console.error('[multiplayer] session check error:', error);
+            wgsRuntimeLog("error", "services/multiplayerAuth.js:23", '[multiplayer] session check error:', error);
             return res.status(error.status || 500).json({ success: false, reason: error.reason || 'session_check_failed', msg: '세션 확인 중 오류가 발생했습니다.' });
         }
     }

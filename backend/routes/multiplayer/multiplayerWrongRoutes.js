@@ -1,5 +1,7 @@
 // Multiplayer wrong-answer history routes.
 'use strict';
+const { runtimeLog: wgsRuntimeLog } = require("../../services/runtimeLog");
+
 
 function registerMultiplayerWrongRoutes(options = {}) {
     const router = options.router;
@@ -64,7 +66,7 @@ function registerMultiplayerWrongRoutes(options = {}) {
             }));
             return res.json({ success: true, groups });
         } catch (error) {
-            console.error('[multiplayer] my wrong groups error:', error);
+            wgsRuntimeLog("error", "routes/multiplayer/multiplayerWrongRoutes.js:67", '[multiplayer] my wrong groups error:', error);
             return res.status(500).json({ success: false, msg: '멀티플레이 응시 기록을 불러오지 못했습니다.' });
         }
     });
@@ -97,7 +99,7 @@ function registerMultiplayerWrongRoutes(options = {}) {
               .filter((q) => !hiddenQuestionIds.has(String(q.question_id)));
             return res.json({ success: true, roomId, submittedAt: resultRows[0].submitted_at, wrongs });
         } catch (error) {
-            console.error('[multiplayer] my wrong practice error:', error);
+            wgsRuntimeLog("error", "routes/multiplayer/multiplayerWrongRoutes.js:100", '[multiplayer] my wrong practice error:', error);
             return res.status(500).json({ success: false, msg: '멀티플레이 오답문제를 불러오지 못했습니다.' });
         }
     });
@@ -129,7 +131,7 @@ function registerMultiplayerWrongRoutes(options = {}) {
                 roomDeleted: cleanupResult.deleted
             });
         } catch (error) {
-            console.error('[multiplayer] delete wrong error:', error);
+            wgsRuntimeLog("error", "routes/multiplayer/multiplayerWrongRoutes.js:132", '[multiplayer] delete wrong error:', error);
             return res.status(error.statusCode || 500).json({ success: false, msg: error.statusCode === 401 ? '로그인이 필요합니다.' : '오답 삭제 중 오류가 발생했습니다.' });
         }
     });
@@ -177,7 +179,7 @@ function registerMultiplayerWrongRoutes(options = {}) {
                 roomDeleted: cleanupResult.deleted
             });
         } catch (error) {
-            console.error('[multiplayer] delete all wrongs error:', error);
+            wgsRuntimeLog("error", "routes/multiplayer/multiplayerWrongRoutes.js:180", '[multiplayer] delete all wrongs error:', error);
             return res.status(error.statusCode || 500).json({ success: false, msg: error.statusCode === 401 ? '로그인이 필요합니다.' : '오답 전체 삭제 중 오류가 발생했습니다.' });
         }
     });

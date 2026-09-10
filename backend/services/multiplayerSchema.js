@@ -1,4 +1,6 @@
 'use strict';
+const { runtimeLog: wgsRuntimeLog } = require("./runtimeLog");
+
 const { runtimeSchemaGate } = require('./schemaRuntime');
 
 async function safeQuery(pool, sql) {
@@ -7,7 +9,7 @@ async function safeQuery(pool, sql) {
     } catch (error) {
         // 운영 중인 서버에서 이미 인덱스가 없거나 컬럼 구조가 조금 달라도
         // 멀티플레이 외 기존 기능이 중단되지 않도록 경고만 남긴다.
-        console.warn('[multiplayer schema warning]', error.message);
+        wgsRuntimeLog("warn", "services/multiplayerSchema.js:10", '[multiplayer schema warning]', error.message);
     }
 }
 

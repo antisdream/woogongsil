@@ -1,5 +1,7 @@
 // 실기 오답노트와 사용자 학습 데이터를 관리합니다.
 'use strict';
+const { runtimeLog: wgsRuntimeLog } = require("../services/runtimeLog");
+
 
 function registerPracticalUserRoutes(options = {}) {
     const app = options.app;
@@ -244,7 +246,7 @@ app.post('/api/save-ipep-wrong', async (req, res) => {
 
         return res.json({ success: true, msg: '실기 오답 저장 완료' });
     } catch (error) {
-        console.error('실기 오답 SQL 저장 오류:', error);
+        wgsRuntimeLog("error", "routes/practicalUserRoutes.js:247", '실기 오답 SQL 저장 오류:', error);
         return res.status(500).json({ success: false, msg: '실기 오답 저장 중 오류가 발생했습니다.' });
     }
 });
@@ -371,7 +373,7 @@ app.get('/api/user/:id/ipep-wrongnotes', async (req, res) => {
 
         return res.json({ success: true, ok: true, wrongNotes, random: result.random, past: result.past, threeWeek: result.threeWeek });
     } catch (error) {
-        console.error('실기 오답 SQL 조회 오류:', error);
+        wgsRuntimeLog("error", "routes/practicalUserRoutes.js:374", '실기 오답 SQL 조회 오류:', error);
         return res.status(500).json({ success: false, msg: '실기 오답 조회 중 오류가 발생했습니다.' });
     }
 });
@@ -401,7 +403,7 @@ app.post('/api/remove-ipep-wrong', async (req, res) => {
 
         return res.json({ success: true, msg: '실기 오답 삭제 완료' });
     } catch (error) {
-        console.error('실기 오답 SQL 삭제 오류:', error);
+        wgsRuntimeLog("error", "routes/practicalUserRoutes.js:404", '실기 오답 SQL 삭제 오류:', error);
         return res.status(500).json({ success: false, msg: '실기 오답 삭제 중 오류가 발생했습니다.' });
     }
 });
@@ -424,7 +426,7 @@ app.post('/api/remove-all-ipep-wrong', async (req, res) => {
 
         return res.json({ success: true, msg: '실기 오답 전체 삭제 완료' });
     } catch (error) {
-        console.error('실기 오답 SQL 전체 삭제 오류:', error);
+        wgsRuntimeLog("error", "routes/practicalUserRoutes.js:427", '실기 오답 SQL 전체 삭제 오류:', error);
         return res.status(500).json({ success: false, msg: '실기 오답 전체 삭제 중 오류가 발생했습니다.' });
     }
 });

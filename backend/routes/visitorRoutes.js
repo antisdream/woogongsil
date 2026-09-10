@@ -1,4 +1,6 @@
 'use strict';
+const { runtimeLog: wgsRuntimeLog } = require("../services/runtimeLog");
+
 
 const { createVisitorAnalyticsSchema } = require('../services/visitorAnalyticsSchema');
 const {
@@ -150,7 +152,7 @@ function registerVisitorRoutes(options = {}) {
         try {
             return res.json(await publicSummary());
         } catch (error) {
-            console.error('[visitor analytics] public summary failed:', error.message);
+            wgsRuntimeLog("error", "routes/visitorRoutes.js:153", '[visitor analytics] public summary failed:', error.message);
             return res.status(503).json({ success: false, reason: 'visitor_summary_unavailable' });
         }
     });
@@ -190,7 +192,7 @@ function registerVisitorRoutes(options = {}) {
             });
         } catch (error) {
             const status = errorStatus(error);
-            if (status >= 500) console.error('[visitor analytics] public visit failed:', error.message);
+            if (status >= 500) wgsRuntimeLog("error", "routes/visitorRoutes.js:193", '[visitor analytics] public visit failed:', error.message);
             return res.status(status).json({
                 success: false,
                 reason: error?.code || 'visitor_analytics_error',
@@ -228,7 +230,7 @@ function registerVisitorRoutes(options = {}) {
             return res.json({ success: true, ...result });
         } catch (error) {
             const status = errorStatus(error);
-            if (status >= 500) console.error('[visitor analytics] admin stats failed:', error.message);
+            if (status >= 500) wgsRuntimeLog("error", "routes/visitorRoutes.js:231", '[visitor analytics] admin stats failed:', error.message);
             return res.status(status).json({
                 success: false,
                 reason: error?.code || 'visitor_analytics_error',
@@ -270,7 +272,7 @@ function registerVisitorRoutes(options = {}) {
             return res.json({ success: true, ...result });
         } catch (error) {
             const status = errorStatus(error);
-            if (status >= 500) console.error('[visit sessions] admin list failed:', error.message);
+            if (status >= 500) wgsRuntimeLog("error", "routes/visitorRoutes.js:273", '[visit sessions] admin list failed:', error.message);
             return res.status(status).json({
                 success: false,
                 reason: error?.code || 'visit_session_error',
@@ -307,7 +309,7 @@ function registerVisitorRoutes(options = {}) {
             return res.json({ success: true, ...result });
         } catch (error) {
             const status = errorStatus(error);
-            if (status >= 500) console.error('[visit sessions] member filter failed:', error.message);
+            if (status >= 500) wgsRuntimeLog("error", "routes/visitorRoutes.js:310", '[visit sessions] member filter failed:', error.message);
             return res.status(status).json({
                 success: false,
                 reason: error?.code || 'visit_session_error',
@@ -343,7 +345,7 @@ function registerVisitorRoutes(options = {}) {
             return res.json({ success: true, ...result });
         } catch (error) {
             const status = errorStatus(error);
-            if (status >= 500) console.error('[member login activity] admin stats failed:', error.message);
+            if (status >= 500) wgsRuntimeLog("error", "routes/visitorRoutes.js:346", '[member login activity] admin stats failed:', error.message);
             return res.status(status).json({
                 success: false,
                 reason: error?.code || 'member_login_activity_error',

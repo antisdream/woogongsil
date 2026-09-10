@@ -1,4 +1,6 @@
 'use strict';
+const { runtimeLog: wgsRuntimeLog } = require("../../services/runtimeLog");
+
 
 const IPEP_WRONG_SOURCES = new Set(['ipep_random', 'ipep_past', 'ipep_three_week']);
 
@@ -460,7 +462,7 @@ function registerStudyWrongNoteRoutes(options = {}) {
             wrongNotes.sort((a, b) => String(b.savedAt || '').localeCompare(String(a.savedAt || '')));
             return res.json({ success: true, wrongNotes });
         } catch (error) {
-            console.error('[학습노트] 오답 조회 오류:', error);
+            wgsRuntimeLog("error", "routes/study/studyWrongNoteRoutes.js:463", '[학습노트] 오답 조회 오류:', error);
             return res.status(500).json({ success: false, msg: '오답노트를 불러오지 못했습니다.' });
         }
     });

@@ -1,5 +1,7 @@
 // 일반 회원 로그인과 독립된 관리자 전용 로그인 API입니다.
 'use strict';
+const { runtimeLog: wgsRuntimeLog } = require("../../services/runtimeLog");
+
 
 const { createVisitSessionService } = require('../../services/visitSessionService');
 const { createVisitorAnalyticsService } = require('../../services/visitorAnalyticsService');
@@ -81,7 +83,7 @@ function registerAdminAuthRoutes(options = {}) {
             });
         } catch (error) {
             // 방문 분석 오류가 유효한 관리자 인증을 실패시키면 안 됩니다.
-            console.error('[visit sessions] admin exclusion failed:', error.message);
+            wgsRuntimeLog("error", "routes/auth/adminAuthRoutes.js:84", '[visit sessions] admin exclusion failed:', error.message);
         }
         appendSetCookie(res, visitorAnalyticsService.createAdminExclusionCookie());
     }
@@ -109,13 +111,12 @@ function registerAdminAuthRoutes(options = {}) {
                     String(userId || ''),
                     String(userId || ''),
                     JSON.stringify({
-                        ipHashRecorded: true,
-                        userAgent: String(req?.headers?.['user-agent'] || '').slice(0, 240),
+                        authMethod: 'password_email_otp',
                     }),
                 ]
             );
         } catch (error) {
-            console.warn('[admin auth audit] write failed:', error.message);
+            wgsRuntimeLog("warn", "routes/auth/adminAuthRoutes.js:117", '[admin auth audit] write failed:', error.message);
         }
     }
 
@@ -168,7 +169,7 @@ function registerAdminAuthRoutes(options = {}) {
             return sendPending(res, await adminEmailOtpService.begin(user));
         } catch (error) {
             if (error instanceof AdminOtpError) return sendOtpError(res, error);
-            console.error('[admin auth login] error:', error.code || 'unexpected_error');
+            wgsRuntimeLog("error", "routes/auth/adminAuthRoutes.js:170", '[admin auth login] error:', error.code || 'unexpected_error');
             return res.status(500).json({
                 success: false,
                 reason: 'admin_login_error',
@@ -226,7 +227,7 @@ function registerAdminAuthRoutes(options = {}) {
                 });
             } catch (error) {
                 if (error instanceof AdminOtpError) return sendOtpError(res, error);
-                console.error('[admin email otp] error:', error.code || 'unexpected_error');
+                wgsRuntimeLog("error", "routes/auth/adminAuthRoutes.js:228", '[admin email otp] error:', error.code || 'unexpected_error');
                 return res.status(500).json({ success: false, valid: false, reason: 'admin_otp_error', message: '이메일 인증 처리 중 오류가 발생했습니다. 다시 로그인해주세요.' });
             }
         });
@@ -255,7 +256,7 @@ function registerAdminAuthRoutes(options = {}) {
             await writeLoginAudit(auth.user.id, 'logout', req);
             return res.json({ success: true, message: '관리자 로그아웃이 완료되었습니다.' });
         } catch (error) {
-            console.error('[admin auth logout] error:', error);
+            wgsRuntimeLog("error", "routes/auth/adminAuthRoutes.js:257", '[admin auth logout] error:', error);
             return res.status(500).json({
                 success: false,
                 reason: 'admin_logout_error',
@@ -276,7 +277,7 @@ function registerAdminAuthRoutes(options = {}) {
                 message: '이 관리자 계정의 모든 관리자 세션을 종료했습니다.',
             });
         } catch (error) {
-            console.error('[admin auth logout-all] error:', error);
+            wgsRuntimeLog("error", "routes/auth/adminAuthRoutes.js:278", '[admin auth logout-all] error:', error);
             return res.status(500).json({
                 success: false,
                 reason: 'admin_logout_all_error',

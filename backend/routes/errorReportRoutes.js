@@ -1,3 +1,4 @@
+const { runtimeLog: wgsRuntimeLog } = require("../services/runtimeLog");
 // errorReportRoutes.js
 // 문제 오류신고 메일 전송 전용 라우터
 // 기존 회원, 문제, 게시판 로직과 분리해서 오류신고 기능만 담당합니다.
@@ -29,8 +30,8 @@ function isValidEmail(value) {
  * 프론트엔드 요청 경로가 달라도 오류 제보 기능이 같은 방식으로 처리되도록 합니다.
  */
 async function sendErrorReport(req, res) {
-  console.log("\n[오류신고 POST 실제 수신]");
-  console.log("[요청 body]", req.body);
+  wgsRuntimeLog("info", "routes/errorReportRoutes.js:32", "\n[오류신고 POST 실제 수신]");
+  wgsRuntimeLog("info", "routes/errorReportRoutes.js:33", "[요청 body]", req.body);
 
   try {
     const mailUser = clean(process.env.MAIL_USER);
@@ -38,7 +39,7 @@ async function sendErrorReport(req, res) {
     const mailFromName = clean(process.env.MAIL_FROM_NAME) || "우공실 오류신고";
     const reportTo = clean(process.env.ERROR_REPORT_TO) || mailUser;
 
-    console.log("[메일 환경변수 실제 확인]", {
+    wgsRuntimeLog("info", "routes/errorReportRoutes.js:41", "[메일 환경변수 실제 확인]", {
       hasMailUser: Boolean(mailUser),
       hasMailPassword: Boolean(mailPassword),
       reportTo,
@@ -120,7 +121,7 @@ async function sendErrorReport(req, res) {
      * 여기서 실패하면 앱 비밀번호 문제일 가능성이 높다.
      */
     await transporter.verify();
-    console.log("[Gmail SMTP 인증 성공]");
+    wgsRuntimeLog("info", "routes/errorReportRoutes.js:123", "[Gmail SMTP 인증 성공]");
 
     const textBody = `
 [우공실 문제 오류신고]
@@ -181,7 +182,7 @@ ${new Date().toLocaleString("ko-KR")}
 
     const info = await transporter.sendMail(mailOptions);
 
-    console.log("[오류신고 메일 전송 성공]", {
+    wgsRuntimeLog("info", "routes/errorReportRoutes.js:184", "[오류신고 메일 전송 성공]", {
       messageId: info.messageId,
       accepted: info.accepted,
       response: info.response,
@@ -193,12 +194,12 @@ ${new Date().toLocaleString("ko-KR")}
       messageId: info.messageId,
     });
   } catch (error) {
-    console.error("[오류신고 메일 전송 실패]");
-    console.error("name:", error.name);
-    console.error("code:", error.code);
-    console.error("command:", error.command);
-    console.error("response:", error.response);
-    console.error("message:", error.message);
+    wgsRuntimeLog("error", "routes/errorReportRoutes.js:196", "[오류신고 메일 전송 실패]");
+    wgsRuntimeLog("error", "routes/errorReportRoutes.js:197", "name:", error.name);
+    wgsRuntimeLog("error", "routes/errorReportRoutes.js:198", "code:", error.code);
+    wgsRuntimeLog("error", "routes/errorReportRoutes.js:199", "command:", error.command);
+    wgsRuntimeLog("error", "routes/errorReportRoutes.js:200", "response:", error.response);
+    wgsRuntimeLog("error", "routes/errorReportRoutes.js:201", "message:", error.message);
 
     return res.status(500).json({
       ok: false,

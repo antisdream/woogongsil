@@ -1,6 +1,8 @@
 const { memberTokenHashFromRequest } = require('../services/memberSessionService');
 // 공개 서비스의 요청 제한과 구형 클라이언트 호환 응답을 처리합니다.
 'use strict';
+const { runtimeLog: wgsRuntimeLog } = require("../services/runtimeLog");
+
 
 
 function registerGatekeeperSecurity(options = {}) {
@@ -16,7 +18,7 @@ if (String(process.env.WGS_TRUST_PROXY || 'true').toLowerCase() !== 'false') {
   try {
     app.set('trust proxy', 1);
   } catch (err) {
-    console.warn('[WGS RATE LIMIT] trust proxy 설정 실패:', err.message);
+    wgsRuntimeLog("warn", "middleware/gatekeeperSecurity.js:19", '[WGS RATE LIMIT] trust proxy 설정 실패:', err.message);
   }
 }
 

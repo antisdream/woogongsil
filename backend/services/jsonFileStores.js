@@ -1,3 +1,4 @@
+const { runtimeLog: wgsRuntimeLog } = require("./runtimeLog");
 const fs = require('fs');
 const path = require('path');
 
@@ -17,7 +18,7 @@ function createJsonFileStores(baseDir) {
             if (!raw.trim()) return fallback;
             return JSON.parse(raw);
         } catch (error) {
-            console.error(`JSON read failed: ${path.basename(filePath)}`, error.message);
+            wgsRuntimeLog("error", "services/jsonFileStores.js:20", `JSON read failed: ${path.basename(filePath)}`, error.message);
             return fallback;
         }
     }

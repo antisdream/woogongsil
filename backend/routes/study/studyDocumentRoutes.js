@@ -1,4 +1,6 @@
 'use strict';
+const { runtimeLog: wgsRuntimeLog } = require("../../services/runtimeLog");
+
 
 const { UploadAccessError } = require('../../services/uploadAccessService');
 const { normalizeBoardContentJson } = require('../../services/boardContentService');
@@ -98,7 +100,7 @@ function registerStudyDocumentRoutes(options = {}) {
             return res.json({ success: true, id: result.insertId, document });
         } catch (error) {
             if (error instanceof UploadAccessError) return res.status(error.status).json({ success: false, msg: error.message });
-            console.error('[학습노트] 문서 생성 오류:', error);
+            wgsRuntimeLog("error", "routes/study/studyDocumentRoutes.js:101", '[학습노트] 문서 생성 오류:', error);
             return res.status(500).json({ success: false, msg: '문서를 저장하지 못했습니다.' });
         }
     });
@@ -130,7 +132,7 @@ function registerStudyDocumentRoutes(options = {}) {
             return res.json({ success: true, document: { ...document, wrongRefs } });
         } catch (error) {
             if (error instanceof UploadAccessError) return res.status(error.status).json({ success: false, msg: error.message });
-            console.error('[학습노트] 문서 조회 오류:', error);
+            wgsRuntimeLog("error", "routes/study/studyDocumentRoutes.js:133", '[학습노트] 문서 조회 오류:', error);
             return res.status(500).json({ success: false, msg: '문서를 불러오지 못했습니다.' });
         }
     });
@@ -179,7 +181,7 @@ function registerStudyDocumentRoutes(options = {}) {
             return res.json({ success: true, document: updatedDocument });
         } catch (error) {
             if (error instanceof UploadAccessError) return res.status(error.status).json({ success: false, msg: error.message });
-            console.error('[학습노트] 문서 수정 오류:', error);
+            wgsRuntimeLog("error", "routes/study/studyDocumentRoutes.js:182", '[학습노트] 문서 수정 오류:', error);
             return res.status(500).json({ success: false, msg: '문서를 수정하지 못했습니다.' });
         }
     });
@@ -220,7 +222,7 @@ function registerStudyDocumentRoutes(options = {}) {
             return res.json({ success: true, document: updatedDocument });
         } catch (error) {
             if (error instanceof UploadAccessError) return res.status(error.status).json({ success: false, msg: error.message });
-            console.error('[학습노트] 문서 메타 수정 오류:', error);
+            wgsRuntimeLog("error", "routes/study/studyDocumentRoutes.js:223", '[학습노트] 문서 메타 수정 오류:', error);
             return res.status(500).json({ success: false, msg: '문서 정보를 수정하지 못했습니다.' });
         }
     });
@@ -246,7 +248,7 @@ function registerStudyDocumentRoutes(options = {}) {
             return res.json({ success: true });
         } catch (error) {
             if (error instanceof UploadAccessError) return res.status(error.status).json({ success: false, msg: error.message });
-            console.error('[학습노트] 문서 삭제 오류:', error);
+            wgsRuntimeLog("error", "routes/study/studyDocumentRoutes.js:249", '[학습노트] 문서 삭제 오류:', error);
             return res.status(500).json({ success: false, msg: '문서를 삭제하지 못했습니다.' });
         }
     });

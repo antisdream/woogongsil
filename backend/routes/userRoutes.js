@@ -1,5 +1,7 @@
 // 계정, 오답노트, 마이페이지 API를 제공합니다.
 'use strict';
+const { runtimeLog: wgsRuntimeLog } = require("../services/runtimeLog");
+
 
 const { createLegalConsentService } = require('../services/legalConsentService');
 
@@ -125,7 +127,7 @@ function registerUserRoutes(options = {}) {
 
             return res.json(safeUser);
         } catch (error) {
-            console.error('유저 정보 조회 오류:', error);
+            wgsRuntimeLog("error", "routes/userRoutes.js:128", '유저 정보 조회 오류:', error);
             return res.status(500).json({ msg: '데이터 조회 오류' });
         }
     });
@@ -144,7 +146,7 @@ function registerUserRoutes(options = {}) {
 
             return res.json({ success: true, msg: '업데이트 완료' });
         } catch (error) {
-            console.error('D-Day 업데이트 오류:', error);
+            wgsRuntimeLog("error", "routes/userRoutes.js:147", 'D-Day 업데이트 오류:', error);
             return res.status(500).json({ success: false, msg: '업데이트 실패' });
         }
     });
@@ -186,7 +188,7 @@ function registerUserRoutes(options = {}) {
             return res.json({ success: true, msg: '회원 탈퇴가 완료되었습니다. 관련 기록이 정리되었습니다.' });
         } catch (error) {
             await connection.rollback();
-            console.error('회원탈퇴 오류:', error);
+            wgsRuntimeLog("error", "routes/userRoutes.js:189", '회원탈퇴 오류:', error);
             return res.status(500).json({ success: false, msg: '회원탈퇴 처리 중 오류가 발생했습니다.' });
         } finally {
             connection.release();
@@ -233,7 +235,7 @@ function registerUserRoutes(options = {}) {
 
             return res.json({ success: true, msg: '오답 저장 완료' });
         } catch (error) {
-            console.error('오답 저장 오류:', error);
+            wgsRuntimeLog("error", "routes/userRoutes.js:236", '오답 저장 오류:', error);
             return res.status(500).json({ success: false, msg: '오답 저장 중 오류가 발생했습니다.' });
         }
     });
@@ -249,7 +251,7 @@ function registerUserRoutes(options = {}) {
             await pool.query('DELETE FROM wgs_wrong_notes WHERE userId = ? AND question_id = ?', [id, questionId]);
             return res.json({ success: true, msg: '삭제됨' });
         } catch (error) {
-            console.error('오답 삭제 오류:', error);
+            wgsRuntimeLog("error", "routes/userRoutes.js:252", '오답 삭제 오류:', error);
             return res.status(500).json({ success: false, msg: '오답 삭제 중 오류가 발생했습니다.' });
         }
     });
@@ -270,7 +272,7 @@ function registerUserRoutes(options = {}) {
 
             return res.json({ success: true, msg: '전체 삭제됨' });
         } catch (error) {
-            console.error('오답 전체 삭제 오류:', error);
+            wgsRuntimeLog("error", "routes/userRoutes.js:273", '오답 전체 삭제 오류:', error);
             return res.status(500).json({ success: false, msg: '오답 전체 삭제 중 오류가 발생했습니다.' });
         }
     });

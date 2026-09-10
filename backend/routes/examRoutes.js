@@ -1,5 +1,7 @@
 // 필기 문제와 채점 API를 제공합니다.
 'use strict';
+const { runtimeLog: wgsRuntimeLog } = require("../services/runtimeLog");
+
 const { toPublicWrittenQuestion } = require('../services/learningAttemptService');
 
 function parseRandomCsv(value, maxItems = 80) {
@@ -87,7 +89,7 @@ function registerExamRoutes(options = {}) {
                 },
             });
         } catch (error) {
-            console.error('랜덤 문제 조회 오류:', error);
+            wgsRuntimeLog("error", "routes/examRoutes.js:90", '랜덤 문제 조회 오류:', error);
             return learningAttempts.respondError(res, error);
         }
     });
@@ -164,7 +166,7 @@ function registerExamRoutes(options = {}) {
                 ipepPastRows = rows;
             } catch (ipepError) {
                 // 실기 카탈로그 테이블이 없거나 구조가 다를 때도 필기 선택창은 정상 동작해야 합니다.
-                console.warn('[exam catalogs] ipep catalog skipped:', ipepError.message);
+                wgsRuntimeLog("warn", "routes/examRoutes.js:167", '[exam catalogs] ipep catalog skipped:', ipepError.message);
             }
 
             const data = {
@@ -179,7 +181,7 @@ function registerExamRoutes(options = {}) {
                 ipep_past: data.ipep_past,
             });
         } catch (error) {
-            console.error('[exam catalogs error]', error);
+            wgsRuntimeLog("error", "routes/examRoutes.js:182", '[exam catalogs error]', error);
             return res.status(500).json({
                 success: false,
                 msg: '시험 카탈로그를 불러오지 못했습니다.',
@@ -207,7 +209,7 @@ function registerExamRoutes(options = {}) {
             const attemptId = await learningAttempts.issue(req, res, 'written_past', rows);
             return res.json({ success: true, attemptId, data: rows.map(row => ({ ...toPublicWrittenQuestion(row), attemptId })) });
         } catch (error) {
-            console.error('기출문제 조회 오류:', error);
+            wgsRuntimeLog("error", "routes/examRoutes.js:210", '기출문제 조회 오류:', error);
             return learningAttempts.respondError(res, error);
         }
     });

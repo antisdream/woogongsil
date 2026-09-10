@@ -1,3 +1,4 @@
+const { runtimeLog: wgsRuntimeLog } = require("./services/runtimeLog");
 // Express 애플리케이션을 설정하고 도메인별 라우트 모듈을 연결합니다.
 const express = require('express');
 const cors = require('cors');
@@ -9,6 +10,8 @@ const bcrypt = require('bcrypt');
 const http = require('http');
 const { loadEnvFile } = require('./config/env');
 const { createDatabasePool } = require('./config/database');
+const { createSecurityEventLog } = require('./services/securityEventLog');
+const { runtimeLog } = require('./services/runtimeLog');
 const { assertMigratedSchema, assertRuntimePrivileges } = require('./services/schemaRuntime');
 const { createAdminUserControlSchema } = require('./services/adminUserControlSchema');
 
@@ -20,7 +23,7 @@ let SocketIOServer = null;
 try {
     SocketIOServer = require('socket.io').Server;
 } catch (socketIoError) {
-    console.warn('WARN: socket.io package is not installed. Multiplayer realtime will be disabled until npm install socket.io is executed.');
+    wgsRuntimeLog("warn", "server.js:25", 'WARN: socket.io package is not installed. Multiplayer realtime will be disabled until npm install socket.io is executed.');
 }
 
 
@@ -74,6 +77,10 @@ const { registerIpepFeature } = require('./services/ipepFeatureMount');
 
 const app = express();
 app.disable('x-powered-by');
+const securityEventLog = createSecurityEventLog();
+app.use(securityEventLog.middleware);
+process.on('uncaughtException', error => { runtimeLog('error', 'server.uncaughtException', error); process.exit(1); });
+process.on('unhandledRejection', error => { runtimeLog('error', 'server.unhandledRejection', error); process.exit(1); });
 
 const wgsCorsOptions = createWgsCorsOptions();
 app.use(createWgsSecurityHeaders());
@@ -107,6 +114,7 @@ app.use('/api/error-report', errorReportRoutes);
 // - 기존 프로젝트 기본값은 유지하되, .env가 있으면 .env 값을 우선 사용해.
 const pool = createDatabasePool();
 const memberSessionService = createMemberSessionService({ pool });
+memberSessionService.events.on('revoked', ({ userId }) => securityEventLog.record({ event: 'session.revoked', outcome: 'success', actorId: userId }));
 app.use(memberSessionService.middleware);
 const learningAttemptService = createLearningAttemptService({ pool, validateRealtimeSession });
 const legalConsentService = createLegalConsentService({ pool });
@@ -730,7 +738,7 @@ app.get('/api/mobile-qr', async (req, res) => {
             res.setHeader('Cache-Control', 'public, max-age=3600');
             return res.send(imageBuffer);
         } catch (error) {
-            console.warn('[mobile qr] provider failed:', providerUrl, error.message);
+            wgsRuntimeLog("warn", "server.js:740", '[mobile qr] provider failed:', providerUrl, error.message);
         }
     }
 
@@ -780,10 +788,19 @@ app.use((req, res) => {
     return res.status(404).send('Not Found');
 });
 
+app.use((error, _req, res, _next) => {
+    runtimeLog('error', 'server.request', error);
+    if (res.headersSent) { res.destroy(); return; }
+    const status = Number(error.status);
+    res.status(Number.isInteger(status) && status >= 400 && status < 500 ? status : 500)
+        .json({ success: false, msg: '요청을 처리하지 못했습니다. 입력 내용을 확인하고 다시 시도해주세요.' });
+});
+
 // 15. 서버 시작
 // - 배포 마이그레이션 완료와 제한된 실행 계정 권한을 확인한 뒤 요청을 받습니다.
 async function startServer() {
     try {
+        await securityEventLog.ready();
         await assertMigratedSchema(pool);
         await assertRuntimePrivileges(pool);
         // Existing privacy retention is a data operation, separate from DDL.
@@ -798,11 +815,11 @@ async function startServer() {
         ).trim();
 
         server.listen(port, bindHost, () => {
-            console.log(` 우공실 서버 정상 작동 중 (Express + Socket.IO, http://${bindHost}:${port}/)`);
-            console.log(` 서버 인스턴스 ID: ${SERVER_INSTANCE_ID}`);
+            wgsRuntimeLog("info", "server.js:817", ` 우공실 서버 정상 작동 중 (Express + Socket.IO, http://${bindHost}:${port}/)`);
+            wgsRuntimeLog("info", "server.js:818", ` 서버 인스턴스 ID: ${SERVER_INSTANCE_ID}`);
         });
     } catch (error) {
-        console.error('서버 시작 실패:', error);
+        wgsRuntimeLog("error", "server.js:821", '서버 시작 실패:', error);
         process.exit(1);
     }
 }

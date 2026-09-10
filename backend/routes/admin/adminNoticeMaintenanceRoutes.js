@@ -1,5 +1,7 @@
 // Admin notice, maintenance, and operation-log routes.
 'use strict';
+const { runtimeLog: wgsRuntimeLog } = require("../../services/runtimeLog");
+
 
 function registerAdminNoticeMaintenanceRoutes(options = {}) {
     const app = options.app;
@@ -48,7 +50,7 @@ function registerAdminNoticeMaintenanceRoutes(options = {}) {
                 history: getAdminBroadcastHistory(),
             });
         } catch (error) {
-            console.error('[admin notice list error]', error);
+            wgsRuntimeLog("error", "routes/admin/adminNoticeMaintenanceRoutes.js:51", '[admin notice list error]', error);
             return res.status(500).json({ success: false, msg: '공지 이력을 불러오는 중 오류가 발생했습니다.' });
         }
     };
@@ -96,7 +98,7 @@ function registerAdminNoticeMaintenanceRoutes(options = {}) {
                 payload: { level, deliveredTo: activeList.length },
             });
 
-            console.log(`[admin notice] ${adminSession.user.id} -> ${activeList.length} users: ${title}`);
+            wgsRuntimeLog("info", "routes/admin/adminNoticeMaintenanceRoutes.js:99", `[admin notice] ${adminSession.user.id} -> ${activeList.length} users: ${title}`);
 
             return res.json({
                 success: true,
@@ -106,7 +108,7 @@ function registerAdminNoticeMaintenanceRoutes(options = {}) {
                 history: getAdminBroadcastHistory(),
             });
         } catch (error) {
-            console.error('[admin notice broadcast error]', error);
+            wgsRuntimeLog("error", "routes/admin/adminNoticeMaintenanceRoutes.js:109", '[admin notice broadcast error]', error);
             return res.status(500).json({ success: false, msg: '공지 발송 중 오류가 발생했습니다.' });
         }
     };
@@ -161,7 +163,7 @@ function registerAdminNoticeMaintenanceRoutes(options = {}) {
                 payload: { enabled },
             });
 
-            console.log(`[admin maintenance] ${adminCheck.user.id} -> ${enabled ? ' ON' : 'OFF'}`);
+            wgsRuntimeLog("info", "routes/admin/adminNoticeMaintenanceRoutes.js:164", `[admin maintenance] ${adminCheck.user.id} -> ${enabled ? ' ON' : 'OFF'}`);
             return res.json({
                 success: true,
                 maintenance: {
@@ -172,7 +174,7 @@ function registerAdminNoticeMaintenanceRoutes(options = {}) {
                 msg: enabled ? '점검 모드가 활성화되었습니다.' : '점검 모드가 해제되었습니다.',
             });
         } catch (error) {
-            console.error('[admin maintenance error]', error);
+            wgsRuntimeLog("error", "routes/admin/adminNoticeMaintenanceRoutes.js:175", '[admin maintenance error]', error);
             return res.status(500).json({
                 success: false,
                 msg: '점검 모드 변경 중 서버 오류가 발생했습니다.',
@@ -236,7 +238,7 @@ function registerAdminNoticeMaintenanceRoutes(options = {}) {
                 sort: sort.toLowerCase(),
             });
         } catch (error) {
-            console.error('[관리자 적용 이력 조회 오류]', error);
+            wgsRuntimeLog("error", "routes/admin/adminNoticeMaintenanceRoutes.js:239", '[관리자 적용 이력 조회 오류]', error);
             return res.status(500).json({ success: false, msg: '적용 이력을 불러오지 못했습니다.' });
         }
     }
@@ -258,7 +260,7 @@ function registerAdminNoticeMaintenanceRoutes(options = {}) {
                 serverNow: Date.now(),
             });
         } catch (error) {
-            console.error('[admin notice latest error]', error);
+            wgsRuntimeLog("error", "routes/admin/adminNoticeMaintenanceRoutes.js:261", '[admin notice latest error]', error);
             return res.status(500).json({ success: false, msg: '관리자 공지 확인 중 오류가 발생했습니다.' });
         }
     };

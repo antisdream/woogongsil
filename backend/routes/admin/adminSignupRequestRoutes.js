@@ -1,4 +1,6 @@
 'use strict';
+const { runtimeLog: wgsRuntimeLog } = require("../../services/runtimeLog");
+
 
 const { createLegalConsentService } = require('../../services/legalConsentService');
 
@@ -137,7 +139,7 @@ function registerAdminSignupRequestRoutes(options = {}) {
                 stats,
             });
         } catch (error) {
-            console.error('[admin signup requests list] error', error);
+            wgsRuntimeLog("error", "routes/admin/adminSignupRequestRoutes.js:140", '[admin signup requests list] error', error);
             return res.status(500).json({ success: false, message: '회원가입 승인 목록 조회 중 오류가 발생했습니다.' });
         }
     });
@@ -212,7 +214,7 @@ function registerAdminSignupRequestRoutes(options = {}) {
                 buildSignupApprovalMailText(request)
             );
             if (mailResult?.success === false) {
-                console.warn('[signup approval] approval email failed:', mailResult.error?.message || mailResult.error);
+                wgsRuntimeLog("warn", "routes/admin/adminSignupRequestRoutes.js:215", '[signup approval] approval email failed:', mailResult.error?.message || mailResult.error);
             }
 
             await writeAdminOperationLog({
@@ -233,7 +235,7 @@ function registerAdminSignupRequestRoutes(options = {}) {
             });
         } catch (error) {
             try { await conn.rollback(); } catch {}
-            console.error('[admin signup approve] error', error);
+            wgsRuntimeLog("error", "routes/admin/adminSignupRequestRoutes.js:236", '[admin signup approve] error', error);
             return res.status(500).json({ success: false, message: '회원가입 승인 처리 중 오류가 발생했습니다.' });
         } finally {
             conn.release();
@@ -287,7 +289,7 @@ function registerAdminSignupRequestRoutes(options = {}) {
                 buildSignupRejectMailText(request, reason)
             );
             if (mailResult?.success === false) {
-                console.warn('[signup approval] reject email failed:', mailResult.error?.message || mailResult.error);
+                wgsRuntimeLog("warn", "routes/admin/adminSignupRequestRoutes.js:290", '[signup approval] reject email failed:', mailResult.error?.message || mailResult.error);
             }
 
             await writeAdminOperationLog({
@@ -308,7 +310,7 @@ function registerAdminSignupRequestRoutes(options = {}) {
             });
         } catch (error) {
             try { await conn.rollback(); } catch {}
-            console.error('[admin signup reject] error', error);
+            wgsRuntimeLog("error", "routes/admin/adminSignupRequestRoutes.js:311", '[admin signup reject] error', error);
             return res.status(500).json({ success: false, message: '회원가입 거절 처리 중 오류가 발생했습니다.' });
         } finally {
             conn.release();

@@ -1,4 +1,6 @@
 'use strict';
+const { runtimeLog: wgsRuntimeLog } = require("../services/runtimeLog");
+
 
 function registerLegalRoutes(options = {}) {
     const app = options.app;
@@ -23,7 +25,7 @@ function registerLegalRoutes(options = {}) {
 
     function sendLegalError(res, error, fallbackCode, fallbackMessage) {
         const status = Number(error?.status || 500);
-        if (status >= 500) console.error(`[${fallbackCode}]`, error);
+        if (status >= 500) wgsRuntimeLog("error", "routes/legalRoutes.js:26", `[${fallbackCode}]`, error);
         return res.status(status).json({
             success: false,
             code: error?.code || fallbackCode,
@@ -38,7 +40,7 @@ function registerLegalRoutes(options = {}) {
             return res.json({ success: true, context, documents });
         } catch (error) {
             const status = Number(error?.status || 500);
-            if (status >= 500) console.error('[legal documents] error', error);
+            if (status >= 500) wgsRuntimeLog("error", "routes/legalRoutes.js:41", '[legal documents] error', error);
             return res.status(status).json({
                 success: false,
                 code: error?.code || 'LEGAL_DOCUMENTS_FAILED',

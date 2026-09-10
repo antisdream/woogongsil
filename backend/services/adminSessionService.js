@@ -1,5 +1,7 @@
 // 일반 회원 세션과 분리된 관리자 전용 세션을 생성하고 검증합니다.
 'use strict';
+const { runtimeLog: wgsRuntimeLog } = require("./runtimeLog");
+
 const { runtimeSchemaGate } = require('./schemaRuntime');
 
 const DEFAULT_IDLE_MINUTES = 30;
@@ -433,7 +435,7 @@ function createAdminSessionService(options = {}) {
 
             return next();
         } catch (error) {
-            console.error('[admin session protection] error:', error);
+            wgsRuntimeLog("error", "services/adminSessionService.js:436", '[admin session protection] error:', error);
             return res.status(500).json({
                 success: false,
                 reason: 'admin_session_error',

@@ -1,5 +1,7 @@
 // 관리자 인증, 결재, 사용자 관리, 공지 API를 제공합니다.
 'use strict';
+const { runtimeLog: wgsRuntimeLog } = require("../services/runtimeLog");
+
 
 const registerAdminQuestionRoutes = require('./admin/adminQuestionRoutes');
 const registerAdminSignupRequestRoutes = require('./admin/adminSignupRequestRoutes');
@@ -91,7 +93,7 @@ function registerAdminRoutes(options = {}) {
                 name: user?.name || sessionUser.name || sessionUser.id,
             };
         } catch (error) {
-            console.error('[관리자 이력 사용자 조회 오류]', error.message);
+            wgsRuntimeLog("error", "routes/adminRoutes.js:94", '[관리자 이력 사용자 조회 오류]', error.message);
             return null;
         }
     }
@@ -114,7 +116,7 @@ function registerAdminRoutes(options = {}) {
                 ]
             );
         } catch (error) {
-            console.error('[관리자 적용 이력 저장 오류]', error.message);
+            wgsRuntimeLog("error", "routes/adminRoutes.js:117", '[관리자 적용 이력 저장 오류]', error.message);
         }
     }
 
@@ -263,7 +265,7 @@ function registerAdminRoutes(options = {}) {
                 message: "운영자 요청이 관리자 결재 대기 목록에 등록되었습니다. 최종 관리자 승인 후 실제 반영됩니다.",
             });
         } catch (err) {
-            console.error("[adminApprovalMiddleware] error", err);
+            wgsRuntimeLog("error", "routes/adminRoutes.js:266", "[adminApprovalMiddleware] error", err);
             return res.status(500).json({ success: false, message: "결재 요청 등록 중 오류가 발생했습니다." });
         }
     }
@@ -325,7 +327,7 @@ function registerAdminRoutes(options = {}) {
                 return acc;
             }, {});
         } catch (error) {
-            console.warn(`관리자 사용자별 집계 실패(${tableName}.${userColumn}):`, error.message);
+            wgsRuntimeLog("warn", "routes/adminRoutes.js:328", `관리자 사용자별 집계 실패(${tableName}.${userColumn}):`, error.message);
             return {};
         }
     }
@@ -364,7 +366,7 @@ function registerAdminRoutes(options = {}) {
                 users,
             });
         } catch (error) {
-            console.error('관리자 실시간 접속자 조회 오류:', error);
+            wgsRuntimeLog("error", "routes/adminRoutes.js:367", '관리자 실시간 접속자 조회 오류:', error);
             return res.status(500).json({ success: false, msg: '관리자 실시간 접속자 조회 중 오류가 발생했습니다.' });
         }
     });
@@ -513,7 +515,7 @@ function registerAdminRoutes(options = {}) {
             }
             return res.json({ success: true, message: suspend ? '임시정지 처리되었습니다.' : '임시정지가 해제되었습니다.' });
         } catch (error) {
-            console.error('[admin suspend user] error', error);
+            wgsRuntimeLog("error", "routes/adminRoutes.js:516", '[admin suspend user] error', error);
             return res.status(500).json({ success: false, message: '임시정지 처리 중 오류가 발생했습니다.' });
         }
     });
@@ -596,7 +598,7 @@ function registerAdminRoutes(options = {}) {
             return res.json({ success: true, message: '계정이 삭제되었습니다. 같은 정보로 다시 회원가입할 수 있습니다.' });
         } catch (error) {
             try { await conn.rollback(); } catch {}
-            console.error('[admin delete user] error', error);
+            wgsRuntimeLog("error", "routes/adminRoutes.js:599", '[admin delete user] error', error);
             return res.status(500).json({ success: false, message: '계정 삭제 중 오류가 발생했습니다.' });
         } finally {
             conn.release();
@@ -669,7 +671,7 @@ function registerAdminRoutes(options = {}) {
             if (!enable) await revokeAdminSessionsForUser(targetId, 'permission_revoked');
             return res.json({ success: true, message: enable ? '운영자 권한이 활성화되었습니다.' : '운영자 권한이 비활성화되었습니다.' });
         } catch (error) {
-            console.error('[admin operator user] error', error);
+            wgsRuntimeLog("error", "routes/adminRoutes.js:672", '[admin operator user] error', error);
             return res.status(500).json({ success: false, message: '운영자 권한 처리 중 오류가 발생했습니다.' });
         }
     });
@@ -698,7 +700,7 @@ function registerAdminRoutes(options = {}) {
             }
             return res.json({ success: true, message: '이메일을 전송했습니다.', result });
         } catch (error) {
-            console.error('[admin email user] error', error);
+            wgsRuntimeLog("error", "routes/adminRoutes.js:701", '[admin email user] error', error);
             return res.status(500).json({ success: false, message: '이메일 전송 중 오류가 발생했습니다.' });
         }
     });
@@ -734,7 +736,7 @@ function registerAdminRoutes(options = {}) {
 
             return res.json({ success: true, isPrimaryAdmin: auth.isPrimaryAdmin, approvals: rows });
         } catch (error) {
-            console.error('[admin approvals list] error', error);
+            wgsRuntimeLog("error", "routes/adminRoutes.js:737", '[admin approvals list] error', error);
             return res.status(500).json({ success: false, message: '결재 목록 조회 중 오류가 발생했습니다.' });
         }
     });
@@ -763,7 +765,7 @@ function registerAdminRoutes(options = {}) {
 
             return res.json({ success: true, message: '승인 및 실제 반영이 완료되었습니다.', applyResult });
         } catch (error) {
-            console.error('[admin approval approve] error', error);
+            wgsRuntimeLog("error", "routes/adminRoutes.js:766", '[admin approval approve] error', error);
             return res.status(500).json({ success: false, message: error.message || '결재 승인 중 오류가 발생했습니다.', detail: error.applyResult || null });
         }
     });
@@ -790,7 +792,7 @@ function registerAdminRoutes(options = {}) {
             if (!result.affectedRows) return res.status(404).json({ success: false, message: '대기 중인 결재 요청을 찾을 수 없습니다.' });
             return res.json({ success: true, message: '반려 처리되었습니다.' });
         } catch (error) {
-            console.error('[admin approval reject] error', error);
+            wgsRuntimeLog("error", "routes/adminRoutes.js:793", '[admin approval reject] error', error);
             return res.status(500).json({ success: false, message: '결재 반려 중 오류가 발생했습니다.' });
         }
     });
@@ -847,7 +849,7 @@ function registerAdminRoutes(options = {}) {
                 message: '선택한 결재 내역을 현재 화면에서 정리했습니다.',
             });
         } catch (error) {
-            console.error('[admin approval delete] error', error);
+            wgsRuntimeLog("error", "routes/adminRoutes.js:850", '[admin approval delete] error', error);
             return res.status(500).json({ success: false, message: '결재 내역 정리 중 오류가 발생했습니다.' });
         }
     });

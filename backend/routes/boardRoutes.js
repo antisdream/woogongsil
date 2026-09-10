@@ -1,4 +1,6 @@
 'use strict';
+const { runtimeLog: wgsRuntimeLog } = require("../services/runtimeLog");
+
 const crypto = require('node:crypto');
 const { normalizeBoardContentJson } = require('../services/boardContentService');
 const { parseBoardType, storedBoardType, BoardPolicyError } = require('../services/boardPolicyService');
@@ -21,7 +23,7 @@ function registerBoardRoutes(options = {}) {
         catch (failure) {
             if (res.headersSent) return;
             const known = failure instanceof BoardPolicyError || failure instanceof UploadAccessError;
-            if (!known) console.error('[board request]', failure.code || 'unexpected_error');
+            if (!known) wgsRuntimeLog("error", "routes/boardRoutes.js:24", '[board request]', failure.code || 'unexpected_error');
             res.status(known ? failure.status : 500).json({ success: false, msg: known ? failure.message : '게시판 요청을 처리하지 못했습니다.' });
         }
     };
@@ -67,7 +69,7 @@ function registerBoardRoutes(options = {}) {
             if (!user?.email) return;
             const action = type === 'like' ? '좋아요를 눌렀습니다' : '댓글을 남겼습니다';
             await sendEmail(user.email, `[우공실 알림] ${nameOf(auth)}님이 ${action}.`, `우공실 게시글에 ${nameOf(auth)}님이 ${action}.\nhttps://woogongsil.site/board/post/${encodeURIComponent(postId)}`);
-        } catch (failure) { console.error('[board notification]', failure.code || 'delivery_failed'); }
+        } catch (failure) { wgsRuntimeLog("error", "routes/boardRoutes.js:70", '[board notification]', failure.code || 'delivery_failed'); }
     }
 
     registerBoardReadRoutes({ app, pool, validateRealtimeSession, getPostWithChildren });
@@ -83,7 +85,7 @@ function registerBoardRoutes(options = {}) {
             return { resourceId: id, ...input };
         });
         const queued = boardType === 'notice';
-        if (queued) sendNoticePostEmailsInBackground({ authorId: idOf(auth), postId: id, title: input.title }).catch(failure => console.error('[notice mail]', failure.code || 'delivery_failed'));
+        if (queued) sendNoticePostEmailsInBackground({ authorId: idOf(auth), postId: id, title: input.title }).catch(failure => wgsRuntimeLog("error", "routes/boardRoutes.js:86", '[notice mail]', failure.code || 'delivery_failed'));
         res.json({ success: true, id, noticeEmailQueued: queued, msg: '게시글이 등록되었습니다.' });
     }));
 

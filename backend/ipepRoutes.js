@@ -1,3 +1,4 @@
+const { runtimeLog: wgsRuntimeLog } = require("./services/runtimeLog");
 ﻿// ipepRoutes.js
 // 역할:
 // 1. 정보처리기사 실기 문제 API만 따로 모아둔 라우터 파일입니다.
@@ -61,7 +62,7 @@ function asyncHandler(handler) {
         try {
             await handler(req, res);
         } catch (error) {
-            console.error(' /api/ipep 처리 중 오류:', error);
+            wgsRuntimeLog("error", "ipepRoutes.js:64", ' /api/ipep 처리 중 오류:', error);
             res.status(error.status || 500).json({
                 success: false,
                 msg: '실기 API 처리 중 오류가 발생했습니다.',

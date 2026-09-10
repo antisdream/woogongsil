@@ -1,5 +1,7 @@
 const { assertMigratedSchema } = require('../../services/schemaRuntime');
 'use strict';
+const { runtimeLog: wgsRuntimeLog } = require("../../services/runtimeLog");
+
 
 function registerAdminQuestionRoutes(options = {}) {
     const app = options.app;
@@ -338,7 +340,7 @@ function registerAdminQuestionRoutes(options = {}) {
                 ipepExamCatalog: catalogRows,
             });
         } catch (error) {
-            console.error('[admin questions meta error]', error);
+            wgsRuntimeLog("error", "routes/admin/adminQuestionRoutes.js:341", '[admin questions meta error]', error);
             return res.status(500).json({ success: false, msg: '문제/해설 관리 기본 정보를 불러오는 중 오류가 발생했습니다.' });
         }
     }
@@ -425,7 +427,7 @@ function registerAdminQuestionRoutes(options = {}) {
             const total = Number(countRows?.[0]?.total || 0);
             return res.json({ success: true, type, page, limit, total, rows: rows.map((row) => normalizeIpepAdminRow(row, type)) });
         } catch (error) {
-            console.error('[admin questions list error]', error);
+            wgsRuntimeLog("error", "routes/admin/adminQuestionRoutes.js:428", '[admin questions list error]', error);
             return res.status(500).json({ success: false, msg: '문제 목록을 불러오는 중 오류가 발생했습니다.' });
         }
     }
@@ -444,7 +446,7 @@ function registerAdminQuestionRoutes(options = {}) {
 
             return res.json({ success: true, type, detail });
         } catch (error) {
-            console.error('[admin questions detail error]', error);
+            wgsRuntimeLog("error", "routes/admin/adminQuestionRoutes.js:447", '[admin questions detail error]', error);
             return res.status(500).json({ success: false, msg: '문제 상세 정보를 불러오는 중 오류가 발생했습니다.' });
         }
     }
@@ -635,7 +637,7 @@ function registerAdminQuestionRoutes(options = {}) {
                 updatedBy: adminCheck.user.id,
             });
         } catch (error) {
-            console.error('[admin questions update error]', error);
+            wgsRuntimeLog("error", "routes/admin/adminQuestionRoutes.js:638", '[admin questions update error]', error);
             const statusCode = error.statusCode || (error.code === 'ER_DUP_ENTRY'? 409 : 500);
             const msg = error.code === 'ER_DUP_ENTRY'? '이미 같은 문제번호/회차/과목 번호가 존재합니다. 고유 번호를 확인해주세요.'
                 : error.message || '문제/해설 저장 중 오류가 발생했습니다.';

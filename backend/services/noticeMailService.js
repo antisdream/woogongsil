@@ -1,4 +1,6 @@
 'use strict';
+const { runtimeLog: wgsRuntimeLog } = require("./runtimeLog");
+
 
 function createNoticeMailService({ pool, sendEmail } = {}) {
     if (!pool) throw new Error('createNoticeMailService requires mysql pool');
@@ -79,14 +81,14 @@ async function sendNoticePostEmailsInBackground({ authorId, postId, title }) {
     const recipients = await getNoticeMailRecipients(authorId);
 
     if (recipients.length === 0) {
-        console.log(`[공지메일] 수신 대상 없음: postId=${postId}, title=${title}`);
+        wgsRuntimeLog("info", "services/noticeMailService.js:82", `[공지메일] 수신 대상 없음: postId=${postId}, title=${title}`);
         return;
     }
 
     let successCount = 0;
     let failCount = 0;
 
-    console.log(`[공지메일] 발송 시작: postId=${postId}, 대상=${recipients.length}명`);
+    wgsRuntimeLog("info", "services/noticeMailService.js:89", `[공지메일] 발송 시작: postId=${postId}, 대상=${recipients.length}명`);
 
     for (const recipient of recipients) {
         const result = await sendEmail(
@@ -102,7 +104,7 @@ async function sendNoticePostEmailsInBackground({ authorId, postId, title }) {
         await new Promise(resolve => setTimeout(resolve, 200));
     }
 
-    console.log(`[공지메일] 발송 완료: postId=${postId}, 성공=${successCount}명, 실패=${failCount}명`);
+    wgsRuntimeLog("info", "services/noticeMailService.js:105", `[공지메일] 발송 완료: postId=${postId}, 성공=${successCount}명, 실패=${failCount}명`);
 }
 
 

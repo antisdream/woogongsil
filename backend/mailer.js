@@ -1,3 +1,4 @@
+const { runtimeLog: wgsRuntimeLog } = require("./services/runtimeLog");
 // 메일 전송 설정과 발송 헬퍼를 한곳에서 관리합니다.
 const nodemailer = require('nodemailer');
 
@@ -52,10 +53,10 @@ async function sendEmail(to, subject, text, options = {}) {
             text
         });
 
-        if (!options.sensitive) console.log('메일 전송 성공:', info.messageId);
+        if (!options.sensitive) wgsRuntimeLog("info", "mailer.js:55", '메일 전송 성공:', info.messageId);
         return { success: true, messageId: info.messageId };
     } catch (error) {
-        if (!options.sensitive) console.error('메일 전송 실패:', error.message);
+        if (!options.sensitive) wgsRuntimeLog("error", "mailer.js:58", '메일 전송 실패:', error.message);
         return { success: false, error };
     }
 }

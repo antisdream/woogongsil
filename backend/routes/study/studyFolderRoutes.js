@@ -1,4 +1,6 @@
 'use strict';
+const { runtimeLog: wgsRuntimeLog } = require("../../services/runtimeLog");
+
 
 function registerStudyFolderRoutes(options = {}) {
     const app = options.app;
@@ -79,7 +81,7 @@ function registerStudyFolderRoutes(options = {}) {
 
             return res.json({ success: true, scope: 'mine', folders, documents });
         } catch (error) {
-            console.error('[학습노트] 트리 조회 오류:', error);
+            wgsRuntimeLog("error", "routes/study/studyFolderRoutes.js:82", '[학습노트] 트리 조회 오류:', error);
             return res.status(500).json({ success: false, msg: '학습노트 목록을 불러오지 못했습니다.' });
         }
     });
@@ -114,7 +116,7 @@ function registerStudyFolderRoutes(options = {}) {
             );
             return res.json({ success: true, id: result.insertId, folder: { id: result.insertId, ownerId, parentId, name, sortOrder: nextSortOrder } });
         } catch (error) {
-            console.error('[학습노트] 폴더 생성 오류:', error);
+            wgsRuntimeLog("error", "routes/study/studyFolderRoutes.js:117", '[학습노트] 폴더 생성 오류:', error);
             return res.status(500).json({ success: false, msg: '폴더를 만들지 못했습니다.' });
         }
     });
@@ -140,7 +142,7 @@ function registerStudyFolderRoutes(options = {}) {
             );
             return res.json({ success: true });
         } catch (error) {
-            console.error('[학습노트] 폴더 수정 오류:', error);
+            wgsRuntimeLog("error", "routes/study/studyFolderRoutes.js:143", '[학습노트] 폴더 수정 오류:', error);
             return res.status(500).json({ success: false, msg: '폴더를 수정하지 못했습니다.' });
         }
     });
@@ -164,7 +166,7 @@ function registerStudyFolderRoutes(options = {}) {
             await pool.query(`DELETE FROM wgs_study_folders WHERE id = ? AND ownerId = ?`, [folderId, ownerId]);
             return res.json({ success: true });
         } catch (error) {
-            console.error('[학습노트] 폴더 삭제 오류:', error);
+            wgsRuntimeLog("error", "routes/study/studyFolderRoutes.js:167", '[학습노트] 폴더 삭제 오류:', error);
             return res.status(500).json({ success: false, msg: '폴더를 삭제하지 못했습니다.' });
         }
     });
@@ -262,10 +264,10 @@ function registerStudyFolderRoutes(options = {}) {
                 try {
                     await connection.rollback();
                 } catch (rollbackError) {
-                    console.warn('[학습노트] 순서 변경 롤백 실패:', rollbackError.message);
+                    wgsRuntimeLog("warn", "routes/study/studyFolderRoutes.js:265", '[학습노트] 순서 변경 롤백 실패:', rollbackError.message);
                 }
             }
-            console.error('[학습노트] 순서 변경 오류:', error);
+            wgsRuntimeLog("error", "routes/study/studyFolderRoutes.js:268", '[학습노트] 순서 변경 오류:', error);
             return res.status(500).json({ success: false, msg: '학습노트 순서를 저장하지 못했습니다.' });
         } finally {
             if (connection) connection.release();

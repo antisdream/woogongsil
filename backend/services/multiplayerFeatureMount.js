@@ -1,3 +1,4 @@
+const { runtimeLog: wgsRuntimeLog } = require("./runtimeLog");
 const createMultiplayerRouter = require('../multiplayerRoutes');
 const { attachMultiplayerSocket } = require('../multiplayerSocket');
 
@@ -14,10 +15,10 @@ function registerMultiplayerFeature({ app, pool, io, memberSessionService }) {
             attachMultiplayerSocket({ io, pool, memberSessionService });
         }
 
-        console.log('OK: written multiplayer API mounted at /api/multiplayer');
+        wgsRuntimeLog("info", "services/multiplayerFeatureMount.js:17", 'OK: written multiplayer API mounted at /api/multiplayer');
     } catch (multiplayerError) {
-        console.error('WARN: written multiplayer API mount failed:', multiplayerError.message);
-        console.error('WARN: Existing site will continue running without multiplayer API.');
+        wgsRuntimeLog("error", "services/multiplayerFeatureMount.js:19", 'WARN: written multiplayer API mount failed:', multiplayerError.message);
+        wgsRuntimeLog("error", "services/multiplayerFeatureMount.js:20", 'WARN: Existing site will continue running without multiplayer API.');
     }
 }
 

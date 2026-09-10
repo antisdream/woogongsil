@@ -1,3 +1,4 @@
+const { runtimeLog: wgsRuntimeLog } = require("./services/runtimeLog");
 // 멀티플레이 시험방, 결과 기록, 오답 API를 제공합니다.
 const express = require('express');
 
@@ -145,7 +146,7 @@ function createMultiplayerRouter({ pool, io = null, memberSessionService } = {})
             if (!detail) return;
             io.to(getSocketRoomName(roomCode)).emit('multiplayer:room-updated', detail);
         } catch (error) {
-            console.warn('[multiplayer] emit room update failed:', error.message);
+            wgsRuntimeLog("warn", "multiplayerRoutes.js:148", '[multiplayer] emit room update failed:', error.message);
         }
     }
 
@@ -468,7 +469,7 @@ function createMultiplayerRouter({ pool, io = null, memberSessionService } = {})
 
             return res.json({ success: true, counts, totalRule: '각 과목 20문제씩 총 100문제 랜덤 추첨' });
         } catch (error) {
-            console.error('[multiplayer] question pool meta error:', error);
+            wgsRuntimeLog("error", "multiplayerRoutes.js:471", '[multiplayer] question pool meta error:', error);
             return res.status(500).json({ success: false, msg: '문제 풀 정보를 불러오지 못했습니다.' });
         }
     });
@@ -505,7 +506,7 @@ function createMultiplayerRouter({ pool, io = null, memberSessionService } = {})
             await emitRoomUpdated(roomCode);
             return res.json({ success: true, room: detail });
         } catch (error) {
-            console.error('[multiplayer] create room error:', error);
+            wgsRuntimeLog("error", "multiplayerRoutes.js:508", '[multiplayer] create room error:', error);
             return res.status(500).json({ success: false, msg: error.message || '방 생성 중 오류가 발생했습니다.' });
         }
     });
@@ -517,7 +518,7 @@ function createMultiplayerRouter({ pool, io = null, memberSessionService } = {})
             if (!detail) return res.status(404).json({ success: false, msg: '방을 찾을 수 없습니다.' });
             return res.json({ success: true, room: detail });
         } catch (error) {
-            console.error('[multiplayer] get room error:', error);
+            wgsRuntimeLog("error", "multiplayerRoutes.js:520", '[multiplayer] get room error:', error);
             return res.status(500).json({ success: false, msg: '방 정보를 불러오지 못했습니다.' });
         }
     });
@@ -570,7 +571,7 @@ function createMultiplayerRouter({ pool, io = null, memberSessionService } = {})
             await emitRoomUpdated(roomCode);
             return res.json({ success: true, room: detail });
         } catch (error) {
-            console.error('[multiplayer] join room error:', error);
+            wgsRuntimeLog("error", "multiplayerRoutes.js:573", '[multiplayer] join room error:', error);
             return res.status(500).json({ success: false, msg: '방 입장 중 오류가 발생했습니다.' });
         }
     });
@@ -603,7 +604,7 @@ function createMultiplayerRouter({ pool, io = null, memberSessionService } = {})
             await emitRoomUpdated(roomCode);
             return res.json({ success: true, room: detail });
         } catch (error) {
-            console.error('[multiplayer] ready status error:', error);
+            wgsRuntimeLog("error", "multiplayerRoutes.js:606", '[multiplayer] ready status error:', error);
             return res.status(500).json({ success: false, msg: '준비 상태 변경 중 오류가 발생했습니다.' });
         }
     });
@@ -625,7 +626,7 @@ function createMultiplayerRouter({ pool, io = null, memberSessionService } = {})
             await emitRoomUpdated(roomCode);
             return res.json({ success: true, room: detail });
         } catch (error) {
-            console.error('[multiplayer] change password error:', error);
+            wgsRuntimeLog("error", "multiplayerRoutes.js:628", '[multiplayer] change password error:', error);
             return res.status(500).json({ success: false, msg: '비밀번호 변경 중 오류가 발생했습니다.' });
         }
     });
@@ -654,7 +655,7 @@ function createMultiplayerRouter({ pool, io = null, memberSessionService } = {})
             await emitRoomUpdated(roomCode);
             return res.json({ success: true, room: detail });
         } catch (error) {
-            console.error('[multiplayer] kick member error:', error);
+            wgsRuntimeLog("error", "multiplayerRoutes.js:657", '[multiplayer] kick member error:', error);
             return res.status(500).json({ success: false, msg: '참여자 내보내기 처리 중 오류가 발생했습니다.' });
         }
     });
@@ -709,7 +710,7 @@ function createMultiplayerRouter({ pool, io = null, memberSessionService } = {})
             await emitRoomUpdated(roomCode);
             return res.json({ success: true, room: detail });
         } catch (error) {
-            console.error('[multiplayer] start room error:', error);
+            wgsRuntimeLog("error", "multiplayerRoutes.js:712", '[multiplayer] start room error:', error);
             return res.status(500).json({ success: false, msg: error.message || '시험 시작 중 오류가 발생했습니다.' });
         }
     });
@@ -731,7 +732,7 @@ function createMultiplayerRouter({ pool, io = null, memberSessionService } = {})
             const questions = await getRoomQuestionsWithAnswer(room.id, false);
             return res.json({ success: true, questions, room: await getRoomDetail(roomCode) });
         } catch (error) {
-            console.error('[multiplayer] get questions error:', error);
+            wgsRuntimeLog("error", "multiplayerRoutes.js:734", '[multiplayer] get questions error:', error);
             return res.status(500).json({ success: false, msg: '문제 목록을 불러오지 못했습니다.' });
         }
     });
@@ -757,7 +758,7 @@ function createMultiplayerRouter({ pool, io = null, memberSessionService } = {})
             await emitRoomUpdated(roomCode);
             return res.json({ success: true, result, room: detail });
         } catch (error) {
-            console.error('[multiplayer] submit error:', error);
+            wgsRuntimeLog("error", "multiplayerRoutes.js:760", '[multiplayer] submit error:', error);
             return res.status(500).json({ success: false, msg: '답안 제출 중 오류가 발생했습니다.' });
         }
     });
@@ -773,7 +774,7 @@ function createMultiplayerRouter({ pool, io = null, memberSessionService } = {})
             if (!result) return res.status(404).json({ success: false, msg: '아직 제출 결과가 없습니다.' });
             return res.json({ success: true, result, room: await getRoomDetail(roomCode) });
         } catch (error) {
-            console.error('[multiplayer] result error:', error);
+            wgsRuntimeLog("error", "multiplayerRoutes.js:776", '[multiplayer] result error:', error);
             return res.status(500).json({ success: false, msg: '결과 조회 중 오류가 발생했습니다.' });
         }
     });
@@ -804,7 +805,7 @@ function createMultiplayerRouter({ pool, io = null, memberSessionService } = {})
             await emitRoomUpdated(roomCode);
             return res.json({ success: true, room: detail });
         } catch (error) {
-            console.error('[multiplayer] leave error:', error);
+            wgsRuntimeLog("error", "multiplayerRoutes.js:807", '[multiplayer] leave error:', error);
             return res.status(500).json({ success: false, msg: '방 나가기 중 오류가 발생했습니다.' });
         }
     });
@@ -834,7 +835,7 @@ function createMultiplayerRouter({ pool, io = null, memberSessionService } = {})
             if (!board.ready) return res.status(409).json({ success: false, notReady: true, ...board });
             return res.json({ success: true, board });
         } catch (error) {
-            console.error('[multiplayer] room record error:', error);
+            wgsRuntimeLog("error", "multiplayerRoutes.js:837", '[multiplayer] room record error:', error);
             return res.status(500).json({ success: false, msg: '방 전체 시험 기록을 불러오지 못했습니다.' });
         }
     });

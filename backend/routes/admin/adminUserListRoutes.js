@@ -1,5 +1,7 @@
 // Admin user list routes.
 'use strict';
+const { runtimeLog: wgsRuntimeLog } = require("../../services/runtimeLog");
+
 
 const {
     DEFAULT_PAGE_SIZE,
@@ -120,7 +122,7 @@ function registerAdminUserListRoutes(options = {}) {
                 // 신규 컬럼은 가능하면 자동 생성합니다. 실패해도 목록 조회 자체는 호환 모드로 계속 진행합니다.
                 await ensureAdminUserControlSchema();
             } catch (schemaError) {
-                console.warn('[admin/users] user-control schema check failed; list will use compatibility mode:', schemaError.message);
+                wgsRuntimeLog("warn", "routes/admin/adminUserListRoutes.js:123", '[admin/users] user-control schema check failed; list will use compatibility mode:', schemaError.message);
             }
 
             const keyword = listQuery.keyword;
@@ -230,7 +232,7 @@ function registerAdminUserListRoutes(options = {}) {
                     );
                     return Object.fromEntries((rows || []).map((row) => [String(row.userId), Number(row.cnt || 0)]));
                 } catch (error) {
-                    console.warn(`[admin/users] login history count failed (${values.join(',')}):`, error.message);
+                    wgsRuntimeLog("warn", "routes/admin/adminUserListRoutes.js:233", `[admin/users] login history count failed (${values.join(',')}):`, error.message);
                     return {};
                 }
             }
@@ -256,7 +258,7 @@ function registerAdminUserListRoutes(options = {}) {
                     );
                     return Object.fromEntries((rows || []).map((row) => [String(row.userId), row.latestAt]));
                 } catch (error) {
-                    console.warn(`[admin/users] latest login history lookup failed (${values.join(',')}):`, error.message);
+                    wgsRuntimeLog("warn", "routes/admin/adminUserListRoutes.js:259", `[admin/users] latest login history lookup failed (${values.join(',')}):`, error.message);
                     return {};
                 }
             }
@@ -353,7 +355,7 @@ function registerAdminUserListRoutes(options = {}) {
                     );
                     return Number(row?.cnt || 0);
                 } catch (error) {
-                    console.warn('[admin/users] today login count failed:', error.message);
+                    wgsRuntimeLog("warn", "routes/admin/adminUserListRoutes.js:356", '[admin/users] today login count failed:', error.message);
                     return 0;
                 }
             }
@@ -382,7 +384,7 @@ function registerAdminUserListRoutes(options = {}) {
                         rawTime: row.actionTime || null,
                     }));
                 } catch (error) {
-                    console.warn('[admin/users] recent login logs failed:', error.message);
+                    wgsRuntimeLog("warn", "routes/admin/adminUserListRoutes.js:385", '[admin/users] recent login logs failed:', error.message);
                     return [];
                 }
             }
@@ -431,7 +433,7 @@ function registerAdminUserListRoutes(options = {}) {
                 },
             });
         } catch (error) {
-            console.error('관리자 사용자 목록 조회 오류:', error);
+            wgsRuntimeLog("error", "routes/admin/adminUserListRoutes.js:434", '관리자 사용자 목록 조회 오류:', error);
             res.status(error.statusCode || 500).json({
                 success: false,
                 reason: error.reason || 'admin_user_list_error',
@@ -597,10 +599,10 @@ function registerAdminUserListRoutes(options = {}) {
                         req,
                     });
                 } catch (auditError) {
-                    console.error('[admin privacy] reveal failure audit failed:', auditError.message);
+                    wgsRuntimeLog("error", "routes/admin/adminUserListRoutes.js:600", '[admin privacy] reveal failure audit failed:', auditError.message);
                 }
             }
-            console.error('[admin privacy] reveal failed:', error.message);
+            wgsRuntimeLog("error", "routes/admin/adminUserListRoutes.js:603", '[admin privacy] reveal failed:', error.message);
             return res.status(error.statusCode || 500).json({
                 success: false,
                 reason: error.reason || 'privacy_reveal_error',

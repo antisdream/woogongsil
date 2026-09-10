@@ -1,3 +1,4 @@
+const { runtimeLog: wgsRuntimeLog } = require("./runtimeLog");
 const {
     ROOM_STATUSES,
     normalizeInt,
@@ -90,7 +91,7 @@ function createMultiplayerRoomCleanup({ pool }) {
             try {
                 await connection.rollback();
             } catch (rollbackError) {
-                console.warn('[multiplayer] room cleanup rollback failed:', rollbackError.message);
+                wgsRuntimeLog("warn", "services/multiplayerRoomCleanup.js:93", '[multiplayer] room cleanup rollback failed:', rollbackError.message);
             }
             throw error;
         } finally {

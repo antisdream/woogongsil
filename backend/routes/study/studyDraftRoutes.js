@@ -1,4 +1,6 @@
 'use strict';
+const { runtimeLog: wgsRuntimeLog } = require("../../services/runtimeLog");
+
 const { UploadAccessError } = require('../../services/uploadAccessService');
 
 const { normalizeBoardContentJson } = require('../../services/boardContentService');
@@ -110,7 +112,7 @@ function registerStudyDraftRoutes(options = {}) {
             return res.json({ success: true, id: result.insertId, draft });
         } catch (error) {
             if (error instanceof UploadAccessError) return res.status(error.status).json({ success: false, msg: error.message });
-            console.error('[학습노트] 임시저장 오류:', error);
+            wgsRuntimeLog("error", "routes/study/studyDraftRoutes.js:113", '[학습노트] 임시저장 오류:', error);
             return res.status(500).json({ success: false, msg: '임시저장을 저장하지 못했습니다.' });
         }
     });
@@ -155,7 +157,7 @@ function registerStudyDraftRoutes(options = {}) {
             });
         } catch (error) {
             if (error instanceof UploadAccessError) return res.status(error.status).json({ success: false, msg: error.message });
-            console.error('[학습노트] 임시저장 목록 오류:', error);
+            wgsRuntimeLog("error", "routes/study/studyDraftRoutes.js:158", '[학습노트] 임시저장 목록 오류:', error);
             return res.status(500).json({ success: false, msg: '임시저장 목록을 불러오지 못했습니다.' });
         }
     });
@@ -175,7 +177,7 @@ function registerStudyDraftRoutes(options = {}) {
             return res.json({ success: true, draft });
         } catch (error) {
             if (error instanceof UploadAccessError) return res.status(error.status).json({ success: false, msg: error.message });
-            console.error('[학습노트] 임시저장 조회 오류:', error);
+            wgsRuntimeLog("error", "routes/study/studyDraftRoutes.js:178", '[학습노트] 임시저장 조회 오류:', error);
             return res.status(500).json({ success: false, msg: '임시저장을 불러오지 못했습니다.' });
         }
     });
@@ -198,7 +200,7 @@ function registerStudyDraftRoutes(options = {}) {
             return res.json({ success: true });
         } catch (error) {
             if (error instanceof UploadAccessError) return res.status(error.status).json({ success: false, msg: error.message });
-            console.error('[학습노트] 임시저장 삭제 오류:', error);
+            wgsRuntimeLog("error", "routes/study/studyDraftRoutes.js:201", '[학습노트] 임시저장 삭제 오류:', error);
             return res.status(500).json({ success: false, msg: '임시저장을 삭제하지 못했습니다.' });
         }
     });

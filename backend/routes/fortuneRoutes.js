@@ -1,5 +1,7 @@
 // 운세와 추천형 보조 API를 제공합니다.
 'use strict';
+const { runtimeLog: wgsRuntimeLog } = require("../services/runtimeLog");
+
 
 const { RESULT_STORAGE_VERSION, sanitizeFortuneResult } = require('../services/fortunePrivacyService');
 const { createLegalConsentService } = require('../services/legalConsentService');
@@ -114,7 +116,7 @@ function sendFortuneError(res, error) {
     if (error?.status && error?.code) {
         return res.status(Number(error.status)).json({ success: false, code: error.code, msg: error.message });
     }
-    console.error('[fortune] processing failed:', error.message);
+    wgsRuntimeLog("error", "routes/fortuneRoutes.js:117", '[fortune] processing failed:', error.message);
     return res.status(500).json({ success: false, msg: '운세 처리 중 서버 오류가 발생했습니다.' });
 }
 
@@ -129,7 +131,7 @@ app.delete('/api/user/fortune-history', async (req, res) => {
         );
         return res.json({ success: true, deletedCount: Number(result.affectedRows || 0), msg: '저장된 운세 결과를 모두 삭제했습니다.' });
     } catch (error) {
-        console.error('[fortune history] delete all failed:', error.message);
+        wgsRuntimeLog("error", "routes/fortuneRoutes.js:132", '[fortune history] delete all failed:', error.message);
         return res.status(500).json({ success: false, msg: '운세 결과 삭제 중 오류가 발생했습니다.' });
     }
 });
@@ -150,7 +152,7 @@ app.delete('/api/user/fortune-history/:historyId', async (req, res) => {
         if (!result.affectedRows) return res.status(404).json({ success: false, msg: '삭제할 운세 결과가 없습니다.' });
         return res.json({ success: true, msg: '운세 결과를 삭제했습니다.' });
     } catch (error) {
-        console.error('[fortune history] delete failed:', error.message);
+        wgsRuntimeLog("error", "routes/fortuneRoutes.js:153", '[fortune history] delete failed:', error.message);
         return res.status(500).json({ success: false, msg: '운세 결과 삭제 중 오류가 발생했습니다.' });
     }
 });

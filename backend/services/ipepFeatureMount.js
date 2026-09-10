@@ -1,3 +1,4 @@
+const { runtimeLog: wgsRuntimeLog } = require("./runtimeLog");
 const express = require('express');
 const path = require('path');
 
@@ -29,10 +30,10 @@ function registerIpepFeature({ app, pool, backendDir, learningAttemptService }) 
         // 실기 API 라우트를 연결합니다.
         app.use('/api/ipep', createIpepRouter(pool, learningAttemptService));
 
-        console.log('OK: IPEP API mounted at /api/ipep');
+        wgsRuntimeLog("info", "services/ipepFeatureMount.js:32", 'OK: IPEP API mounted at /api/ipep');
     } catch (ipepRouteError) {
-        console.error('WARN: IPEP API mount failed:', ipepRouteError.message);
-        console.error('WARN: Main written-exam site will continue running.');
+        wgsRuntimeLog("error", "services/ipepFeatureMount.js:34", 'WARN: IPEP API mount failed:', ipepRouteError.message);
+        wgsRuntimeLog("error", "services/ipepFeatureMount.js:35", 'WARN: Main written-exam site will continue running.');
     }
 }
 

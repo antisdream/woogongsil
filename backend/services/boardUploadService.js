@@ -1,4 +1,6 @@
 'use strict';
+const { runtimeLog: wgsRuntimeLog } = require("./runtimeLog");
+
 
 const fs = require('fs');
 const path = require('path');
@@ -297,7 +299,7 @@ function createBoardUploadHandler(options = {}) {
             });
         } catch (error) {
             if (error instanceof UploadContentError) return res.status(error.status).json({ success: false, msg: error.message });
-            console.error('게시판 파일 저장 실패:', error.code || 'unknown');
+            wgsRuntimeLog("error", "services/boardUploadService.js:300", '게시판 파일 저장 실패:', error.code || 'unknown');
             return res.status(500).json({ success: false, msg: '파일 업로드 중 오류가 발생했습니다.' });
         }
     }

@@ -1,5 +1,7 @@
 // 화면 설정 관리자 API를 제공합니다.
 'use strict';
+const { runtimeLog: wgsRuntimeLog } = require("../services/runtimeLog");
+
 
 const { isRetiredScreenSetting, SCREEN_SETTING_VISIBLE_SQL } = require('../services/screenSettingVisibility');
 
@@ -111,7 +113,7 @@ app.get('/api/screen-settings', async (req, res) => {
             }, 0),
         });
     } catch (error) {
-        console.error('GET /api/screen-settings error:', error);
+        wgsRuntimeLog("error", "routes/siteManagementRoutes.js:114", 'GET /api/screen-settings error:', error);
         res.status(500).json({ ok: false, message: '화면 설정을 불러오지 못했습니다.' });
     }
 });
@@ -241,7 +243,7 @@ app.get('/api/admin/screen-settings', async (req, res) => {
 
         res.json({ ok: true, settings: rows.filter(row => !isRetiredScreenSetting(row)), summary });
     } catch (error) {
-        console.error('GET /api/admin/screen-settings error:', error);
+        wgsRuntimeLog("error", "routes/siteManagementRoutes.js:244", 'GET /api/admin/screen-settings error:', error);
         res.status(500).json({ ok: false, message: '화면 설정 목록을 불러오지 못했습니다.' });
     }
 });
@@ -283,7 +285,7 @@ app.post('/api/admin/screen-settings', async (req, res) => {
 
         res.json({ ok: true, id: result.insertId, message: '화면 설정이 추가되었습니다.' });
     } catch (error) {
-        console.error('POST /api/admin/screen-settings error:', error);
+        wgsRuntimeLog("error", "routes/siteManagementRoutes.js:286", 'POST /api/admin/screen-settings error:', error);
         if (error && error.code === 'ER_DUP_ENTRY') {
             return res.status(409).json({ ok: false, message: '같은 페이지/섹션/설정 키가 이미 존재합니다.' });
         }
@@ -333,7 +335,7 @@ app.put('/api/admin/screen-settings/:id', async (req, res) => {
 
         res.json({ ok: true, message: '화면 설정이 수정되었습니다.' });
     } catch (error) {
-        console.error('PUT /api/admin/screen-settings/:id error:', error);
+        wgsRuntimeLog("error", "routes/siteManagementRoutes.js:336", 'PUT /api/admin/screen-settings/:id error:', error);
         if (error && error.code === 'ER_DUP_ENTRY') {
             return res.status(409).json({ ok: false, message: '같은 페이지/섹션/설정 키가 이미 존재합니다.' });
         }
@@ -368,7 +370,7 @@ app.patch('/api/admin/screen-settings/:id/toggle', async (req, res) => {
 
         res.json({ ok: true, message: '활성 상태가 변경되었습니다.' });
     } catch (error) {
-        console.error('PATCH /api/admin/screen-settings/:id/toggle error:', error);
+        wgsRuntimeLog("error", "routes/siteManagementRoutes.js:371", 'PATCH /api/admin/screen-settings/:id/toggle error:', error);
         res.status(500).json({ ok: false, message: '활성 상태를 변경하지 못했습니다.' });
     }
 });
@@ -393,7 +395,7 @@ app.delete('/api/admin/screen-settings/:id', async (req, res) => {
 
         res.json({ ok: true, message: '화면 설정이 삭제되었습니다.' });
     } catch (error) {
-        console.error('DELETE /api/admin/screen-settings/:id error:', error);
+        wgsRuntimeLog("error", "routes/siteManagementRoutes.js:396", 'DELETE /api/admin/screen-settings/:id error:', error);
         res.status(500).json({ ok: false, message: '화면 설정을 삭제하지 못했습니다.' });
     }
 });
@@ -443,7 +445,7 @@ app.post('/api/admin/screen-settings/bulk', async (req, res) => {
 
         res.json({ ok: true, message: '전체 페이지 공통 설정이 저장되었습니다.' });
     } catch (error) {
-        console.error('POST /api/admin/screen-settings/bulk error:', error);
+        wgsRuntimeLog("error", "routes/siteManagementRoutes.js:446", 'POST /api/admin/screen-settings/bulk error:', error);
         if (error && error.code === 'ER_DUP_ENTRY') {
             return res.status(409).json({ ok: false, message: '같은 페이지/섹션/설정 키가 이미 존재합니다.' });
         }

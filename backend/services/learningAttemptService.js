@@ -1,4 +1,6 @@
 'use strict';
+const { runtimeLog: wgsRuntimeLog } = require("./runtimeLog");
+
 const { runtimeSchemaGate } = require('./schemaRuntime');
 
 const crypto = require('node:crypto');
@@ -211,7 +213,7 @@ function createLearningAttemptService({ pool, validateRealtimeSession, env = pro
     }
 
     function respondError(res, error) {
-        if (!error.status) console.error('[learning] request failed:', error.code || 'internal');
+        if (!error.status) wgsRuntimeLog("error", "services/learningAttemptService.js:214", '[learning] request failed:', error.code || 'internal');
         return res.status(error.status || 500).json({ success: false, reason: error.reason || 'learning_failed', msg: error.status ? error.message : '채점 결과를 저장하지 못했습니다. 답안을 유지하고 다시 제출해주세요.' });
     }
     return { ensureSchema, issue, submit, principal, respondError, assertOrigin };

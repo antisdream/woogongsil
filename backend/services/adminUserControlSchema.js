@@ -1,4 +1,6 @@
 'use strict';
+const { runtimeLog: wgsRuntimeLog } = require("./runtimeLog");
+
 const { runtimeSchemaGate } = require('./schemaRuntime');
 
 function createAdminUserControlSchema({ pool, adminUserId = 'skn29' }) {
@@ -13,7 +15,7 @@ async function adminTableExists(tableName) {
         );
         return Number(rows?.[0]?.cnt || 0) >0;
     } catch (error) {
-        console.warn(`관리자 테이블 존재 확인 실패(${tableName}):`, error.message);
+        wgsRuntimeLog("warn", "services/adminUserControlSchema.js:16", `관리자 테이블 존재 확인 실패(${tableName}):`, error.message);
         return false;
     }
 }
@@ -28,7 +30,7 @@ async function adminColumnExists(tableName, columnName) {
         );
         return Number(rows?.[0]?.cnt || 0) >0;
     } catch (error) {
-        console.warn(`관리자 컬럼 존재 확인 실패(${tableName}.${columnName}):`, error.message);
+        wgsRuntimeLog("warn", "services/adminUserControlSchema.js:31", `관리자 컬럼 존재 확인 실패(${tableName}.${columnName}):`, error.message);
         return false;
     }
 }
