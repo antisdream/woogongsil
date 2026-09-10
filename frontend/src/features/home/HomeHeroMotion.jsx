@@ -1,5 +1,5 @@
-import { useEffect, useId, useRef, useState } from 'react';
-import { FiArrowRight, FiBookOpen, FiBookmark, FiCheck, FiCheckCircle, FiEdit3, FiHelpCircle, FiMousePointer, FiPause, FiPlay, FiRotateCcw } from 'react-icons/fi';
+import { useEffect, useRef, useState } from 'react';
+import { FiArrowRight, FiBookOpen, FiBookmark, FiCheck, FiCheckCircle, FiEdit3, FiHelpCircle, FiMousePointer, FiRotateCcw } from 'react-icons/fi';
 import { getHomeHeroMotionVariant } from './homeHeroMotionPolicy.js';
 import '../../styles/app/home-hero-motion.css';
 
@@ -108,45 +108,32 @@ function LearningBook() {
     </div>;
 }
 
-export default function HomeHeroMotion({ children }) {
+export default function HomeHeroMotion() {
     const root = useRef(null);
-    const exampleId = useId();
     const [variant] = useState(() => getHomeHeroMotionVariant(typeof navigator === 'undefined' ? '' : navigator.userAgent));
-    const [showExample, setShowExample] = useState(false);
-    const [paused, setPaused] = useState(false);
     const [inView, setInView] = useState(true);
     const [pageVisible, setPageVisible] = useState(() => typeof document === 'undefined' || !document.hidden);
-    const [reducedMotion, setReducedMotion] = useState(() => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 
     useEffect(() => {
-        const preference = window.matchMedia('(prefers-reduced-motion: reduce)');
-        const updatePreference = () => setReducedMotion(preference.matches);
         const updateVisibility = () => setPageVisible(!document.hidden);
-        preference.addEventListener('change', updatePreference);
         document.addEventListener('visibilitychange', updateVisibility);
         const observer = typeof IntersectionObserver === 'undefined' ? null : new IntersectionObserver(([entry]) => setInView(entry.isIntersecting), { threshold: 0.05 });
         observer?.observe(root.current);
         return () => {
-            preference.removeEventListener('change', updatePreference);
             document.removeEventListener('visibilitychange', updateVisibility);
             observer?.disconnect();
         };
     }, []);
 
-    const running = !paused && !showExample && !reducedMotion && inView && pageVisible;
+    const running = inView && pageVisible;
     return <section className="ui-hero-motion" ref={root} data-hero-motion={variant} data-motion-running={running} aria-label="학습 미리보기">
         <div className="ui-motion-toolbar">
             <span className="ui-motion-toolbar-label"><FiBookOpen aria-hidden="true" />학습 미리보기</span>
-            <div className="ui-motion-controls">
-                {!showExample && <button type="button" className="ui-motion-control" aria-label={reducedMotion ? '동작 줄이기 설정 사용 중' : paused ? '애니메이션 재생' : '애니메이션 일시정지'} aria-pressed={paused || reducedMotion} disabled={reducedMotion} onClick={() => setPaused((value) => !value)}>{paused || reducedMotion ? <FiPlay aria-hidden="true" /> : <FiPause aria-hidden="true" />}<span>{reducedMotion ? '동작 줄이기' : paused ? '재생' : '일시정지'}</span></button>}
-                <button type="button" className="ui-motion-control ui-motion-example-toggle" aria-expanded={showExample} aria-controls={exampleId} onClick={() => setShowExample((value) => !value)}>{showExample ? <FiBookOpen aria-hidden="true" /> : <FiEdit3 aria-hidden="true" />}<span>{showExample ? '애니메이션 보기' : '직접 풀어보기'}</span></button>
-            </div>
         </div>
-        <div className="ui-motion-scene" hidden={showExample}>
+        <div className="ui-motion-scene">
             {variant === 'story' ? <LearningStory /> : <LearningBook />}
             <p className="ui-sr-only">{variant === 'story' ? 'SQL 문제의 정답 WHERE를 확인하고, 헷갈린 개념을 오답으로 복습하는 학습 흐름입니다.' : '학습 노트의 책장이 넘어가며 SQL 문제, WHERE 해설, 오답 복습 과정을 보여줍니다.'}</p>
             <p className="ui-motion-disclaimer">설명용 예시이며 학습 기록에 저장되지 않아요.</p>
         </div>
-        <div id={exampleId} className="ui-motion-example" hidden={!showExample}>{children}</div>
     </section>;
 }

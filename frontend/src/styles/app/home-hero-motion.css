@@ -8,17 +8,10 @@
 }
 body.wgs-theme-dark .ui-hero-motion { --ui-motion-error:#ffa59f; --ui-motion-error-bg:#412b35; }
 .ui-hero-motion *, .ui-hero-motion *::before, .ui-hero-motion *::after { box-sizing:border-box; }
-.ui-hero-motion [hidden] { display:none !important; }
 .ui-motion-toolbar { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:4px 12px; margin-bottom:12px; }
 .ui-motion-toolbar-label { display:flex; align-items:center; gap:7px; color:var(--wgs-muted); font-size:12px; font-weight:700; }
 .ui-motion-toolbar-label svg { color:var(--wgs-primary); width:16px; height:16px; }
-.ui-motion-controls { display:flex; flex-wrap:wrap; gap:4px; margin-left:auto; }
-body .ui-motion-control { display:inline-flex; align-items:center; justify-content:center; gap:6px; min-height:44px; padding:8px 10px; border:1px solid var(--wgs-border); border-radius:9px; background:var(--wgs-card); color:var(--wgs-muted); font:inherit; font-size:12px; font-weight:650; cursor:pointer; box-shadow:none; }
-body .ui-motion-example-toggle { color:var(--wgs-primary); }
-.ui-motion-control svg { width:15px; height:15px; flex:none; }
-@media(hover:hover) { body .ui-motion-control:hover:not(:disabled) { border-color:var(--wgs-primary); background:var(--wgs-active-bg); } }
 .ui-motion-disclaimer { margin:17px 0 0; color:var(--wgs-subtle); font-size:11px; line-height:1.7; text-align:center; }
-.ui-motion-example { min-width:0; }
 
 /* App: the answer travels from the option to the query, followed by review. */
 .ui-motion-story { padding:8px 0 0; perspective:950px; }
@@ -163,7 +156,6 @@ body .ui-motion-example-toggle { color:var(--wgs-primary); }
     .ui-motion-book-keyword { font-size:15px; margin-bottom:11px; }
 }
 @media(max-width:360px) {
-    body .ui-motion-control { padding-inline:8px; font-size:11px; }
     .ui-motion-question { padding:17px 13px; }
     .ui-motion-option { padding-inline:7px; gap:5px; }
     .ui-motion-leaf, .ui-motion-face { padding-inline:11px; }
@@ -174,12 +166,10 @@ body .ui-motion-example-toggle { color:var(--wgs-primary); }
     .ui-motion-book-label { font-size:11px; padding-inline:10px; }
 }
 @media(prefers-reduced-motion:reduce) {
-    .ui-hero-motion *, .ui-hero-motion *::before, .ui-hero-motion *::after { animation:none !important; transition:none !important; }
-    .ui-motion-question, .ui-motion-review-note, .ui-motion-book, .ui-motion-book-label { opacity:1; transform:none; }
-    .ui-motion-flying-answer, .ui-motion-burst, .ui-motion-cursor, .ui-motion-blank, .ui-motion-turn-second { display:none; }
-    .ui-motion-feedback .ui-motion-prompt, .ui-motion-feedback .ui-motion-hint, .ui-motion-feedback .ui-motion-review { opacity:0; }
-    .ui-motion-feedback .ui-motion-explain, .ui-motion-answer, .ui-motion-note-check { opacity:1; }
-    .ui-motion-right { color:var(--wgs-primary); border-color:var(--wgs-primary); background:var(--wgs-active-bg); }
-    .ui-motion-turn-first { transform:rotateY(-176deg); }
-    .ui-motion-book-halo { transform:translateX(-50%); }
+    /* The landing is an autoplay illustration by product choice. Keep its
+       8/9-second cycle instead of the shared shell's .01ms reduction; other
+       screens continue to use the system preference. */
+    .ui-hero-motion .ui-motion-scene *,
+    .ui-hero-motion .ui-motion-scene *::before,
+    .ui-hero-motion .ui-motion-scene *::after { animation-duration:var(--ui-motion-cycle) !important; }
 }

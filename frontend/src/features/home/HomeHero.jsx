@@ -1,32 +1,7 @@
-import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { FiArrowRight, FiBookOpen, FiCheck, FiEdit3, FiRotateCcw } from 'react-icons/fi';
+import { FiArrowRight, FiBookOpen, FiEdit3, FiRotateCcw } from 'react-icons/fi';
 import HomeHeroMotion from './HomeHeroMotion.jsx';
 import '../../styles/app/landing-redesign.css';
-
-const sampleOptions = ['GROUP BY', 'ORDER BY', 'WHERE', 'HAVING'];
-function LearningPreview() {
-    const [answer, setAnswer] = useState(null);
-    const [submitted, setSubmitted] = useState(false);
-    return <section className="ui-learning-preview" aria-labelledby="ui-preview-title">
-        <div className="ui-preview-heading"><span><FiEdit3 aria-hidden="true" /> 학습 미리보기</span><span className="ui-preview-tag">직접 풀어보세요</span></div>
-        <div className="ui-preview-body">
-            <p className="ui-preview-topic">정보처리기사 · SQL 예제</p>
-            <h2 id="ui-preview-title">조건에 맞는 행을 선택할 때<br className="ui-desktop-break" /> 사용하는 절은?</h2>
-            <pre className="ui-sql-example"><code><span>SELECT</span> name <span>FROM</span> students{`\n`}<mark>_____</mark> score &gt;= 80;</code></pre>
-            <fieldset className="ui-preview-options" disabled={submitted}>
-                <legend className="ui-sr-only">정답을 하나 선택하세요</legend>
-                {sampleOptions.map((option, index) => <label key={option} className={`ui-preview-option ${answer === index ? 'is-selected' : ''} ${submitted && index === 2 ? 'is-correct' : ''}`}>
-                    <input type="radio" name="home-example-answer" value={index} checked={answer === index} onChange={() => setAnswer(index)} />
-                    <span className="ui-option-number">{index + 1}</span><span>{option}</span>{submitted && index === 2 && <FiCheck aria-hidden="true" />}
-                </label>)}
-            </fieldset>
-            <div className="ui-preview-feedback" aria-live="polite" aria-atomic="true">{submitted && <div className="ui-preview-explanation"><strong>{answer === 2 ? '정답이에요.' : '정답은 WHERE예요.'}</strong><p>WHERE는 조건에 맞는 행을 선택합니다. 이 쿼리는 점수가 80점 이상인 학생의 이름을 가져와요.</p></div>}</div>
-            <button type="button" className={submitted ? 'ui-secondary ui-preview-submit' : 'ui-primary ui-preview-submit'} disabled={!submitted && answer === null} onClick={() => { if (submitted) { setSubmitted(false); setAnswer(null); } else setSubmitted(true); }}>{submitted ? '다시 풀어보기' : '정답과 해설 확인'}<FiArrowRight aria-hidden="true" /></button>
-            <p className="ui-preview-disclaimer">설명용 예제입니다. 결과는 학습 기록에 저장되지 않아요.</p>
-        </div>
-    </section>;
-}
 
 export default function HomeHero({ homeDefaultBanner, homeHeroTitle, homeHeroDesc, loggedInUser, dDay, calcDday, homeWelcomePrefix, homeWelcomeSuffix, homeDdayPrefix, homeDdaySuffix, homeHeroLayout }) {
     const align = (value) => ['left','center','right'].includes(value) ? value : 'left';
@@ -44,7 +19,7 @@ export default function HomeHero({ homeDefaultBanner, homeHeroTitle, homeHeroDes
                 <p className="ui-hero-note">필기 문제은행 · 기출문제 · 실기 연습<br />문제를 풀고 해설을 확인하며, 부족한 부분을 다시 공부하세요.</p>
                 {homeDefaultBanner && <img className="ui-configured-banner" src={homeDefaultBanner} alt="우공실 학습 안내" loading="lazy" />}
             </div>
-            <HomeHeroMotion><LearningPreview /></HomeHeroMotion>
+            <HomeHeroMotion />
         </section>
         <section className="ui-learning-journey" aria-labelledby="ui-journey-title">
             <div className="ui-journey-intro"><p className="ui-eyebrow">공부의 흐름을 이어가세요</p><h2 id="ui-journey-title">풀고, 이해하고,<br />다시 내 것으로.</h2></div>
