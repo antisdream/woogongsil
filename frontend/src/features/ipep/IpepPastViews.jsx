@@ -89,11 +89,12 @@ export function IpepPastResult({
         return (
             <section className="learning-results" style={{ ...panelStyle, textAlign: 'center' }}>
                 <h3 style={{ color: 'var(--wgs-blue)', fontSize: '26px', margin: '0 0 20px 0' }}>{getText('result.title', '최종 결과표')}</h3>
+                {pastResults.some(row => row.requiresSelfCheck) && <p role="note">자기채점 문항은 자동 채점 점수에 포함하지 않았습니다. 정답 예시와 직접 비교해주세요.</p>}
 
                 <div style={{ border: `2px solid ${pastSummary.isPass ? '#10b981' : '#ef4444'}`, background: pastSummary.isPass ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.12)', borderRadius: '14px', padding: '28px', marginBottom: '24px' }}>
                     <p className="learning-score" style={{ margin: '0 0 12px 0', color: pastSummary.isPass ? '#10b981' : '#ef4444', fontSize: '42px' }}>{formatText('result.total_score_value', '{score}점', { score: pastSummary.totalScore })}</p>
                     <h3 style={{ margin: 0, color: 'var(--wgs-text)' }}>
-                        {pastSummary.isPass
+                        {pastSummary.selfCheckCount ? '자동 채점 점수입니다.' : pastSummary.isPass
                             ? formatText('result.pass_message', '{name}님, 합격 기준을 넘겼습니다.', { name: userName })
                             : formatText('result.fail_message', '{name}님, 불합격 기준입니다.', { name: userName })}
                     </h3>
@@ -125,8 +126,8 @@ export function IpepPastResult({
                                         <td style={{ border: '1px solid var(--wgs-border)', padding: '10px', textAlign: 'center' }}>{formatText('past.question_no', '{number}번', { number: getQuestionNo(row.question, index) })}</td>
                                         <td style={{ border: '1px solid var(--wgs-border)', padding: '10px', color: isFullCorrect ? '#10b981' : '#ef4444', whiteSpace: 'pre-wrap' }}>{row.userAnswer || getText('result.blank_answer', '(미입력)')}</td>
                                         <td style={{ border: '1px solid var(--wgs-border)', padding: '10px', color: '#10b981', whiteSpace: 'pre-wrap' }}>{row.correctAnswer}</td>
-                                        <td style={{ border: '1px solid var(--wgs-border)', padding: '10px', textAlign: 'center' }}>{row.score} / {row.maxScore}</td>
-                                        <td style={{ border: '1px solid var(--wgs-border)', padding: '10px', textAlign: 'center', color: isFullCorrect ? '#10b981' : '#ef4444', fontWeight: '900' }}>{isFullCorrect ? getText('result.correct_symbol', 'O') : getText('result.wrong_symbol', 'X')}</td>
+                                        <td style={{ border: '1px solid var(--wgs-border)', padding: '10px', textAlign: 'center' }}>{row.requiresSelfCheck ? '미채점' : `${row.score} / ${row.maxScore}`}</td>
+                                        <td style={{ border: '1px solid var(--wgs-border)', padding: '10px', textAlign: 'center', color: isFullCorrect ? '#10b981' : '#ef4444', fontWeight: '900' }}>{row.requiresSelfCheck ? '검토' : isFullCorrect ? getText('result.correct_symbol', 'O') : getText('result.wrong_symbol', 'X')}</td>
                                     </tr>
                                 );
                             })}

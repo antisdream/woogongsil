@@ -20,32 +20,7 @@
 
 // Express 라우터를 만들기 위해 express를 불러온다.
 const express = require('express');
-const {
-    cleanText,
-    parseRandomCsv,
-    parseRandomIdCsv,
-    normalizeFlexible,
-    normalizeExactOutput,
-    normalizeSql,
-    safeJsonParse,
-    stripLeadingOrderLabel,
-    uniqueNonEmpty,
-    buildComparableVariants,
-    buildRuntimeAnswerSlots,
-    mergeAnswerSlots,
-    calculateMultiTermScore,
-} = require('./services/ipepAnswerGrading');
-
-const IPEP_QUESTION_TABLES = {
-    ipep_random: 'ipep_random_questions',
-    ipep_past: 'ipep_past_questions',
-    ipep_three_week: 'ipep_three_week_questions',
-};
-
-function getIpepQuestionTable(source) {
-    return IPEP_QUESTION_TABLES[source] || null;
-}
-
+const { cleanText, parseRandomCsv, parseRandomIdCsv } = require('./services/ipepAnswerGrading');
 
 // 6. 문제 응답 정리 함수
 // DB 컬럼명을 프론트에서 쓰기 편한 형태로 정리합니다.
@@ -71,7 +46,7 @@ function toPublicQuestion(row, source) {
         gradingPolicy: row.grading_policy,
         score: row.score || 5,
         choiceImgPath: row.choice_img_path || null,
-        explanationImgPath: row.explanation_img_path || null
+        explanationImgPath: null
     };
 }
 
@@ -86,10 +61,10 @@ function asyncHandler(handler) {
             await handler(req, res);
         } catch (error) {
             console.error(' /api/ipep 처리 중 오류:', error);
-            res.status(500).json({
+            res.status(error.status || 500).json({
                 success: false,
                 msg: '실기 API 처리 중 오류가 발생했습니다.',
-                error: error.message
+                reason: error.reason || 'ipep_failed'
             });
         }
     };
@@ -100,7 +75,7 @@ function asyncHandler(handler) {
 // 서버 진입점에서 createIpepRouter(pool) 형태로 호출합니다.
 
 
-function createIpepRouter(pool) {
+function createIpepRouter(pool, learningAttempts) {
     const router = express.Router();
 
     // ------------------------------------------------------
@@ -217,9 +192,11 @@ function createIpepRouter(pool) {
             });
         }
 
+        const attemptId = await learningAttempts.issue(req, res, 'ipep_random', rows);
         res.json({
             success: true,
-            data: toPublicQuestion(rows[0], 'ipep_random'),
+            attemptId,
+            data: { ...toPublicQuestion(rows[0], 'ipep_random'), attemptId },
             randomMeta: {
                 selectionMode,
                 excludedQuestionCount: excludeIds.length,
@@ -300,15 +277,17 @@ function createIpepRouter(pool) {
             ORDER BY question_no ASC
         `, [year, session]);
 
+        const attemptId = rows.length ? await learningAttempts.issue(req, res, 'ipep_past', rows) : null;
         res.json({
             success: true,
+            attemptId,
             isOpen: true,
             examYear: year,
             examSession: session,
             totalCount: rows.length,
             passScore: 60,
             scorePerQuestion: 5,
-            data: rows.map(row => toPublicQuestion(row, 'ipep_past'))
+            data: rows.map(row => ({ ...toPublicQuestion(row, 'ipep_past'), attemptId }))
         });
     }));
 
@@ -386,13 +365,15 @@ function createIpepRouter(pool) {
             ORDER BY ${orderSql}
         `, params);
 
+        const attemptId = rows.length ? await learningAttempts.issue(req, res, 'ipep_three_week', rows) : null;
         res.json({
             success: true,
+            attemptId,
             weekNo,
             sectionNo,
             order,
             totalCount: rows.length,
-            data: rows.map(row => toPublicQuestion(row, 'ipep_three_week'))
+            data: rows.map(row => ({ ...toPublicQuestion(row, 'ipep_three_week'), attemptId }))
         });
     }));
 
@@ -411,149 +392,7 @@ function createIpepRouter(pool) {
     // - ipep_random
     // - ipep_past
     // ------------------------------------------------------
-    router.post('/check-answer', asyncHandler(async (req, res) => {
-        const source = cleanText(req.body.source);
-        const questionId = Number(req.body.questionId);
-        const userAnswer = cleanText(req.body.userAnswer);
-
-        if (!source || !questionId) {
-            return res.status(400).json({
-                success: false,
-                msg: 'source와 questionId가 필요합니다.'
-            });
-        }
-
-        const tableName = getIpepQuestionTable(source);
-        if (!tableName) {
-            return res.status(400).json({
-                success: false,
-                msg: '지원하지 않는 실기 문제 출처입니다.'
-            });
-        }
-
-        const explanationSelect = source === 'ipep_three_week'
-            ? 'explanation_text'
-            : 'NULL AS explanation_text';
-
-        const [rows] = await pool.query(`SELECT
-                question_id,
-                question_text,
-                answer_raw,
-                answer_normalized,
-                answer_aliases_json,
-                answer_slots_json,
-                grading_policy,
-                score,
-                ${explanationSelect}
-            FROM ${tableName}
-            WHERE question_id = ?
-              AND is_active = 1
-            LIMIT 1
-        `, [questionId]);
-
-        if (rows.length === 0) {
-            return res.status(404).json({
-                success: false,
-                msg: '문제를 찾을 수 없습니다.'
-            });
-        }
-
-        const question = rows[0];
-        const gradingPolicy = question.grading_policy || 'FLEX_TERM';
-        const answerRaw = cleanText(question.answer_raw);
-        const answerAliases = safeJsonParse(question.answer_aliases_json, []);
-        const answerSlots = safeJsonParse(question.answer_slots_json, []);
-        const runtimeAnswerSlots = buildRuntimeAnswerSlots(answerRaw);
-        const effectiveAnswerSlots = source === 'ipep_three_week'
-            ? mergeAnswerSlots(runtimeAnswerSlots, answerSlots)
-            : answerSlots;
-
-        let isCorrect = false;
-        let score = 0;
-        let normalizedUserAnswer = '';
-        let normalizedCorrectAnswer = '';
-        let detail = {};
-
-        if (gradingPolicy === 'SELF_CHECK') {
-            // 긴 서술형은 자동채점이 위험하므로 자기채점 안내를 반환합니다.
-            return res.json({
-                success: true,
-                gradingPolicy,
-                requiresSelfCheck: true,
-                isCorrect: null,
-                score: null,
-                maxScore: question.score || 5,
-                correctAnswer: answerRaw,
-                explanationText: question.explanation_text || '',
-                msg: '이 문제는 서술형 성격이 강해 정답 예시와 비교하는 자기채점 방식으로 확인해 주세요.'
-            });
-        }
-
-        if (gradingPolicy === 'EXACT_OUTPUT') {
-            normalizedUserAnswer = normalizeExactOutput(userAnswer);
-            normalizedCorrectAnswer = normalizeExactOutput(answerRaw);
-            isCorrect = normalizedUserAnswer === normalizedCorrectAnswer;
-            score = isCorrect ? 5 : 0;
-
-            detail = {
-                compareMode: '대소문자, 공백, 줄바꿈을 최대한 정확히 비교'
-            };
-        } else if (gradingPolicy === 'SQL_TEXT') {
-            normalizedUserAnswer = normalizeSql(userAnswer);
-            normalizedCorrectAnswer = normalizeSql(answerRaw);
-            isCorrect = normalizedUserAnswer === normalizedCorrectAnswer;
-            score = isCorrect ? 5 : 0;
-
-            detail = {
-                compareMode: 'SQL 대소문자와 공백 차이는 완화, SQL 문법 기호는 보존'
-            };
-        } else if (gradingPolicy === 'MULTI_TERM') {
-            const result = calculateMultiTermScore(effectiveAnswerSlots, userAnswer);
-
-            isCorrect = result.isCorrect;
-            score = result.score;
-
-            detail = {
-                compareMode: '여러 용어 답안: 쉼표/줄바꿈 누락, 순번 라벨 생략, 일부 기호형 답안까지 완화',
-                correctSlotCount: result.correctSlotCount,
-                totalSlotCount: result.totalSlotCount,
-                matchedSlots: result.matchedSlots || []
-            };
-        } else {
-            // FLEX_TERM 기본 처리합니다
-            normalizedUserAnswer = normalizeFlexible(userAnswer);
-
-            const normalizedAliases = uniqueNonEmpty([
-                ...buildComparableVariants(answerRaw),
-                ...buildComparableVariants(stripLeadingOrderLabel(answerRaw)),
-                ...(Array.isArray(answerAliases) ? answerAliases.flatMap(alias => buildComparableVariants(alias)) : []),
-            ]);
-            const userAnswerVariants = buildComparableVariants(userAnswer);
-
-            normalizedCorrectAnswer = normalizedAliases[0] || '';
-            isCorrect = normalizedAliases.length >0 && userAnswerVariants.some(variant => normalizedAliases.includes(variant));
-            score = isCorrect ? 5 : 0;
-
-            detail = {
-                compareMode: '일반 용어형: 대소문자, 공백, 쉼표, 하이픈 등 문장부호 완화, 기호형 답안은 별도 보존 비교'
-            };
-        }
-
-        res.json({
-            success: true,
-            gradingPolicy,
-            requiresSelfCheck: false,
-            isCorrect,
-            score,
-            maxScore: question.score || 5,
-            correctAnswer: answerRaw,
-            explanationText: question.explanation_text || '',
-            normalizedUserAnswer,
-            normalizedCorrectAnswer,
-            detail
-        });
-    }));
-
+    router.post('/check-answer', (_req, res) => res.status(410).json({ success: false, msg: '문제를 다시 불러온 뒤 답안을 제출해주세요.' }));
 
     // 완성된 router를 server.js로 돌려줍니다.
     return router;

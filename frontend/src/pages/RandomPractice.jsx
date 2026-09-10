@@ -2,6 +2,7 @@ import '../styles/app/learning-redesign.css';
 // 필기 문제은행 라우트 페이지 컴포넌트입니다.
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import axios from 'axios';
+import { learningRequestOptions, submitLearningAttempt } from '../features/learningAttempts.js';
 import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
 import DrawingBoard from './DrawingBoard'; 
@@ -122,7 +123,6 @@ const RandomPractice = () => {
     const [showDrawing, setShowDrawing] = useState(false); 
 
     const userId = sessionStorage.getItem('userId');
-    const userName = sessionStorage.getItem('userName');
     const getSessionAuth = useCallback(() => ({
         id: sessionStorage.getItem('userId') || userId || '',
         userId: sessionStorage.getItem('userId') || userId || '',
@@ -131,6 +131,7 @@ const RandomPractice = () => {
     }), [userId]);
     
     const nextButtonRef = useRef(null);
+    const submittingRef = useRef(false);
 
     const getSubjectNameLabel = useCallback((id) => {
         const fallback = getSubjectName(id);
@@ -150,7 +151,7 @@ const RandomPractice = () => {
     const fetchRandomQuestion = useCallback(async () => {
         try {
             setLoadError(false);
-            const res = await axios.get(`${API_BASE}/api/random-question${buildWrittenRandomQuery()}`);
+            const res = await axios.get(`${API_BASE}/api/random-question${buildWrittenRandomQuery()}`, learningRequestOptions());
             
             if (!res.data || Object.keys(res.data).length === 0) {
                 throw new Error("문제 데이터가 비어있습니다.");
@@ -176,36 +177,24 @@ const RandomPractice = () => {
     const handleGrade = async () => {
         if (!selectedAnswer) return alert(t('messages.need_answer', '정답을 선택해주세요!'));
         
-        setIsSubmitted(true);
-        const correct = String(selectedAnswer) === String(question.correct_label);
-        setIsCorrect(correct);
-
-        if (!correct && userId) {
-            try {
-                //   오답 저장 시 year와 session을 명시적으로 넘겨주어 백엔드에서 null로 갱신하지 않게 방지합니다.
-                await axios.post(`${API_BASE}/api/save-wrong`, { 
-                    ...getSessionAuth(),
-                    id: userId, 
-                    source: 'random',
-                    year: question.year,
-                    session: question.session,
-                    wrongQuestions: [question] 
-                });
-            } catch (err) { console.error("오답 저장 실패"); }
-        }
-
-        if (userId) {
-            try {
-                await axios.post(`${API_BASE}/api/practice-results`, {
-                    ...getSessionAuth(),
-                    userId, userName, questionId: question.question_id, isCorrect: correct
-                });
-
-            } catch (err) {
-                console.error("개인 결과 저장 실패:", err);
-                toast.error("결과 저장에 실패했습니다. 현재 채점 결과는 화면에서 확인할 수 있습니다.");
+        if (submittingRef.current || isSubmitted) return;
+        submittingRef.current = true;
+        try {
+            const data = await submitLearningAttempt(question.attemptId, { [question.question_id]: selectedAnswer });
+            const grade = data.grades[0];
+            const gradedQuestion = { ...question, ...grade };
+            setQuestion(gradedQuestion);
+            setIsCorrect(grade.isCorrect);
+            setIsSubmitted(true);
+            if (!grade.isCorrect && userId) {
+                await axios.post(`${API_BASE}/api/save-wrong`, {
+                    ...getSessionAuth(), id: userId, source: 'random', year: question.year,
+                    session: question.session, wrongQuestions: [gradedQuestion]
+                }).catch(() => toast.error('채점은 저장했지만 오답노트 저장에 실패했습니다.'));
             }
-        }
+        } catch (error) {
+            toast.error(error.response?.data?.msg || '채점에 실패했습니다. 답안을 유지하고 다시 제출해주세요.');
+        } finally { submittingRef.current = false; }
 
         setTimeout(() => {
             if (nextButtonRef.current) {

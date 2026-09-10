@@ -43,6 +43,7 @@ const registerGatekeeperSecurity = require('./middleware/gatekeeperSecurity');
 const registerPracticalUserRoutes = require('./routes/practicalUserRoutes');
 const registerUserRoutes = require('./routes/userRoutes');
 const registerExamRoutes = require('./routes/examRoutes');
+const { createLearningAttemptService } = require('./services/learningAttemptService');
 const registerAuthRoutes = require('./routes/auth/authRoutes');
 const registerAdminAuthRoutes = require('./routes/auth/adminAuthRoutes');
 const { createAdminEmailOtpService } = require('./services/adminEmailOtpService');
@@ -113,6 +114,7 @@ app.use('/api/error-report', errorReportRoutes);
 // - 매 요청마다 DB 연결을 새로 만들지 않고 pool에서 빌려 쓰는 방식입니다.
 // - 기존 프로젝트 기본값은 유지하되, .env가 있으면 .env 값을 우선 사용해.
 const pool = createDatabasePool();
+const learningAttemptService = createLearningAttemptService({ pool, validateRealtimeSession });
 const legalConsentService = createLegalConsentService({ pool });
 registerLegalRoutes({ app, pool, legalConsentService, validateRealtimeSession });
 const visitorAnalyticsSchema = createVisitorAnalyticsSchema({ pool });
@@ -142,7 +144,7 @@ ensureStudyNoteSchema();
 
 // React 빌드 결과물을 Express가 정적 파일로 제공합니다.
 
-registerIpepFeature({ app, pool, backendDir: __dirname });
+registerIpepFeature({ app, pool, learningAttemptService, backendDir: __dirname });
 
 
 // 예전 관리자 화면 정적 파일이 운영 dist에 남아 있어도 /admin은 항상 먼저 차단합니다.
@@ -313,8 +315,6 @@ const {
     RANKING_PAST_FILE,
     RANKING_DATA_FILE,
     readJSON,
-    getIpepRankingStore,
-    saveIpepRankingStore,
 } = createJsonFileStores(__dirname);
 
 function safeNumber(value, fallback = 0) {
@@ -327,7 +327,6 @@ const {
     getBoardDateString,
     formatDateOnly,
     normalizeToMysqlDateTime,
-    getSeasonStatus,
 } = require('./services/dateTimeHelpers');
 
 const {
@@ -840,19 +839,10 @@ registerExamRoutes({
     app,
     pool,
     buildQuestionSelect,
+    learningAttemptService,
 });
 
-registerLearningResultsRoutes({
-    app,
-    pool,
-    getSeasonStatus,
-    validateRealtimeSession,
-    getUserById,
-    getIpepRankingStore,
-    saveIpepRankingStore,
-    safeNumber,
-    getKSTDateTime,
-});
+registerLearningResultsRoutes({ app, pool, buildQuestionSelect, learningAttemptService });
 
 registerFortuneRoutes({
     app,
@@ -994,6 +984,7 @@ async function startServer() {
         await adminEmailOtpService.ensureSchema();
         await memberVerificationService.ensureSchema();
         await boardPolicyService.ensureSchema();
+        await learningAttemptService.ensureSchema();
         await ensureVisitorAnalyticsSchema();
         await importDataFromJSON();
         await uploadAccessService.migrateLegacyFiles();

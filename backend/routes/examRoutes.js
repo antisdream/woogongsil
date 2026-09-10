@@ -1,5 +1,6 @@
 // 필기 문제와 채점 API를 제공합니다.
 'use strict';
+const { toPublicWrittenQuestion } = require('../services/learningAttemptService');
 
 function parseRandomCsv(value, maxItems = 80) {
     const raw = Array.isArray(value) ? value.join(',') : String(value || '');
@@ -44,6 +45,7 @@ function buildWrittenRandomWhere({ excludeIds = [], excludeSubjects = [] } = {})
 
 function registerExamRoutes(options = {}) {
     const app = options.app;
+    const learningAttempts = options.learningAttemptService;
     const pool = options.pool;
     const buildQuestionSelect = options.buildQuestionSelect;
 
@@ -74,8 +76,10 @@ function registerExamRoutes(options = {}) {
 
             if (rows.length === 0) return res.status(404).json({ success: false, msg: '문제 없음' });
 
+            const attemptId = await learningAttempts.issue(req, res, 'written_random', rows);
             return res.json({
-                ...rows[0],
+                ...toPublicWrittenQuestion(rows[0]),
+                attemptId,
                 random_meta: {
                     selectionMode,
                     excludedQuestionCount: excludeIds.length,
@@ -84,7 +88,7 @@ function registerExamRoutes(options = {}) {
             });
         } catch (error) {
             console.error('랜덤 문제 조회 오류:', error);
-            return res.status(500).json({ success: false, error: error.message });
+            return learningAttempts.respondError(res, error);
         }
     });
 
@@ -196,22 +200,16 @@ function registerExamRoutes(options = {}) {
                 ' ORDER BY q.info_id ASC, q.question_id ASC'
             );
 
-            return res.json({ success: true, data: rows });
+            if (!rows.length) return res.json({ success: true, data: [] });
+            const attemptId = await learningAttempts.issue(req, res, 'written_past', rows);
+            return res.json({ success: true, attemptId, data: rows.map(row => ({ ...toPublicWrittenQuestion(row), attemptId })) });
         } catch (error) {
             console.error('기출문제 조회 오류:', error);
-            return res.status(500).json({ success: false, error: error.message });
+            return learningAttempts.respondError(res, error);
         }
     });
 
-    app.get('/api/questions', async (req, res) => {
-        try {
-            const rows = await buildQuestionSelect('', [], ' ORDER BY q.year DESC, q.session ASC, q.info_id ASC');
-            return res.json(rows);
-        } catch (error) {
-            console.error('전체 문제 조회 오류:', error);
-            return res.status(500).json({ success: false, error: error.message });
-        }
-    });
+    app.get('/api/questions', (_req, res) => res.status(410).json({ success: false, msg: '전체 문제 내려받기를 종료했습니다. 문제은행 또는 회차별 학습을 이용해주세요.' }));
 
 }
 

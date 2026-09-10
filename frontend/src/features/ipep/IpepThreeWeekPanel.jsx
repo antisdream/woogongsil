@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import axios from 'axios';
+import { learningRequestOptions, submitLearningAttempt } from '../learningAttempts.js';
 import ErrorReportButton from '../../components/ErrorReportButton.jsx';
 import DrawingBoard from '../../pages/DrawingBoard.jsx';
 import IpepSpecialSymbolPad from './IpepSpecialSymbolPad.jsx';
@@ -88,7 +89,7 @@ export default function IpepThreeWeekPanel({
                 sectionNo: selectedSection,
                 order,
             });
-            const res = await axios.get(`${API_BASE}/api/ipep/three-week/questions?${params.toString()}`);
+            const res = await axios.get(`${API_BASE}/api/ipep/three-week/questions?${params.toString()}`, learningRequestOptions());
             setQuestions(Array.isArray(res.data?.data) ? res.data.data : []);
             setCurrentIndex(0);
             setAnswers({});
@@ -135,13 +136,8 @@ export default function IpepThreeWeekPanel({
 
         setChecking(true);
         try {
-            const res = await axios.post(`${API_BASE}/api/ipep/check-answer`, {
-                source: currentQuestion.source,
-                questionId: currentQuestion.questionId,
-                userAnswer: currentAnswer,
-            });
-
-            const rawResult = res.data || {};
+            const data = await submitLearningAttempt(currentQuestion.attemptId, { [currentQuestion.questionId]: currentAnswer });
+            const rawResult = data.grades[0];
             const gradedResult = rawResult.requiresSelfCheck
                 ? {
                     ...rawResult,
@@ -178,7 +174,8 @@ export default function IpepThreeWeekPanel({
         const nextResult = {
             ...currentResult,
             isCorrect,
-            score: isCorrect ? maxScore : 0,
+            score: 0,
+            selfAssessment: isCorrect,
             maxScore,
         };
         setResults((prev) => ({

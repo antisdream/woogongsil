@@ -3,7 +3,7 @@ import '../styles/app/learning-redesign.css';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { toast } from 'react-toastify';
+import { learningRequestOptions, submitLearningAttempt } from '../features/learningAttempts.js';
 import ErrorReportButton from "../components/ErrorReportButton";
 import useScreenSettings from '../useScreenSettings';
 import IpepRandomMode from '../features/ipep/IpepRandomMode.jsx';
@@ -28,7 +28,6 @@ import IpepThreeWeekPanel from '../features/ipep/IpepThreeWeekPanel.jsx';
 import {
     buildIpepSessionAuth,
     normalizeIpepWrongQuestionForSave,
-    saveIpepPracticeResultRecord,
     saveIpepWrongNotesRecord,
 } from '../features/ipep/ipepPracticePersistence.js';
 import {
@@ -117,18 +116,6 @@ function IpepPractice({ setIsExamActive, initialMode = 'lobby' }) {
     const userId = sessionStorage.getItem('userId') || '';
     const getSessionAuth = useCallback(() => buildIpepSessionAuth(userId), [userId]);
 
-    // 실기 개인 채점 결과를 저장하고, 저장 실패를 안내해도 오답 저장은 계속합니다.
-    const saveIpepPracticeResult = (payload) => saveIpepPracticeResultRecord({
-        apiBase: API_BASE,
-        getSessionAuth,
-        userId,
-        userName,
-        ...payload
-    }).catch((error) => {
-        console.warn('실기 결과 저장 실패:', error);
-        toast.error('결과 저장에 실패했습니다. 현재 채점 결과는 화면에서 확인할 수 있습니다.');
-    });
-
     // 실기 오답노트는 필기 오답노트와 충돌하지 않도록 별도 API에 저장합니다.
     const saveIpepWrongNotes = (payload) => saveIpepWrongNotesRecord({
         apiBase: API_BASE,
@@ -148,13 +135,15 @@ function IpepPractice({ setIsExamActive, initialMode = 'lobby' }) {
         const maxScore = pastResults.reduce((sum, row) => sum + Number(row.maxScore || 5), 0);
         const fullCorrectCount = pastResults.filter(row => Number(row.score || 0) >= Number(row.maxScore || 5)).length;
         const isPass = totalScore >= 60 || fullCorrectCount >= 12;
+        const selfCheckCount = pastResults.filter(row => row.requiresSelfCheck).length;
 
         return {
             totalScore,
             maxScore,
             fullCorrectCount,
             isPass,
-            passText: isPass ? '합격' : '불합격'
+            selfCheckCount,
+            passText: selfCheckCount ? '자동 채점 결과' : isPass ? '합격' : '불합격'
         };
     }, [pastResults]);
 
@@ -244,7 +233,7 @@ function IpepPractice({ setIsExamActive, initialMode = 'lobby' }) {
         setRandomAnswer('');
 
         try {
-            const res = await axios.get(`${API_BASE}/api/ipep/random-question?${buildIpepRandomQuery(subjectCode)}`);
+            const res = await axios.get(`${API_BASE}/api/ipep/random-question?${buildIpepRandomQuery(subjectCode)}`, learningRequestOptions());
             const nextQuestion = res.data?.data || null;
             setRandomQuestion(nextQuestion);
             rememberIpepRandomQuestion(nextQuestion);
@@ -275,31 +264,12 @@ function IpepPractice({ setIsExamActive, initialMode = 'lobby' }) {
         }
 
         try {
-            const res = await axios.post(`${API_BASE}/api/ipep/check-answer`, {
-                source: randomQuestion.source,
-                questionId: randomQuestion.questionId,
-                userAnswer: randomAnswer
-            });
-
-            // 백엔드 채점 결과를 우선 받되, 사용자가 입력하기 어려운 주관식 예외는 프론트에서 한 번 더 보정합니다.
-            // - Class/class/클래스, ㉡/ㄴ, ÷//, 원자성|Atomicity 조합 등을 처리합니다.
-            // - 기존 채점 API, 개인 결과, 오답노트 저장 흐름은 그대로 유지합니다.
-            const gradedResult = mergeClientIpepGrade(randomQuestion, res.data || {}, randomAnswer);
+            const data = await submitLearningAttempt(randomQuestion.attemptId, { [randomQuestion.questionId]: randomAnswer });
+            const gradedResult = mergeClientIpepGrade(randomQuestion, data.grades[0]);
             setRandomResult(gradedResult);
+            setRandomQuestion(previous => ({ ...previous, explanationImgPath: gradedResult.explanationImgPath }));
 
-            // 실기 문제은행 1문제 채점 결과를 개인 결과/오답노트에 반영합니다.
-            const maxScore = Number(gradedResult?.maxScore || randomQuestion?.score || 5);
-            const earnedScore = Number(gradedResult?.score ?? (gradedResult?.isCorrect ? maxScore : 0));
-            await saveIpepPracticeResult({
-                mode: 'random',
-                totalCount: 1,
-                // 부분점수라도 점수가 있으면 개인 학습 기록의 정답 수에 1문제로 반영합니다.
-                correctCount: earnedScore >0 ? 1 : 0,
-                totalScore: earnedScore,
-                maxScore
-            });
-
-            if (!gradedResult?.isCorrect) {
+            if (!gradedResult?.isCorrect && !gradedResult?.requiresSelfCheck) {
                 await saveIpepWrongNotes({
                     source: 'ipep_random',
                     wrongQuestions: [normalizeIpepWrongQuestion(randomQuestion, randomAnswer, 'ipep_random', gradedResult)]
@@ -328,7 +298,7 @@ function IpepPractice({ setIsExamActive, initialMode = 'lobby' }) {
         }
 
         try {
-            const res = await axios.get(`${API_BASE}/api/ipep/past-exam?year=${examRow.examYear}&session=${examRow.examSession}`);
+            const res = await axios.get(`${API_BASE}/api/ipep/past-exam?year=${examRow.examYear}&session=${examRow.examSession}`, learningRequestOptions());
 
             if (!res.data?.success || !res.data?.isOpen) {
                 alert(res.data?.msg || getIpepScreenSetting('messages.not_open_notice', '현재 오픈베타 테스트 중으로, 빠른 시일 내에 추가할 예정입니다.'));
@@ -368,86 +338,6 @@ function IpepPractice({ setIsExamActive, initialMode = 'lobby' }) {
         setPastAnswers(prev => ({ ...prev, [questionId]: value }));
     }
 
-    async function gradeOnePastQuestion(question, userAnswer) {
-        // 사용자가 아무것도 입력하지 않은 문항은 '틀림'이 아니라 '미응시/미입력'으로 처리합니다.
-        // 따라서 채점 점수는 0점이지만 오답노트에는 저장하지 않습니다.
-        const trimmedAnswer = String(userAnswer || '').trim();
-        if (!trimmedAnswer) {
-            return {
-                question,
-                userAnswer: '',
-                correctAnswer: question.answerRaw || question.answerNormalized || '',
-                gradingPolicy: question.gradingPolicy,
-                requiresSelfCheck: false,
-                isCorrect: false,
-                isBlank: true,
-                score: 0,
-                maxScore: Number(question.score || 5)
-            };
-        }
-
-        const res = await axios.post(`${API_BASE}/api/ipep/check-answer`, {
-            source: 'ipep_past',
-            questionId: question.questionId,
-            userAnswer: trimmedAnswer
-        });
-
-        const data = res.data || {};
-        const gradedData = mergeClientIpepGrade(question, data, trimmedAnswer);
-
-        // 프론트 예외처리로 명백히 정답 처리된 경우에는 SELF_CHECK 확인창을 띄우지 않습니다.
-        // 예: 사용자가 "ㄴ, ㄷ, ㄱ"처럼 입력했지만 DB 정답이 "㉡, ㉢, ㉠"인 경우
-        if (gradedData.isCorrect && gradedData.detail?.clientExceptionApplied) {
-            return {
-                question,
-                userAnswer: trimmedAnswer,
-                correctAnswer: gradedData.correctAnswer || '',
-                gradingPolicy: gradedData.gradingPolicy || data.gradingPolicy || question.gradingPolicy,
-                requiresSelfCheck: false,
-                isCorrect: true,
-                isBlank: false,
-                score: Number(gradedData.score || gradedData.maxScore || 5),
-                maxScore: Number(gradedData.maxScore || 5)
-            };
-        }
-
-        if (data.requiresSelfCheck) {
-            // 긴 서술형은 자동채점보다 정답 예시와 직접 비교해 판정하도록 안내합니다.
-            // 이 처리는 백엔드의 SELF_CHECK 정책을 존중하는 안전장치다.
-            const ok = window.confirm(
-                formatIpepSetting('messages.self_check_confirm', '[자기채점 필요]\n\n문제: {question}\n\n내 답안:\n{userAnswer}\n\n정답 예시:\n{correctAnswer}\n\n정답으로 처리할까요?', {
-                    question: question.questionText,
-                    userAnswer: trimmedAnswer || getIpepScreenSetting('result.blank_answer', '(미입력)'),
-                    correctAnswer: gradedData.correctAnswer || data.correctAnswer || ''
-                })
-            );
-
-            return {
-                question,
-                userAnswer: trimmedAnswer,
-                correctAnswer: gradedData.correctAnswer || data.correctAnswer || '',
-                gradingPolicy: data.gradingPolicy || question.gradingPolicy,
-                requiresSelfCheck: true,
-                isCorrect: ok,
-                isBlank: false,
-                score: ok ? Number(data.maxScore || gradedData.maxScore || 5) : 0,
-                maxScore: Number(data.maxScore || gradedData.maxScore || 5)
-            };
-        }
-
-        return {
-            question,
-            userAnswer: trimmedAnswer,
-            correctAnswer: gradedData.correctAnswer || '',
-            gradingPolicy: gradedData.gradingPolicy || data.gradingPolicy || question.gradingPolicy,
-            requiresSelfCheck: false,
-            isCorrect: Boolean(gradedData.isCorrect),
-            isBlank: false,
-            score: Number(gradedData.score || 0),
-            maxScore: Number(gradedData.maxScore || 5)
-        };
-    }
-
     async function submitPastExam(autoSubmit = false) {
         if (isSubmittingPast) return;
 
@@ -463,39 +353,15 @@ function IpepPractice({ setIsExamActive, initialMode = 'lobby' }) {
         setIsSubmittingPast(true);
 
         try {
-            const results = [];
-
-            for (const question of pastQuestions) {
-                const userAnswer = String(pastAnswers[question.questionId] || '').trim();
-                const graded = await gradeOnePastQuestion(question, userAnswer);
-                results.push(graded);
-            }
-
+            const data = await submitLearningAttempt(pastQuestions[0]?.attemptId, pastAnswers);
+            const questionsById = new Map(pastQuestions.map(q => [Number(q.questionId), q]));
+            const results = data.grades.map(grade => ({ ...grade,
+                question: { ...questionsById.get(Number(grade.questionId)), explanationImgPath: grade.explanationImgPath } }));
             setPastResults(results);
-
-            // 실기 기출문제 최종 채점 결과를 개인 결과/오답노트에 반영합니다.
-            // - 점수는 부분점수까지 누적합니다.
-            // - 정답률 표기용 correctCount는 1점 이상 받은 문제 수로 계산합니다.
-            // - 20문제를 전부 공백 제출한 경우에는 개인 결과에 반영하지 않습니다.
-            const totalScore = results.reduce((sum, row) => sum + Number(row.score || 0), 0);
-            const maxScore = results.reduce((sum, row) => sum + Number(row.maxScore || 5), 0);
-            const answeredCount = results.filter(row => !row.isBlank).length;
-            const correctCount = results.filter(row => Number(row.score || 0) >0).length;
-            if (answeredCount >0) {
-                await saveIpepPracticeResult({
-                    mode: 'past',
-                    totalCount: results.length,
-                    correctCount,
-                    totalScore,
-                    maxScore,
-                    year: selectedExam?.examYear,
-                    session: selectedExam?.examSession
-                });
-            }
 
             const wrongQuestions = results
                 // 빈 답안은 '미입력'으로 보고 오답노트 저장 대상에서 제외합니다.
-                .filter(row => !row.isBlank && Number(row.score || 0) < Number(row.maxScore || 5))
+                .filter(row => !row.isBlank && !row.requiresSelfCheck && Number(row.score || 0) < Number(row.maxScore || 5))
                 .map(row => normalizeIpepWrongQuestion(row.question, row.userAnswer, 'ipep_past', row));
             await saveIpepWrongNotes({
                 source: 'ipep_past',
@@ -524,7 +390,7 @@ function IpepPractice({ setIsExamActive, initialMode = 'lobby' }) {
             return;
         }
 
-        const wrongRows = pastResults.filter(row => !row.isBlank && Number(row.score || 0) < Number(row.maxScore || 5));
+        const wrongRows = pastResults.filter(row => !row.isBlank && !row.requiresSelfCheck && Number(row.score || 0) < Number(row.maxScore || 5));
         const printWindow = window.open('', '_blank');
         const blankAnswerText = getIpepScreenSetting('result.blank_answer', '(미입력)');
         const correctSymbol = getIpepScreenSetting('result.correct_symbol', 'O');
@@ -541,8 +407,8 @@ function IpepPractice({ setIsExamActive, initialMode = 'lobby' }) {
                     <td>${escapeHtml(formatIpepSetting('past.question_no', '{number}번', { number: qNo }))}</td>
                     <td>${escapeHtml(row.userAnswer || blankAnswerText)}</td>
                     <td>${escapeHtml(row.correctAnswer || '')}</td>
-                    <td>${row.score} / ${row.maxScore}</td>
-                    <td class="${isFullCorrect ? 'correct' : 'wrong'}">${escapeHtml(isFullCorrect ? correctSymbol : wrongSymbol)}</td>
+                    <td>${row.requiresSelfCheck ? '자기채점 · 자동 점수 제외' : `${row.score} / ${row.maxScore}`}</td>
+                    <td class="${isFullCorrect ? 'correct' : 'wrong'}">${escapeHtml(row.requiresSelfCheck ? '자기채점' : isFullCorrect ? correctSymbol : wrongSymbol)}</td>
                 </tr>
             `;
         }).join('');
@@ -597,7 +463,7 @@ function IpepPractice({ setIsExamActive, initialMode = 'lobby' }) {
 
                 <div class="result-box">
                     <div class="score">${escapeHtml(formatIpepSetting('result.score_value', '{score}점 / {maxScore}점', { score: pastSummary.totalScore, maxScore: pastSummary.maxScore }))}</div>
-                    <h2>${escapeHtml(pastSummary.isPass ? getIpepScreenSetting('result.pdf_pass_title', ' 합격입니다.') : getIpepScreenSetting('result.pdf_fail_title', ' 불합격입니다.'))}</h2>
+                    <h2>${escapeHtml(pastSummary.selfCheckCount ? '자동 채점 결과 · 자기채점 문항 별도 확인' : pastSummary.isPass ? getIpepScreenSetting('result.pdf_pass_title', ' 합격입니다.') : getIpepScreenSetting('result.pdf_fail_title', ' 불합격입니다.'))}</h2>
                     <p>${escapeHtml(formatIpepSetting('result.pdf_summary', '{name}님 · 정답 처리 {count}문제', { name: userName, count: pastSummary.fullCorrectCount }))}</p>
                     <div class="time-box">
                         <div>${escapeHtml(getIpepScreenSetting('time.start_label', '시작 일시: '))}<strong>${escapeHtml(formatDateTime(startTime))}</strong></div>

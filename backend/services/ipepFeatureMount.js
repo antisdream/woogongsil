@@ -1,7 +1,7 @@
 const express = require('express');
 const path = require('path');
 
-function registerIpepFeature({ app, pool, backendDir }) {
+function registerIpepFeature({ app, pool, backendDir, learningAttemptService }) {
     // 정보처리기사 실기 API 연결 블록
     // ----------------------------------------------------------
     // 이 블록은 실기 API만 추가합니다.
@@ -27,7 +27,7 @@ function registerIpepFeature({ app, pool, backendDir }) {
         app.use('/ipep-img/three-week', express.static(path.join(ipepImageDir, 'three-week')));
 
         // 실기 API 라우트를 연결합니다.
-        app.use('/api/ipep', createIpepRouter(pool));
+        app.use('/api/ipep', createIpepRouter(pool, learningAttemptService));
 
         console.log('OK: IPEP API mounted at /api/ipep');
     } catch (ipepRouteError) {

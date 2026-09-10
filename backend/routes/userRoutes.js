@@ -171,6 +171,8 @@ function registerUserRoutes(options = {}) {
             await connection.query('UPDATE wgs_posts SET authorName = ? WHERE authorId = ?', ['탈퇴회원', id]);
             await connection.query('UPDATE wgs_comments SET authorName = ? WHERE authorId = ?', ['탈퇴회원', id]);
             await connection.query('UPDATE wgs_replies SET authorName = ? WHERE authorId = ?', ['탈퇴회원', id]);
+            await connection.query('DELETE FROM wgs_learning_results WHERE user_id = ?', [id]);
+            await connection.query('DELETE FROM wgs_learning_attempts WHERE user_id = ?', [id]);
             await connection.query('DELETE FROM wgs_ranking_random WHERE userId = ?', [id]);
             await connection.query('DELETE FROM wgs_ranking_past WHERE userId = ?', [id]);
             await connection.query('DELETE FROM wgs_post_likes WHERE userId = ?', [id]);

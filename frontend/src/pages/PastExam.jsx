@@ -1,7 +1,8 @@
 import '../styles/app/learning-redesign.css';
 // 필기 기출문제 라우트 페이지 컴포넌트입니다.
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import axios from 'axios';
+import { learningRequestOptions, submitLearningAttempt } from '../features/learningAttempts.js';
 import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
 import DrawingBoard from './DrawingBoard';
@@ -31,6 +32,7 @@ const PastExam = ({ isExamActive, setIsExamActive }) => {
     const [selectedYear, setSelectedYear] = useState('');
     const [selectedSession, setSelectedSession] = useState('');
     const [questions, setQuestions] = useState([]);
+    const submittingRef = useRef(false);
     const [currentIndex, setCurrentIndex] = useState(0);
     const [userAnswers, setUserAnswers] = useState({});
     const [isSubmitted, setIsSubmitted] = useState(false);
@@ -165,7 +167,7 @@ const PastExam = ({ isExamActive, setIsExamActive }) => {
         }
 
         try {
-            const res = await axios.get(`${API_BASE}/api/past-exam?year=${selectedYear}&session=${selectedSession}`);
+            const res = await axios.get(`${API_BASE}/api/past-exam?year=${selectedYear}&session=${selectedSession}`, learningRequestOptions());
             
             let fetchedQuestions = [];
             if (Array.isArray(res.data)) {
@@ -229,77 +231,36 @@ const PastExam = ({ isExamActive, setIsExamActive }) => {
     };
 
     async function executeGradeExam() {
+        if (submittingRef.current || isSubmitted) return;
+        submittingRef.current = true;
         setShowConfirmModal(false);
-        if (typeof setIsExamActive === 'function') setIsExamActive(false);
-        
-        //  시험 제출 시점 기록
-        setEndTime(new Date());
-
-        let cCount = 0;
-        const wrongQs = []; 
-        const subScores = [0, 0, 0, 0, 0];
-
-        questions.forEach((q, idx) => {
-            const uAns = userAnswers[q.question_id];
-            const subjectIdx = Math.floor(idx / 20); 
-
-            if (uAns !== undefined) { 
-                if (String(uAns) === String(q.correct_label)) {
-                    cCount++;
-                    if (subjectIdx >= 0 && subjectIdx < 5) subScores[subjectIdx] += 5; 
-                } else {
-                    wrongQs.push(q);
-                }
-            }
-        });
-
-        const totalQ = questions.length; 
-        const avgScore = cCount; 
-        const localAccuracy = totalQ >0 ? Math.round((cCount / totalQ) * 100) : 0;
-        
-        let isPass = true;
-        let failReason = '';
-        const failedSubjects = [];
-
-        subScores.forEach((score, i) => {
-            if (score < 40) failedSubjects.push(i + 1);
-        });
-
-        if (failedSubjects.length >0) {
-            isPass = false;
-            failReason = formatSetting('result.fail_reason_subject', '{subjects}과목 과락', { subjects: failedSubjects.join(', ') });
-        } else if (avgScore < 60) {
-            isPass = false;
-            failReason = t('result.fail_reason_average', '평균 점수 미달');
-        }
-
-        setSubjectScores(subScores);
-        setExamResult({ isPass, average: avgScore, failReason, accuracy: localAccuracy, correctCount: cCount, totalCount: totalQ });
-        setIsSubmitted(true);
-        setStep(3); 
-        
-        if (userId) {
-            try {
-                if (wrongQs.length >0) {
-                    await axios.post(`${API_BASE}/api/save-wrong`, {
-                        ...getSessionAuth(),
-                        id: userId, wrongQuestions: wrongQs, source: 'past', year: selectedYear, session: selectedSession
-                    }).catch(e => console.error("오답노트 저장 실패", e));
-                }
-
-                const resultData = {
-                    ...getSessionAuth(),
-                    userId, userName, examYear: selectedYear, examSession: selectedSession,
-                    score: avgScore, correctCount: cCount, totalCount: totalQ, answers: userAnswers, resultMode: 'replace'
-                };
-                
-                await axios.post(`${API_BASE}/api/exam-results`, resultData);
-                
-            } catch (e) { 
-                console.error("개인 결과 저장 실패:", e);
-                toast.error("결과 저장에 실패했습니다. 현재 채점 결과와 PDF는 계속 확인할 수 있습니다.");
-            }
-        }
+        try {
+            const data = await submitLearningAttempt(questions[0]?.attemptId, userAnswers);
+            const grades = new Map(data.grades.map(row => [Number(row.questionId), row]));
+            const gradedQuestions = questions.map(q => ({ ...q, ...grades.get(Number(q.question_id)) }));
+            const subScores = [0, 0, 0, 0, 0];
+            gradedQuestions.forEach((q, idx) => { if (q.isCorrect && Math.floor(idx / 20) < 5) subScores[Math.floor(idx / 20)] += 5; });
+            const cCount = data.summary.correctCount;
+            const totalQ = data.summary.totalCount;
+            const failedSubjects = subScores.flatMap((score, index) => score < 40 ? [index + 1] : []);
+            const failReason = failedSubjects.length
+                ? formatSetting('result.fail_reason_subject', '{subjects}과목 과락', { subjects: failedSubjects.join(', ') })
+                : cCount < 60 ? t('result.fail_reason_average', '평균 점수 미달') : '';
+            setQuestions(gradedQuestions);
+            setSubjectScores(subScores);
+            setExamResult({ isPass: !failReason, average: cCount, failReason,
+                accuracy: totalQ ? Math.round(cCount / totalQ * 100) : 0, correctCount: cCount, totalCount: totalQ });
+            setEndTime(new Date());
+            setIsSubmitted(true);
+            setStep(3);
+            if (typeof setIsExamActive === 'function') setIsExamActive(false);
+            const wrongQs = gradedQuestions.filter(q => !q.isBlank && !q.isCorrect);
+            if (userId && wrongQs.length) await axios.post(`${API_BASE}/api/save-wrong`, {
+                ...getSessionAuth(), id: userId, wrongQuestions: wrongQs, source: 'past', year: selectedYear, session: selectedSession
+            }).catch(() => toast.error('채점은 저장했지만 오답노트 저장에 실패했습니다.'));
+        } catch (error) {
+            toast.error(error.response?.data?.msg || '채점에 실패했습니다. 답안을 유지하고 다시 제출해주세요.');
+        } finally { submittingRef.current = false; }
     }
 
     useEffect(() => {

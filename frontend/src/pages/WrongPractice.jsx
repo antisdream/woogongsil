@@ -2,6 +2,7 @@ import '../styles/app/learning-redesign.css';
 // 오답노트 라우트 페이지 컴포넌트입니다.
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
+import { submitReviewAnswer } from '../features/learningAttempts.js';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import useScreenSettings from '../useScreenSettings';
 import '../styles/app/mobile-practice.css';
@@ -690,13 +691,7 @@ const WrongPractice = () => {
 
         setIsChecking(true);
         try {
-            const res = await axios.post(`${API_BASE}/api/ipep/check-answer`, {
-                source: activeTab,
-                questionId: getQuestionId(currentNote),
-                userAnswer: ipepAnswer
-            });
-
-            const data = res.data || {};
+            const data = await submitReviewAnswer(activeTab, getQuestionId(currentNote), ipepAnswer);
             if (data.requiresSelfCheck) {
                 const ok = window.confirm(
                     formatSetting('messages.self_check_confirm', '[자기채점 필요]\n\n내 답안:\n{userAnswer}\n\n정답 예시:\n{correctAnswer}\n\n정답으로 처리할까요?', {
@@ -708,7 +703,9 @@ const WrongPractice = () => {
                     isCorrect: ok,
                     correctAnswer: data.correctAnswer || getCorrectAnswer(currentNote),
                     explanation: data.explanation || getExplanation(currentNote),
-                    score: ok ? Number(data.maxScore || currentNote.score || 5) : 0,
+                    score: 0,
+                    selfAssessment: ok,
+                    requiresSelfCheck: true,
                     maxScore: Number(data.maxScore || currentNote.score || 5)
                 });
             } else {
