@@ -128,8 +128,32 @@ def recovery_health():
     raise RuntimeError("Restored application HTTP checks failed")
 
 
+def edge_health(manifest, phase):
+    checks = [("/version.json", 200), ("/api/gatekeeper/status", 200),
+              ("/api/admin/auth/me", 401), ("/api/questions", 410)]
+    for route, expected in checks:
+        req = urllib.request.Request("https://woogongsil.site" + route,
+            headers={"User-Agent": "WGS-Release-Healthcheck", "Origin": "https://untrusted.example"})
+        try:
+            response = urllib.request.urlopen(req, timeout=15)
+        except urllib.error.HTTPError as error:
+            response = error
+        with response:
+            body = response.read(100000)
+            if response.status != expected or response.headers.get("Strict-Transport-Security") != "max-age=300":
+                raise RuntimeError("HTTPS security release probe failed")
+            if response.headers.get("Access-Control-Allow-Origin"):
+                raise RuntimeError("Untrusted browser origin was allowed")
+            if "script-src 'self';" not in response.headers.get("Content-Security-Policy", ""):
+                raise RuntimeError("HTTPS script policy differs")
+            if route == "/version.json" and json.loads(body).get("commit") != manifest["commit"]:
+                raise RuntimeError("HTTPS release commit differs")
+        if phase == 'dry-run':
+            time.sleep(2)
+
+
 class Deployment:
-    def __init__(self, app, base, release, runner=None, verifier=None, recovery_verifier=None):
+    def __init__(self, app, base, release, runner=None, verifier=None, recovery_verifier=None, edge_verifier=None):
         self.app, self.base, self.release = app, base, release
         self.manifest = json.loads((release / "release-manifest.json").read_text())
         self.previous = json.loads((base / "current.json").read_text())
@@ -137,6 +161,11 @@ class Deployment:
         self.runner = runner or self.run
         self.verifier = verifier or health
         self.recovery_verifier = recovery_verifier or recovery_health
+        self.edge_verifier = edge_verifier or edge_health
+        self.security_enabled = "backend/services/schemaRuntime.js" in self.manifest["managed"]
+        self.runtime_prepared = False
+        self.edge_attempted = False
+        self.server_stopped = False
         self.source_changed = False
         self.dist_changed = False
         self.dependencies_changed = False
@@ -170,6 +199,8 @@ class Deployment:
         disk = shutil.disk_usage(self.base)
         if disk.free < 2 * 1024 ** 3:
             raise RuntimeError("At least 2 GiB of free deployment disk is required")
+        if self.security_enabled and not self.migration_marker.is_file():
+            raise RuntimeError("The previous notice migration must already be recorded before this security release")
 
     def prepare(self):
         self.before.mkdir(mode=0o700)
@@ -181,7 +212,12 @@ class Deployment:
                 target = self.before / "source" / name
                 target.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(source, target)
-        self.runner(["node", DB_HELPER, str(self.app / "backend/.env"), str(self.before / "mysql.sql.gz")])
+        backup_env = self.app / "backend/.env"
+        if self.security_enabled:
+            self.security("prepare")
+            self.runtime_prepared = True
+            backup_env = self.app.parent / "private/db-migration.env"
+        self.runner(["node", DB_HELPER, str(backup_env), str(self.before / "mysql.sql.gz")])
         self.runner(["gzip", "-t", str(self.before / "mysql.sql.gz")])
         new_dist = self.release / "app/frontend/dist"
         for name in PRESERVED_STATIC:
@@ -203,13 +239,28 @@ class Deployment:
         if old_lock != new_lock:
             self.runner(["npm", "ci", "--omit=dev", "--no-audit", "--no-fund"], cwd=self.release / "app/backend")
         self.replace_dependencies = old_lock != new_lock
+        if self.security_enabled:
+            self.edge("prepare")
         atomic_json(self.before / "snapshot.json", {"managed": names, "databaseSha256": digest(self.before / "mysql.sql.gz")})
+
+    def security(self, operation):
+        self.runner(["node", str(self.release / "scripts/release/security-runtime.cjs"), operation,
+                     "--app-root", str(self.app), "--backup-dir", str(self.before)])
+
+    def edge(self, operation, phase=None):
+        arguments = ["sudo", "-n", "python3", str(self.release / "scripts/release/configure_edge.py"), operation,
+                     "--app-root", str(self.app), "--backup-dir", str(self.before / "edge")]
+        if phase: arguments += ["--phase", phase]
+        self.runner(arguments)
 
     def migration(self, operation):
         self.runner(["node", str(self.release / "scripts/release/migrate-notices.cjs"), operation,
                      "--app-root", str(self.app), "--backup-dir", str(self.before)])
 
     def apply(self):
+        if self.security_enabled:
+            self.server_stopped = True
+            self.runner(["pm2", "stop", "wgs-backend"])
         self.source_changed = True
         for name in self.manifest["managed"]:
             target = checked_path(self.app, name)
@@ -230,8 +281,19 @@ class Deployment:
         if not self.migration_marker.exists():
             self.migration_attempted = True
             self.migration("apply")
-        self.runner(["pm2", "restart", "wgs-backend"])
-        self.verifier(self.manifest)
+        if self.security_enabled:
+            self.security("activate")
+            self.edge_attempted = True
+            self.edge("apply", "dry-run")
+            self.security("restart")
+            self.server_stopped = False
+            self.verifier(self.manifest)
+            self.edge_verifier(self.manifest, "dry-run")
+            self.edge("apply", "enforced")
+            self.edge_verifier(self.manifest, "enforced")
+        else:
+            self.runner(["pm2", "restart", "wgs-backend"])
+            self.verifier(self.manifest)
         if self.migration_attempted:
             atomic_json(self.migration_marker, {"commit": self.manifest["commit"], "backup": str(self.before)})
         state = {"tag": self.manifest["tag"], "commit": self.manifest["commit"],
@@ -243,6 +305,17 @@ class Deployment:
     def rollback(self):
         # Roll back only the scoped notice migration, never restore the whole live DB.
         migration_error = None
+        security_error = None
+        if self.edge_attempted:
+            try:
+                self.edge("rollback")
+            except Exception as error:
+                security_error = error
+        if self.runtime_prepared:
+            try:
+                self.security("rollback")
+            except Exception as error:
+                security_error = security_error or error
         if self.migration_attempted:
             try:
                 self.migration("rollback")
@@ -268,14 +341,19 @@ class Deployment:
             if current.exists():
                 current.rename(self.release / "failed-node_modules")
             (self.before / "node_modules").rename(current)
-        if self.source_changed:
-            self.runner(["pm2", "restart", "wgs-backend"])
+        if self.source_changed or self.server_stopped:
+            if self.security_enabled:
+                self.security("restart")
+            else:
+                self.runner(["pm2", "restart", "wgs-backend"])
             self.recovery_verifier()
         atomic_json(self.base / "current.json", self.previous)
-        atomic_json(self.release / "FAILED.json", {"status": "rolled_back" if not migration_error else "notice_rollback_requires_review",
+        atomic_json(self.release / "FAILED.json", {"status": "rolled_back" if not (migration_error or security_error) else "rollback_requires_review",
                                                   "tag": self.manifest["tag"], "commit": self.manifest["commit"]})
         if migration_error:
             raise RuntimeError("Source recovered; notice rollback needs review") from migration_error
+        if security_error:
+            raise RuntimeError("Source recovered; security configuration rollback needs review") from security_error
 
     def execute(self):
         self.validate()

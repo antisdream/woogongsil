@@ -53,8 +53,10 @@ jobs:
           npm ci --prefix backend --no-audit --no-fund
           npm test --prefix backend
           node --test backend/*.test.js
+          node --test scripts/release/security-runtime.test.cjs
           node scripts/release/migrate-notices.cjs verify
           python3 -m unittest discover -s scripts/release -p '*_test.py' -v
+          python3 ops/security/harden_host_test.py
       - name: Verify and build the website
         shell: bash
         run: |

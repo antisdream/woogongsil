@@ -24,6 +24,12 @@ def managed_path(name):
         return p.suffix in {".js", ".py"} or name in {"backend/package.json", "backend/package-lock.json"}
     if name.startswith("frontend/"):
         return p.suffix.lower() not in {".md", ".txt"}
+    if name.startswith("ops/nginx/"):
+        return p.suffix in {".conf", ".md"}
+    if name.startswith("ops/mysql/"):
+        return p.suffix == ".md"
+    if name.startswith("ops/security/"):
+        return p.suffix in {".conf", ".md"} or p.name == "harden_host.py"
     return name == "VERSION"
 
 
