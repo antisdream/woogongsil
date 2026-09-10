@@ -1,3 +1,4 @@
+const { memberTokenHashFromRequest } = require('../services/memberSessionService');
 // 공개 서비스의 요청 제한과 구형 클라이언트 호환 응답을 처리합니다.
 'use strict';
 
@@ -115,7 +116,7 @@ function wgsRouteGroup(req) {
   if (path === '/api/gatekeeper/verify') return 'gatekeeper';
   if (path === '/api/admin/auth/login') return 'admin_login';
   if (method === 'POST' && /^\/api\/admin\/auth\/otp\/(status|resend|verify)\/?$/i.test(path)) return 'admin_otp';
-  if (path === '/api/login') return 'login';
+  if (path === '/api/login' || path === '/api/member/session/exchange') return 'login';
   if (method === 'POST' && /^\/api\/error-report(?:\/send)?\/?$/i.test(path)) return 'error_report';
   if (method === 'POST' && path === '/api/visitors/visit') return 'visitor_visit';
 
@@ -169,7 +170,7 @@ function wgsRateSpecs(req, group) {
   const ip = wgsRateKeyPart(wgsClientIp(req), 'unknown-ip');
   const username = wgsRateKeyPart(body.username || body.id || body.userId || body.loginId || '', '');
   const email = wgsRateKeyPart(body.email || body.emailAddress || '', '');
-  const sessionToken = wgsRateHashPart(body.sessionToken || req.headers['x-session-token'] || req.query?.sessionToken || '', '');
+  const sessionToken = memberTokenHashFromRequest(req) || wgsRateHashPart(body.sessionToken || req.headers['x-session-token'] || req.query?.sessionToken || '', '');
   const specs = [];
 
   function add(name, keyValue, max, sec) {

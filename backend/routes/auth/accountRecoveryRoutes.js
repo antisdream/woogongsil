@@ -2,7 +2,7 @@
 
 const { MemberVerificationError, assertPassword } = require('../../services/memberEmailVerificationService');
 
-function registerAccountRecoveryRoutes({ app, bcrypt, memberVerificationService, validateRealtimeSession, revokeAdminSessionsForUser, sendEmail, saltRounds }) {
+function registerAccountRecoveryRoutes({ app, bcrypt, memberVerificationService, memberSessionService, validateRealtimeSession, revokeAdminSessionsForUser, sendEmail, saltRounds }) {
     const service = memberVerificationService;
 
     app.post('/api/find-id', async (req, res) => {
@@ -33,15 +33,21 @@ function registerAccountRecoveryRoutes({ app, bcrypt, memberVerificationService,
                 }
             }
             const email = await service.consume(req, purpose, { userId }, async (db, state) => {
-                if (session && session.user.sessionToken !== state.user.sessionToken) {
-                    throw new MemberVerificationError('member_login_required', '로그인이 변경되었습니다. 다시 진행해주세요.', 401);
+                if (session) {
+                    try { await memberSessionService.assertStillActive(session, db); }
+                    catch (error) {
+                        if (error.status === 401) throw new MemberVerificationError('member_login_required', '로그인이 변경되었습니다. 다시 진행해주세요.', 401);
+                        throw error;
+                    }
                 }
                 const hashedPassword = await bcrypt.hash(password, saltRounds);
                 await db.query('UPDATE wgs_users SET password = ?, sessionToken = NULL WHERE id = ?', [hashedPassword, state.userId]);
                 await revokeAdminSessionsForUser(state.userId, purpose === 'find-pw' ? 'password_reset' : 'password_changed', db);
+                await memberSessionService.revokeAllForUser(state.userId, 'password_changed', db);
                 return state.email;
             });
             service.clearCookie(res);
+            memberSessionService.clearCookie(res);
             // Notification failure must not turn a committed password change into a retry.
             try {
                 await sendEmail(email, '[우공실] 비밀번호 변경 안내',

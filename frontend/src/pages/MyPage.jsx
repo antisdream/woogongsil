@@ -17,7 +17,7 @@ const MyPage = () => {
     const userId = sessionStorage.getItem('userId');
     const getSessionAuth = useCallback(() => ({
         id: sessionStorage.getItem('userId') || userId || '',
-        sessionToken: sessionStorage.getItem('sessionToken') || '',
+
         serverInstanceId: sessionStorage.getItem('wgsServerInstanceId') || localStorage.getItem('wgsServerInstanceId') || '',
     }), [userId]);
     const { getSetting } = useScreenSettings('mypage');

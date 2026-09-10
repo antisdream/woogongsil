@@ -6,6 +6,7 @@ const crypto = require('crypto');
 
 const registerGatekeeperSecurity = require('./middleware/gatekeeperSecurity');
 const registerAuthRoutes = require('./routes/auth/authRoutes');
+const { createMemberSessionDouble } = require('./test-support/memberSessionDouble');
 const registerAdminAuthRoutes = require('./routes/auth/adminAuthRoutes');
 const registerAccountRecoveryRoutes = require('./routes/auth/accountRecoveryRoutes');
 const registerUserRoutes = require('./routes/userRoutes');
@@ -453,13 +454,8 @@ function createMemberFixture() {
         compare: async (password, hash) => password === 'correct-unit-password' && hash === user.password,
         hash: async () => 'unit-test-replacement-hash',
     };
-    const validateRealtimeSession = async (req) => {
-        const id = String(req.body?.id ?? req.body?.userId ?? req.query?.id ?? req.query?.userId ?? req.headers?.['x-user-id'] ?? '').trim();
-        const token = String(req.body?.sessionToken ?? req.query?.sessionToken ?? req.headers?.['x-session-token'] ?? '').trim();
-        return id === user.id && token && token === user.sessionToken
-            ? { valid: true, user, id, sessionToken: token }
-            : { valid: false, reason: 'session_expired', user: null };
-    };
+    const memberSessionService = createMemberSessionDouble(user, { initiallyActive: true });
+    const validateRealtimeSession = req => memberSessionService.validateRequest(req);
     const verificationCodes = {};
     const legalConsentService = {
         async ensureSchema() {},
@@ -467,7 +463,7 @@ function createMemberFixture() {
     };
     registerGatekeeperSecurity({ app: registry.app, crypto });
     registerAuthRoutes({
-        app: registry.app, pool, bcrypt,
+        app: registry.app, pool, bcrypt, memberSessionService,
         sendEmail: async () => assert.fail('these tests must never send email'),
         verificationCodes, getUserById, getUserByEmail: async () => null,
         getKSTDateTime: () => '2026-09-07 20:00:00', ensureAdminUserControlSchema: async () => {},
@@ -482,12 +478,12 @@ function createMemberFixture() {
         },
         visitorAnalyticsService: { createAdminExclusionCookie: () => '', createAdminExclusionClearCookie: () => '' },
     });
-    return { ...registry, user, queries, pool, bcrypt, getUserById, validateRealtimeSession, verificationCodes, legalConsentService };
+    return { ...registry, user, queries, pool, bcrypt, getUserById, validateRealtimeSession, memberSessionService, verificationCodes, legalConsentService };
 }
 
 test('member password and session verification remain required after the public entry gate is removed', async () => {
     const fixture = createMemberFixture();
-    fixture.user.sessionToken = null;
+    await fixture.memberSessionService.revokeCurrent();
     const wrongPassword = await fixture.dispatch('POST', '/api/login', {
         body: { id: fixture.user.id, password: 'wrong-password' },
     });
@@ -498,15 +494,15 @@ test('member password and session verification remain required after the public 
         body: { id: fixture.user.id, password: 'correct-unit-password' },
     });
     assert.equal(login.body.success, true);
-    assert.ok(login.body.sessionToken);
-    fixture.user.sessionToken = login.body.sessionToken;
+    assert.equal(login.body.sessionToken, undefined);
+    assert.ok(login.body.csrfToken);
 
     const invalidSession = await fixture.dispatch('POST', '/api/check-session', {
         body: { id: fixture.user.id, sessionToken: 'forged-session' },
     });
     assert.equal(invalidSession.body.valid, false);
     const validSession = await fixture.dispatch('POST', '/api/check-session', {
-        body: { id: fixture.user.id, sessionToken: fixture.user.sessionToken },
+        body: { id: fixture.user.id }, headers: { cookie: 'wgs_member=unit-cookie-session' },
     });
     assert.equal(validSession.body.valid, true);
 });
@@ -522,13 +518,13 @@ test('public entry cannot read an anonymous or different member profile', async 
     assert.equal(anonymous.statusCode, 401);
     const differentMember = await fixture.dispatch('GET', '/api/user/:id', {
         params: { id: 'another-member' },
-        headers: { 'x-user-id': fixture.user.id, 'x-session-token': fixture.user.sessionToken },
+        headers: { 'x-user-id': fixture.user.id, cookie: 'wgs_member=unit-cookie-session' },
     });
     assert.equal(differentMember.statusCode, 403);
     assert.equal(fixture.queries.length, 0, 'rejected profile requests must not read private rows');
     const ownProfile = await fixture.dispatch('GET', '/api/user/:id', {
         params: { id: fixture.user.id },
-        headers: { 'x-user-id': fixture.user.id, 'x-session-token': fixture.user.sessionToken },
+        headers: { 'x-user-id': fixture.user.id, cookie: 'wgs_member=unit-cookie-session' },
     });
     assert.equal(ownProfile.statusCode, 200);
     assert.equal(ownProfile.body.id, fixture.user.id);
@@ -544,12 +540,13 @@ test('password recovery and password change still require verified email and the
             pool: fixture.pool, sendEmail: async () => assert.fail('no mail should be sent'), env: { NODE_ENV: 'development' },
         }),
         validateRealtimeSession: fixture.validateRealtimeSession,
+        memberSessionService: fixture.memberSessionService,
         sendEmail: async () => assert.fail('no mail should be sent'), saltRounds: 10,
         revokeAdminSessionsForUser: async () => assert.fail('unverified requests must not revoke sessions'),
     });
     for (const routePath of ['/api/find-pw/reset', '/api/user/change-pw']) {
         const response = await fixture.dispatch('POST', routePath, {
-            headers: { origin: 'http://localhost:5000' },
+            headers: { origin: 'http://localhost:5000', cookie: 'wgs_member=unit-cookie-session' },
             body: { id: fixture.user.id, sessionToken: fixture.user.sessionToken, newPassword: 'Test_1234', newPw: 'Test_1234' },
         });
         assert.equal(response.statusCode, 400);

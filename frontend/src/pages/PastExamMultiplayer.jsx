@@ -1,3 +1,4 @@
+import { memberHeaders, memberCsrfToken } from '../features/memberSession.js';
 import '../styles/app/learning-redesign.css';
 // 멀티플레이 라우트 페이지 컴포넌트입니다.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -249,19 +250,10 @@ function PastExamMultiplayerInner({ setIsExamActive, initialTab = 'play' }) {
             leaveNotified = true;
             const leaveUrl = `${API_BASE}/api/multiplayer/rooms/${encodeURIComponent(roomCode)}/leave`;
             try {
-                const payload = new Blob([JSON.stringify({ reason: 'unsubmitted-exit' })], { type: 'application/json' });
-                if (navigator?.sendBeacon) {
-                    navigator.sendBeacon(leaveUrl, payload);
-                    // 개발 환경처럼 프론트/백엔드 포트가 분리된 경우를 대비해 keepalive fetch도 이어서 시도합니다.
-                }
-            } catch {
-                // 브라우저 종료 시점의 sendBeacon 실패는 keepalive fetch로 한 번 더 보정합니다.
-            }
-            try {
                 fetch(leaveUrl, {
                     method: 'POST',
                     credentials: 'include',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: memberHeaders({ 'Content-Type': 'application/json' }),
                     body: JSON.stringify({ reason: 'unsubmitted-exit' }),
                     keepalive: true,
                 }).catch(() => {});
@@ -298,9 +290,9 @@ function PastExamMultiplayerInner({ setIsExamActive, initialTab = 'play' }) {
     useEffect(() => {
         // 방에 들어간 동안에는 socket으로 대기방 상태 변화를 실시간 반영합니다.
         if (!room?.roomCode || !currentUser?.id) return undefined;
-        const socket = createSocket(API_BASE, { withCredentials: true, auth: { id: currentUser.id, sessionToken: sessionStorage.getItem('sessionToken') || '' } });
+        const socket = createSocket(API_BASE, { withCredentials: true, auth: callback => callback({ csrfToken: memberCsrfToken() }) });
         socketRef.current = socket;
-        socket.emit('multiplayer:join-room', { roomCode: room.roomCode });
+        socket.on('connect', () => socket.emit('multiplayer:join-room', { roomCode: room.roomCode }));
         socket.on('multiplayer:room-updated', (updatedRoom) => {
             if (!updatedRoom || String(updatedRoom.roomCode) !== String(room.roomCode)) return;
             setRoom(updatedRoom);

@@ -1,3 +1,4 @@
+import { setMemberSession, hasMemberSession } from '../features/memberSession.js';
 // 로그인 라우트 페이지 컴포넌트입니다.
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
@@ -55,7 +56,7 @@ const Login = () => {
     const [isLoggingIn, setIsLoggingIn] = useState(false);
 
     useEffect(() => {
-        const alreadyLoggedIn = Boolean(sessionStorage.getItem('userId') && sessionStorage.getItem('sessionToken'));
+        const alreadyLoggedIn = hasMemberSession();
         if (alreadyLoggedIn) {
             navigate('/', { replace: true });
         }
@@ -84,11 +85,9 @@ const Login = () => {
         setIsLoggingIn(true);
 
         try {
-            const clientSessionToken = sessionStorage.getItem('sessionToken');
             const res = await axios.post(`${API_BASE}/api/login`, {
                 id: trimmedId,
                 password,
-                clientSessionToken,
                 replaceConfirmationToken,
             });
 
@@ -128,7 +127,7 @@ const Login = () => {
             sessionStorage.setItem('userId', res.data.user.id);
             sessionStorage.setItem('isOperator', res.data.user.isOperator ? 'true' : 'false');
             sessionStorage.setItem('isPrimaryAdmin', res.data.user.isPrimaryAdmin ? 'true' : 'false');
-            sessionStorage.setItem('sessionToken', res.data.sessionToken);
+            setMemberSession(res.data);
             const requiresLegalConsent = res.data.requiresLegalConsent === true;
             sessionStorage.setItem('wgsLegalConsentRequired', requiresLegalConsent ? 'true' : 'false');
             localStorage.setItem(REMEMBERED_LOGIN_KEY, 'true');

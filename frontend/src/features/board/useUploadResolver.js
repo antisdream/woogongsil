@@ -10,13 +10,12 @@ export function localUploadPath(value) {
 
 export function useUploadResolver() {
     const cache = useRef(new Map());
-    const objectUrls = useRef(new Set());
     const controllers = useRef(new Set());
     const [fileError, setFileError] = useState('');
 
     useEffect(() => {
-        const urls = objectUrls.current, pending = controllers.current, files = cache.current;
-        return () => { for (const controller of pending) controller.abort(); for (const url of urls) URL.revokeObjectURL(url); files.clear(); };
+        const pending = controllers.current, files = cache.current;
+        return () => { for (const controller of pending) controller.abort(); files.clear(); };
     }, []);
 
     const resolveFileUrl = useCallback(async value => {
@@ -26,11 +25,12 @@ export function useUploadResolver() {
             const controller = new AbortController(); controllers.current.add(controller);
             cache.current.set(uploadPath, (async () => {
                 try {
-                    const response = await fetch(uploadPath, { headers: memberRequestHeaders(), credentials: 'include', cache: 'no-store', signal: controller.signal });
+                    const response = await fetch(uploadPath, { method: 'HEAD', headers: memberRequestHeaders(), credentials: 'include', cache: 'no-store', signal: controller.signal });
                     if (!response.ok) throw new Error('첨부파일을 열 권한이 없거나 파일이 삭제되었습니다. 로그인 상태를 확인해주세요.');
-                    const blob = await response.blob();
                     if (controller.signal.aborted) return '';
-                    const url = URL.createObjectURL(blob); objectUrls.current.add(url); return url;
+                    // Same-origin HttpOnly cookies authenticate native image/video
+                    // requests and Range streaming without copying full files to JS.
+                    return uploadPath;
                 } catch (error) {
                     if (error.name !== 'AbortError') setFileError(error.message);
                     cache.current.delete(uploadPath);

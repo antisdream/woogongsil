@@ -54,7 +54,7 @@ const PastExam = ({ isExamActive, setIsExamActive }) => {
     const getSessionAuth = useCallback(() => ({
         id: sessionStorage.getItem('userId') || userId || '',
         userId: sessionStorage.getItem('userId') || userId || '',
-        sessionToken: sessionStorage.getItem('sessionToken') || '',
+
         serverInstanceId: sessionStorage.getItem('wgsServerInstanceId') || localStorage.getItem('wgsServerInstanceId') || '',
     }), [userId]);
 

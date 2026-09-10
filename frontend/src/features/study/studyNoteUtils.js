@@ -9,14 +9,14 @@ export const getStudyAuthPayload = () => {
     return {
         id: userId,
         userId,
-        sessionToken: sessionStorage.getItem('sessionToken') || '',
+
         serverInstanceId: sessionStorage.getItem('wgsServerInstanceId') || localStorage.getItem('wgsServerInstanceId') || '',
     };
 };
 
 export const isStudyLoggedIn = () => {
     const auth = getStudyAuthPayload();
-    return Boolean(auth.userId && auth.sessionToken);
+    return Boolean(auth.userId && sessionStorage.getItem('wgsMemberAuthenticated'));
 };
 
 export const normalizeStudyFolderKey = (folderId) => {

@@ -17,7 +17,9 @@ function registerMemberEmailVerificationRoutes({ app, memberVerificationService,
             if (purpose === 'change-pw') {
                 const session = await validateRealtimeSession(req);
                 if (!session?.valid) throw new MemberVerificationError('member_login_required', '로그인 후 다시 진행해주세요.', 401);
-                user = session.user;
+                // The public session principal intentionally contains no password
+                // hash. Fetch it internally for the account-change fingerprint.
+                user = await getUserById(session.user.id);
             } else if (purpose === 'find-pw') {
                 user = await getUserById(String(req.body.id || '').trim());
             } else {

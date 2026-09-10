@@ -55,14 +55,13 @@ const Home = () => {
     useEffect(() => {
         const checkSession = async () => {
             const userId = sessionStorage.getItem('userId');
-            const token = sessionStorage.getItem('sessionToken');
+            const authenticated = sessionStorage.getItem('wgsMemberAuthenticated');
             const serverInstanceId = sessionStorage.getItem(SERVER_INSTANCE_ID_KEY) || localStorage.getItem(SERVER_INSTANCE_ID_KEY) || '';
 
-            if (userId && token) {
+            if (userId && authenticated) {
                 try {
                     const res = await axios.post(`${API_BASE}/api/check-session`, {
                         id: userId,
-                        sessionToken: token,
                         serverInstanceId
                     });
 

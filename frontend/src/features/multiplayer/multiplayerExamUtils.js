@@ -1,3 +1,4 @@
+import { memberHeaders } from '../memberSession.js';
 // 멀티플레이 시험 기능 모듈입니다: multiplayerExamUtils
 export const API_BASE = import.meta.env?.VITE_API_BASE_URL || '';
 
@@ -80,27 +81,10 @@ export function getExamMeta(examType) {
 }
 
 export async function apiJson(path, options = {}) {
-    // 멀티플레이 API 공통 호출 함수: 기존 로그인 세션 검증 방식(id/sessionToken)을 모든 요청에 붙인다.
-    const userId = sessionStorage.getItem('userId') || '';
-    const sessionToken = sessionStorage.getItem('sessionToken') || '';
-    const method = (options.method || 'GET').toUpperCase();
-    let finalPath = path;
-    let finalBody = options.body;
-
-    if (method === 'GET') {
-        const joiner = finalPath.includes('?') ? '&' : '?';
-        finalPath = `${finalPath}${joiner}id=${encodeURIComponent(userId)}&sessionToken=${encodeURIComponent(sessionToken)}`;
-    } else {
-        let bodyObj = {};
-        try { bodyObj = finalBody ? JSON.parse(finalBody) : {}; } catch { bodyObj = {}; }
-        finalBody = JSON.stringify({ ...bodyObj, id: userId, sessionToken });
-    }
-
-    const res = await fetch(`${API_BASE}${finalPath}`, {
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
+    const res = await fetch(`${API_BASE}${path}`, {
         ...options,
-        body: finalBody
+        credentials: 'include',
+        headers: memberHeaders({ 'Content-Type': 'application/json', ...(options.headers || {}) }),
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok || data.success === false) throw new Error(data.msg || '요청 처리 중 오류가 발생했습니다.');

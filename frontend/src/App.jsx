@@ -1,3 +1,4 @@
+import { setMemberSession, clearMemberSession, hasMemberSession } from './features/memberSession.js';
 // Root application shell, route table, and global guards.
 import React, { Suspense, lazy, useState, useEffect, useCallback, useRef } from 'react';
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
@@ -205,9 +206,9 @@ function App() {
     useEffect(() => {
         let alive = true;
         const id = sessionStorage.getItem('userId') || '';
-        const sessionToken = sessionStorage.getItem('sessionToken') || '';
 
-        if (!loggedInUser || !id || !sessionToken) {
+
+        if (!loggedInUser || !id || !hasMemberSession()) {
             setLegalConsentGate({ status: 'idle' });
             return () => { alive = false; };
         }
@@ -216,7 +217,7 @@ function App() {
         axios.post(`${API_BASE}/api/legal/user-status`, {
             id,
             userId: id,
-            sessionToken,
+
             serverInstanceId: sessionStorage.getItem(SERVER_INSTANCE_ID_KEY) || localStorage.getItem(SERVER_INSTANCE_ID_KEY) || '',
         }).then((response) => {
             if (!alive) return;
@@ -300,7 +301,7 @@ function App() {
         // 1순위: handleLogout에서 저장한 명확한 사유
         // 2순위: 브라우저를 닫았다가 다시 들어온 경우의 일반 세션 만료 안내
         const pendingRaw = localStorage.getItem(PENDING_LOGOUT_TOAST_KEY);
-        const hasBrowserSession = Boolean(sessionStorage.getItem('userId') && sessionStorage.getItem('sessionToken'));
+        const hasBrowserSession = hasMemberSession();
 
         if (pendingRaw) {
             try {
@@ -479,7 +480,7 @@ function App() {
         }
 
         const userId = sessionStorage.getItem('userId');
-        const sessionToken = sessionStorage.getItem('sessionToken');
+
 
         if (reason !== 'manual') {
             savePendingLogoutToast(reason);
@@ -491,12 +492,16 @@ function App() {
 
         if (userId && callLogoutApi && !isForced) {
             try {
-                await axios.post(`${API_BASE}/api/logout`, { id: userId, sessionToken });
+                await axios.post(`${API_BASE}/api/logout`, { id: userId });
             } catch (e) {
-                // 로그아웃 API 실패가 있어도 브라우저 세션은 비워야 하므로 여기서 멈추지 않는다.
+                if (e.response?.status !== 401) {
+                    showWgsToast('로그아웃을 완료하지 못했습니다. 연결을 확인하고 다시 시도해주세요.', 'warning');
+                    return;
+                }
             }
         }
 
+        clearMemberSession();
         sessionStorage.clear();
         navigate('/');
         window.location.reload();
@@ -511,30 +516,29 @@ function App() {
     useEffect(() => {
         let pollTimer;
         const userId = sessionStorage.getItem('userId');
-        const sessionToken = sessionStorage.getItem('sessionToken');
-        const serverInstanceId = sessionStorage.getItem(SERVER_INSTANCE_ID_KEY) || localStorage.getItem(SERVER_INSTANCE_ID_KEY) || '';
 
-        if (userId && sessionToken) {
+
+        if (userId && hasMemberSession()) {
             pollTimer = setInterval(async () => {
                 if (document.visibilityState === 'hidden') return;
                 try {
-                    const res = await axios.post(`${API_BASE}/api/check-session`, {
-                        id: userId,
-                        sessionToken,
-                        serverInstanceId
-                    });
+                    const res = await axios.get(`${API_BASE}/api/member/session`, { withCredentials: true });
 
                     if (res.data.serverInstanceId) {
                         sessionStorage.setItem(SERVER_INSTANCE_ID_KEY, res.data.serverInstanceId);
                         localStorage.setItem(SERVER_INSTANCE_ID_KEY, res.data.serverInstanceId);
                     }
 
-                    if (!res.data.valid) {
+                    if (!res.data.valid || res.data.id !== userId) {
                         const reason = res.data.reason || 'session_expired';
                         handleLogout({ reason, isForced: true, callLogoutApi: false });
-                    } else if (syncSessionAdminFlags(res.data)) {
+                    } else {
+                        const flagsChanged = syncSessionAdminFlags(res.data);
+                        setMemberSession(res.data);
+                        if (flagsChanged) {
                         // 세션은 유효하지만 DB 권한값이 바뀐 경우 공개 역할별 화면을 즉시 갱신합니다.
                         setAuthRevision((prev) => prev + 1);
+                        }
                     }
                 } catch (e) {
                     console.error(e);
@@ -549,9 +553,9 @@ function App() {
     // 최초 접속 시점 이후에 발송된 공지만 보여주기 위해 마지막 확인 시각을 localStorage에 저장합니다.
     useEffect(() => {
         const userId = sessionStorage.getItem('userId');
-        const sessionToken = sessionStorage.getItem('sessionToken');
 
-        if (!loggedInUser || !userId || !sessionToken) {
+
+        if (!loggedInUser || !userId || !hasMemberSession()) {
             setAdminNoticePopup(null);
             setAdminNoticeQueue([]);
             return undefined;
@@ -569,7 +573,7 @@ function App() {
                 const sinceMs = Number(localStorage.getItem(ADMIN_NOTICE_SEEN_KEY) || Date.now());
                 const res = await axios.post(`${API_BASE}/api/notices/latest`, {
                     id: userId,
-                    sessionToken,
+
                     sinceMs
                 });
 

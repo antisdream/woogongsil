@@ -1,3 +1,4 @@
+import { bootstrapMemberSession } from './features/memberSession.js';
 /* 과거 점검 링크에 남아 있는 rollback_check 쿼리만 정리합니다. */
 try {
   const __wgsUrl = new URL(window.location.href);
@@ -22,7 +23,7 @@ import './index.css';
 
 
 
-ReactDOM.createRoot(document.getElementById('root')).render(
+bootstrapMemberSession().finally(() => ReactDOM.createRoot(document.getElementById('root')).render(
 
   <BrowserRouter>
 
@@ -30,5 +31,4 @@ ReactDOM.createRoot(document.getElementById('root')).render(
 
   </BrowserRouter>
 
-);
-
+));

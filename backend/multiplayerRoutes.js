@@ -40,7 +40,7 @@ const { createMultiplayerAuth } = require('./services/multiplayerAuth');
 const { createMultiplayerRoomCleanup } = require('./services/multiplayerRoomCleanup');
 const registerMultiplayerWrongRoutes = require('./routes/multiplayer/multiplayerWrongRoutes');
 
-function createMultiplayerRouter({ pool, io = null } = {}) {
+function createMultiplayerRouter({ pool, io = null, memberSessionService } = {}) {
     const router = express.Router();
 
     if (!pool) throw new Error('multiplayerRoutes requires mysql pool');
@@ -49,7 +49,7 @@ function createMultiplayerRouter({ pool, io = null } = {}) {
         .then(() => console.log('OK: written multiplayer schema checked'))
         .catch((err) => console.warn('WARN: written multiplayer schema check failed:', err.message));
 
-    const { requireSessionUser, requireSessionUserForHandler } = createMultiplayerAuth({ pool });
+    const { requireSessionUser, requireSessionUserForHandler } = createMultiplayerAuth({ pool, memberSessionService });
     const { cleanupRoomIfAllWrongAnswersHidden } = createMultiplayerRoomCleanup({ pool });
 
     async function getActiveRoomByCode(roomCode) {

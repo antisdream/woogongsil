@@ -3,7 +3,7 @@ import axios from 'axios';
 export const buildIpepSessionAuth = (userId = '') => ({
     id: sessionStorage.getItem('userId') || userId || '',
     userId: sessionStorage.getItem('userId') || userId || '',
-    sessionToken: sessionStorage.getItem('sessionToken') || '',
+
     serverInstanceId: sessionStorage.getItem('wgsServerInstanceId') || localStorage.getItem('wgsServerInstanceId') || '',
 });
 

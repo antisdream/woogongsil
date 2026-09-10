@@ -126,7 +126,8 @@ function registerAdminUserListRoutes(options = {}) {
             const keyword = listQuery.keyword;
             const hasEmail = await adminColumnExists('wgs_users', 'email');
             const hasDDay = await adminColumnExists('wgs_users', 'dDay');
-            const hasSessionToken = await adminColumnExists('wgs_users', 'sessionToken');
+            const hasMemberSessions = await adminTableExists('wgs_member_sessions');
+            const activeSessionSql = 'EXISTS (SELECT 1 FROM wgs_member_sessions ms WHERE ms.active_user_id=u.id AND ms.revoked_at IS NULL AND ms.expires_at>UNIX_TIMESTAMP(NOW(3))*1000 AND ms.idle_expires_at>UNIX_TIMESTAMP(NOW(3))*1000)';
             const hasCreatedAt = await adminColumnExists('wgs_users', 'created_at');
             const hasLastLoginAt = await adminColumnExists('wgs_users', 'last_login_at');
             const hasLastLogoutAt = await adminColumnExists('wgs_users', 'last_logout_at');
@@ -167,8 +168,8 @@ function registerAdminUserListRoutes(options = {}) {
                 'u.name AS name',
                 hasEmail ? 'u.email AS email' : "''AS email",
                 hasDDay ? 'u.dDay AS dDay' : 'NULL AS dDay',
-                hasSessionToken
-                    ? "CASE WHEN u.sessionToken IS NOT NULL AND u.sessionToken <> '' THEN 1 ELSE 0 END AS has_active_session"
+                hasMemberSessions
+                    ? `CASE WHEN ${activeSessionSql} THEN 1 ELSE 0 END AS has_active_session`
                     : '0 AS has_active_session',
                 hasCreatedAt ? 'u.created_at AS created_at' : 'NULL AS created_at',
                 hasLastLoginAt ? 'u.last_login_at AS last_login_at' : 'NULL AS last_login_at',
@@ -386,8 +387,8 @@ function registerAdminUserListRoutes(options = {}) {
                 }
             }
 
-            const onlineUsers = hasSessionToken
-                ? await getFilteredCount("u.sessionToken IS NOT NULL AND u.sessionToken <> ''")
+            const onlineUsers = hasMemberSessions
+                ? await getFilteredCount(activeSessionSql)
                 : activeIds.size;
             const loginKeepUsers = hasIsSuspended
                 ? await getFilteredCount('COALESCE(u.is_suspended, 0) = 0')

@@ -50,7 +50,7 @@ const Board = () => {
     const getSessionAuth = useCallback(() => ({
         id: sessionStorage.getItem('userId') || userId || '',
         userId: sessionStorage.getItem('userId') || userId || '',
-        sessionToken: sessionStorage.getItem('sessionToken') || '',
+
         serverInstanceId: sessionStorage.getItem('wgsServerInstanceId') || localStorage.getItem('wgsServerInstanceId') || '',
     }), [userId]);
 
@@ -74,7 +74,7 @@ const Board = () => {
     const boardNoticeLabel = t('tabs.notice_label', '공지게시판');
     const boardFreeLabel = t('tabs.free_label', '자유게시판');
     const getBoardLabel = (boardType) => boardType === BOARD_NOTICE ? boardNoticeLabel : boardFreeLabel;
-    const isLoggedIn = !!(userId && sessionStorage.getItem('sessionToken'));
+    const isLoggedIn = !!(userId && sessionStorage.getItem('wgsMemberAuthenticated'));
     const requireLogin = () => {
         if (isLoggedIn) return true;
         toast.error(LOGIN_REQUIRED_MESSAGE);

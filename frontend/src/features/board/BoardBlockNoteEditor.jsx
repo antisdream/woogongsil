@@ -1,3 +1,4 @@
+import { memberHeaders } from '../memberSession.js';
 import { useUploadResolver } from './useUploadResolver.js';
 import AttachmentDownloads from './AttachmentDownloads.jsx';
 import { useCallback, useEffect, useMemo, useRef } from 'react';
@@ -77,10 +78,7 @@ function BoardBlockNoteEditor({
         const response = await fetch(uploadUrl, {
             method: 'POST',
             credentials: 'include',
-            headers: {
-                'X-User-Id': String(uploadAuthRef.current.userId || uploadAuthRef.current.id || ''),
-                'X-Session-Token': String(uploadAuthRef.current.sessionToken || ''),
-            },
+            headers: memberHeaders(),
             body: formData,
         });
 

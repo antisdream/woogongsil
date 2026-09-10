@@ -76,7 +76,7 @@ function createLearningAttemptService({ pool, validateRealtimeSession, env = pro
             if (!userId || !sessionKey) throw fail(401, 'learning_session', '로그인 상태를 다시 확인해주세요.');
             return { userId, ownerHash: digest('member|' + userId + '|' + sessionKey) };
         }
-        if (req.headers['x-user-id'] || req.headers['x-session-token'] || req.body?.sessionToken) {
+        if (req.headers['x-user-id'] || req.headers['x-session-token'] || req.body?.sessionToken || cookie(req, secure ? '__Host-wgs_member' : 'wgs_member')) {
             throw fail(401, 'learning_session', '로그인 세션이 만료되었습니다. 다시 로그인해주세요.');
         }
         let secret = cookie(req, guestCookie);

@@ -55,14 +55,12 @@ export default function AccountLegalConsent({ onAccepted, onLogout }) {
     }
 
     const id = sessionStorage.getItem('userId') || '';
-    const sessionToken = sessionStorage.getItem('sessionToken') || '';
     setSubmitting(true);
     setError('');
     try {
       const response = await axios.post('/api/legal/user-acceptance', {
         id,
         userId: id,
-        sessionToken,
         serverInstanceId: sessionStorage.getItem('wgsServerInstanceId') || localStorage.getItem('wgsServerInstanceId') || '',
         legal: {
           age14Confirmed: true,

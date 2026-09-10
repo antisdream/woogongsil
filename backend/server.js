@@ -44,6 +44,7 @@ const registerPracticalUserRoutes = require('./routes/practicalUserRoutes');
 const registerUserRoutes = require('./routes/userRoutes');
 const registerExamRoutes = require('./routes/examRoutes');
 const { createLearningAttemptService } = require('./services/learningAttemptService');
+const { createMemberSessionService } = require('./services/memberSessionService');
 const registerAuthRoutes = require('./routes/auth/authRoutes');
 const registerAdminAuthRoutes = require('./routes/auth/adminAuthRoutes');
 const { createAdminEmailOtpService } = require('./services/adminEmailOtpService');
@@ -114,6 +115,8 @@ app.use('/api/error-report', errorReportRoutes);
 // - 매 요청마다 DB 연결을 새로 만들지 않고 pool에서 빌려 쓰는 방식입니다.
 // - 기존 프로젝트 기본값은 유지하되, .env가 있으면 .env 값을 우선 사용해.
 const pool = createDatabasePool();
+const memberSessionService = createMemberSessionService({ pool });
+app.use(memberSessionService.middleware);
 const learningAttemptService = createLearningAttemptService({ pool, validateRealtimeSession });
 const legalConsentService = createLegalConsentService({ pool });
 registerLegalRoutes({ app, pool, legalConsentService, validateRealtimeSession });
@@ -127,7 +130,7 @@ const visitSessionService = createVisitSessionService({
     ensureSchema: ensureVisitorAnalyticsSchema,
 });
 
-registerMultiplayerFeature({ app, pool, io });
+registerMultiplayerFeature({ app, pool, io, memberSessionService });
 
 // 실기 오답노트 SQL 테이블 안전 점검
 // ----------------------------------------------------------
@@ -183,43 +186,10 @@ const {
 } = createRealtimeState({ adminUserId: ADMIN_USER_ID });
 
 async function validateRealtimeSession(req) {
-    // 일부 관리자 조회 API는 GET(query) 또는 body 없는 요청으로 들어올 수 있습니다.
-    // req.body.id를 바로 읽으면 body가 undefined인 요청에서 서버 오류가 발생할 수 있습니다.
-    // body, query, header를 모두 확인하는 방식으로 요청 값을 통일합니다.
-    const body = req && req.body && typeof req.body === 'object'? req.body : {};
-    const query = req && req.query && typeof req.query === 'object'? req.query : {};
-
-    const id = String(body.id ?? body.userId ?? query.id ?? query.userId ?? req?.headers?.['x-user-id'] ?? '').trim();
-    const sessionToken = String(body.sessionToken ?? query.sessionToken ?? req?.headers?.['x-session-token'] ?? '').trim();
-    const clientServerInstanceId = String(body.serverInstanceId ?? query.serverInstanceId ?? req?.headers?.['x-server-instance-id'] ?? '').trim();
-
-    if (!id || !sessionToken) {
-        return { valid: false, reason: 'session_expired', user: null, id, sessionToken };
-    }
-
-    // 서버가 재시작/업데이트된 경우 기존 화면을 들고 있는 사용자를 다시 로그인하게 합니다.
-    // check-session, online-users와 같은 기준을 사용해야 toast 문구가 흔들리지 않습니다.
-    if (clientServerInstanceId && clientServerInstanceId !== SERVER_INSTANCE_ID) {
-        removeActiveUser(id, sessionToken || null);
-        return { valid: false, reason: 'server_updated', user: null, id, sessionToken };
-    }
-
-    const user = await getUserById(id);
-    const isValid = Boolean(user && user.sessionToken && user.sessionToken === sessionToken);
-
-    if (!isValid) {
-        removeActiveUser(id, sessionToken || null);
-        return {
-            valid: false,
-            reason: user && user.sessionToken ? 'duplicate_login' : 'session_expired',
-            user: null,
-            id,
-            sessionToken
-        };
-    }
-
-    touchActiveUser(user, req, sessionToken);
-    return { valid: true, reason: null, user, id, sessionToken };
+    const isBackgroundCheck = ['/api/check-session', '/api/notices/latest', '/api/online-users', '/api/legal/user-status'].includes(req.path);
+    const auth = await memberSessionService.validateRequest(req, { touch: !isBackgroundCheck });
+    if (auth.valid) touchActiveUser(auth.user, req, auth.sessionHash);
+    return auth;
 }
 
 // 2-3. 관리자 권한검사 보조 로직
@@ -467,6 +437,7 @@ registerAuthRoutes({
     bcrypt,
     sendEmail,
     memberVerificationService,
+    memberSessionService,
     validateRealtimeSession,
     getUserByEmail,
     getUserById,
@@ -783,6 +754,7 @@ registerAdminRoutes({
     getAdminUserControl,
     isUserManagementTargetProtected,
     revokeAdminSessionsForUser: (userId, reason) => adminSessionService.revokeAllForUser(userId, reason),
+    revokeMemberSessionsForUser: (userId, reason) => memberSessionService.revokeAllForUser(userId, reason),
     getApprovalBypassToken,
     isApprovalBypassRequest,
     touchActiveUser,
@@ -812,6 +784,7 @@ registerAccountRecoveryRoutes({
     getUserById,
     getUserByEmail,
     memberVerificationService,
+    memberSessionService,
     validateRealtimeSession,
     sendEmail,
     revokeAdminSessionsForUser: (userId, reason, db) => adminSessionService.revokeAllForUser(userId, reason, db),
@@ -983,6 +956,7 @@ async function startServer() {
         await adminSessionService.ensureSchema();
         await adminEmailOtpService.ensureSchema();
         await memberVerificationService.ensureSchema();
+        await memberSessionService.ensureSchema();
         await boardPolicyService.ensureSchema();
         await learningAttemptService.ensureSchema();
         await ensureVisitorAnalyticsSchema();

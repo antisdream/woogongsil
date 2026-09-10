@@ -23,6 +23,7 @@ function registerAdminRoutes(options = {}) {
     const getAdminUserControl = options.getAdminUserControl;
     const isUserManagementTargetProtected = options.isUserManagementTargetProtected;
     const revokeAdminSessionsForUser = options.revokeAdminSessionsForUser;
+    const revokeMemberSessionsForUser = options.revokeMemberSessionsForUser || (async () => {});
     const getApprovalBypassToken = options.getApprovalBypassToken;
     const isApprovalBypassRequest = options.isApprovalBypassRequest;
     const touchActiveUser = options.touchActiveUser;
@@ -506,7 +507,10 @@ function registerAdminRoutes(options = {}) {
             );
 
             if (!result.affectedRows) return res.status(404).json({ success: false, message: '사용자를 찾을 수 없습니다.' });
-            if (suspend) await revokeAdminSessionsForUser(targetId, 'account_suspended');
+            if (suspend) {
+                await revokeAdminSessionsForUser(targetId, 'account_suspended');
+                await revokeMemberSessionsForUser(targetId, 'account_suspended');
+            }
             return res.json({ success: true, message: suspend ? '임시정지 처리되었습니다.' : '임시정지가 해제되었습니다.' });
         } catch (error) {
             console.error('[admin suspend user] error', error);

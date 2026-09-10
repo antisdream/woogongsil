@@ -7,5 +7,5 @@ export const verificationConfig = csrfToken => ({
 
 export const memberVerificationIdentity = () => ({
     id: sessionStorage.getItem('userId') || '',
-    sessionToken: sessionStorage.getItem('sessionToken') || '',
+
 });

@@ -1,3 +1,4 @@
+import { memberHeaders } from '../features/memberSession.js';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import axios from 'axios';
 import { toast } from 'react-toastify';
@@ -264,25 +265,13 @@ function StudyNotes() {
         const payload = buildDraftPayload(state, saveReason);
         const body = JSON.stringify(payload);
         const url = `${API_BASE}/api/study/drafts`;
-        let sent = false;
-
-        if (navigator.sendBeacon) {
-            try {
-                sent = navigator.sendBeacon(url, new Blob([body], { type: 'application/json' }));
-            } catch {
-                sent = false;
-            }
-        }
-
-        if (!sent) {
-            fetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body,
-                credentials: 'include',
-                keepalive: true,
-            }).catch(() => {});
-        }
+        fetch(url, {
+            method: 'POST',
+            headers: memberHeaders({ 'Content-Type': 'application/json' }),
+            body,
+            credentials: 'include',
+            keepalive: true,
+        }).catch(() => {});
 
         if (options.updateStatus !== false) setLastDraftSavedAt(formatDraftNow());
         return true;

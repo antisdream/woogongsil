@@ -1,5 +1,6 @@
 // Socket.IO로 멀티플레이 대기방 상태를 동기화합니다.
 const createMultiplayerRouter = require('./multiplayerRoutes');
+const { createMemberSessionService } = require('./services/memberSessionService');
 
 // multiplayerSocket.js
 // 역할:
@@ -14,28 +15,6 @@ function normalizeRoomCode(value) {
     return String(value || '').trim().replace(/[^0-9]/g, '');
 }
 
-async function validateSocketSession(pool, socket) {
-    const auth = socket.handshake.auth || {};
-    const query = socket.handshake.query || {};
-    const id = String(auth.id || auth.userId || query.id || query.userId || '').trim();
-    const sessionToken = String(auth.sessionToken || query.sessionToken || '').trim();
-
-    if (!id || !sessionToken) return null;
-
-    const [rows] = await pool.query(
-        `SELECT id, name, sessionToken FROM wgs_users WHERE id = ? LIMIT 1`,
-        [id]
-    );
-    const user = rows[0];
-
-    if (!user || !user.sessionToken || user.sessionToken !== sessionToken) return null;
-
-    return {
-        id: String(user.id),
-        name: user.name || String(user.id),
-        sessionToken
-    };
-}
 
 async function getRoomDetail(pool, roomCode) {
     const [roomRows] = await pool.query(
@@ -99,57 +78,54 @@ async function getRoomDetail(pool, roomCode) {
     };
 }
 
-function attachMultiplayerSocket({ io, pool }) {
+function attachMultiplayerSocket({ io, pool, memberSessionService = createMemberSessionService({ pool }) }) {
     if (!io || !pool) {
         console.warn('WARN: Socket.IO server is not ready. Multiplayer realtime update is disabled.');
         return;
     }
 
-    io.on('connection', async (socket) => {
-        try {
-            const user = await validateSocketSession(pool, socket);
-            if (!user) {
-                socket.emit('multiplayer:error', { msg: '세션이 만료되었습니다. 다시 로그인해주세요.' });
-                socket.disconnect(true);
-                return;
-            }
-
-            socket.data.wgsUser = user;
-
-            socket.on('multiplayer:join-room', async (payload = {}) => {
-                const roomCode = normalizeRoomCode(payload.roomCode);
-                if (!roomCode) {
-                    socket.emit('multiplayer:error', { msg: '방 번호가 없습니다.' });
-                    return;
-                }
-
-                const roomName = getSocketRoomName(roomCode);
-                socket.join(roomName);
-                socket.data.roomCode = roomCode;
-
-                const detail = await getRoomDetail(pool, roomCode);
-                if (detail) {
-                    io.to(roomName).emit('multiplayer:room-updated', detail);
-                }
-            });
-
-            socket.on('multiplayer:request-room', async (payload = {}) => {
+    const disconnectRevoked = ({ userId, sessionHash }) => {
+        for (const socket of io.sockets.sockets.values()) {
+            if ((userId && socket.data.memberUserId === userId) || (sessionHash && socket.data.memberHash === sessionHash)) socket.disconnect(true);
+        }
+    };
+    memberSessionService.events.on('revoked', disconnectRevoked);
+    io.on('connection', socket => {
+        // Public screen-setting broadcasts do not carry member data. Multiplayer
+        // packets require the cookie and memory-only CSRF proof on every event.
+        const sendRoom = async (payload = {}, join = false) => {
+            try {
+                const auth = await memberSessionService.validateSocket(socket);
+                if (!auth.valid) throw new Error('session_expired');
                 const roomCode = normalizeRoomCode(payload.roomCode || socket.data.roomCode);
                 if (!roomCode) return;
-
                 const detail = await getRoomDetail(pool, roomCode);
-                if (detail) socket.emit('multiplayer:room-updated', detail);
-            });
-
-            socket.on('disconnect', () => {
-                // 연결 끊김 자체를 DB에서 퇴장 처리하지 않는다.
-                // 새로고침/모바일 네트워크 전환 때도 대기방 참여 상태가 유지되어야 하기 때문입니다.
-            });
-        } catch (error) {
-            console.error('[multiplayer socket] connection error:', error);
-            socket.emit('multiplayer:error', { msg: '실시간 연결 중 오류가 발생했습니다.' });
+                if (!detail || !detail.members.some(member => member.userId === String(auth.user.id) && member.status.trim() !== 'LEFT')) {
+                    socket.emit('multiplayer:error', { msg: '참여 중인 방만 열 수 있습니다.' });
+                    return;
+                }
+                const roomName = getSocketRoomName(roomCode);
+                // Reconnection can first request the existing room. Bind every
+                // authenticated connection so revocation also closes that socket.
+                socket.data.memberHash = auth.sessionHash;
+                socket.data.memberUserId = String(auth.user.id);
+                if (join) { await socket.join(roomName); socket.data.roomCode = roomCode; }
+                socket.emit('multiplayer:room-updated', detail);
+            } catch (_) {
+                if (socket.data.roomCode) await socket.leave(getSocketRoomName(socket.data.roomCode));
+                socket.emit('multiplayer:error', { msg: '세션이 만료되었습니다. 다시 로그인해주세요.' });
+                socket.disconnect(true);
+            }
+        };
+        socket.on('multiplayer:join-room', payload => sendRoom(payload, true));
+        socket.on('multiplayer:request-room', payload => sendRoom(payload));
+        const timer = setInterval(async () => {
+            if (!socket.data.memberHash) return;
+            try { if ((await memberSessionService.validateSocket(socket)).valid) return; } catch { /* Expired or revoked. */ }
             socket.disconnect(true);
-        }
+        }, 15000);
+        timer.unref?.();
+        socket.on('disconnect', () => clearInterval(timer));
     });
 
     console.log('OK: Socket.IO multiplayer realtime handler attached');

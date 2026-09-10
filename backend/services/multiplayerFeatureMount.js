@@ -1,17 +1,17 @@
 const createMultiplayerRouter = require('../multiplayerRoutes');
 const { attachMultiplayerSocket } = require('../multiplayerSocket');
 
-function registerMultiplayerFeature({ app, pool, io }) {
+function registerMultiplayerFeature({ app, pool, io, memberSessionService }) {
     // 필기 기출문제 멀티플레이 API + Socket.IO 연결
     // ------------------------------------------------------------
     // 기존 필기/실기/게시판/FAQ API보다 독립된 /api/multiplayer 경로로만 추가합니다.
     // 기존 API 경로를 수정하지 않기 때문에 기존 기능과 충돌하지 않는다.
     try {
-        const multiplayerRouter = createMultiplayerRouter({ pool, io });
+        const multiplayerRouter = createMultiplayerRouter({ pool, io, memberSessionService });
         app.use('/api/multiplayer', multiplayerRouter);
 
         if (io) {
-            attachMultiplayerSocket({ io, pool });
+            attachMultiplayerSocket({ io, pool, memberSessionService });
         }
 
         console.log('OK: written multiplayer API mounted at /api/multiplayer');

@@ -10,6 +10,7 @@ const {
     normalizeFilters,
 } = require('./services/visitSessionService');
 const registerAuthRoutes = require('./routes/auth/authRoutes');
+const { createMemberSessionDouble } = require('./test-support/memberSessionDouble');
 const registerAdminAuthRoutes = require('./routes/auth/adminAuthRoutes');
 const registerVisitorRoutes = require('./routes/visitorRoutes');
 
@@ -968,7 +969,7 @@ function cookieResponseDouble() {
 
 test('analytics failure cannot turn a valid login or session check into an authentication failure', async () => {
     const handlers = new Map();
-    const app = { post(path, handler) { handlers.set(path, handler); } };
+    const app = { post(path, handler) { handlers.set(path, handler); }, get(path, handler) { handlers.set(path, handler); } };
     const user = {
         id: 'member-a', password: 'hash', name: 'Member A', email: 'a@example.com',
         sessionToken: null, is_suspended: 0, is_operator: 0, is_primary_admin: 0,
@@ -988,6 +989,7 @@ test('analytics failure cannot turn a valid login or session check into an authe
     registerAuthRoutes({
         app,
         pool,
+        memberSessionService: createMemberSessionDouble(user),
         bcrypt: { compare: async () => true, hash: async () => 'hash' },
         sendEmail: async () => {},
         requireHcaptcha: async () => true,
@@ -1023,19 +1025,19 @@ test('analytics failure cannot turn a valid login or session check into an authe
     assert.equal(loginResponse.statusCode, 200);
     assert.equal(loginResponse.body.success, true);
 
-    user.sessionToken = loginResponse.body.sessionToken;
+    assert.equal(loginResponse.body.sessionToken, undefined);
     const sessionResponse = responseDouble();
     await handlers.get('/api/check-session')({
-        body: { id: 'member-a', sessionToken: user.sessionToken },
-        headers: { 'x-wgs-client-id': 'wgs-aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee' },
+        body: { id: 'member-a' },
+        headers: { cookie: 'wgs_member=unit-cookie-session', 'x-wgs-client-id': 'wgs-aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee' },
     }, sessionResponse);
     assert.equal(sessionResponse.statusCode, 200);
     assert.equal(sessionResponse.body.valid, true);
 
     const logoutResponse = responseDouble();
     await handlers.get('/api/logout')({
-        body: { id: 'member-a', sessionToken: user.sessionToken },
-        headers: { 'x-wgs-client-id': 'wgs-aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee' },
+        body: { id: 'member-a' },
+        headers: { cookie: 'wgs_member=unit-cookie-session', 'x-wgs-client-id': 'wgs-aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee' },
     }, logoutResponse);
     assert.equal(logoutResponse.statusCode, 200);
     assert.equal(logoutResponse.body.success, true);
@@ -1068,7 +1070,7 @@ test('general login sets or clears the visitor exclusion cookie for the authenti
     for (const roleCase of roleCases) {
         await t.test(roleCase.label, async () => {
             const handlers = new Map();
-            const app = { post(path, handler) { handlers.set(path, handler); } };
+            const app = { post(path, handler) { handlers.set(path, handler); }, get(path, handler) { handlers.set(path, handler); } };
             const user = {
                 id: `${roleCase.label.replace(/\s+/g, '-')}-account`,
                 password: 'hash',
@@ -1083,6 +1085,7 @@ test('general login sets or clears the visitor exclusion cookie for the authenti
             let exclusionClearCookieCalls = 0;
             registerAuthRoutes({
                 app,
+                memberSessionService: createMemberSessionDouble(user),
                 pool: {
                     async query(sql) {
                         if (String(sql).includes('INSERT INTO wgs_login_history')) {
@@ -1148,7 +1151,7 @@ test('general login sets or clears the visitor exclusion cookie for the authenti
             assert.equal(analyticsCalls[0].isExcluded, roleCase.expectedExcluded);
             assert.equal(exclusionCookieCalls, roleCase.expectedExcluded ? 1 : 0);
             assert.equal(exclusionClearCookieCalls, roleCase.expectedExcluded ? 0 : 1);
-            const setCookies = response.headers.get('Set-Cookie');
+            const setCookies = response.headers.get('Set-Cookie').filter(cookie => cookie.startsWith('wgs_visitor_admin_exclusion='));
             assert.equal(setCookies.length, 1);
             assert.match(
                 setCookies[0],

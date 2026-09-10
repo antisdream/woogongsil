@@ -1,26 +1,12 @@
 'use strict';
+const { createMemberSessionService } = require('./memberSessionService');
 
-function createMultiplayerAuth({ pool } = {}) {
+function createMultiplayerAuth({ pool, memberSessionService = createMemberSessionService({ pool }) } = {}) {
     if (!pool) throw new Error('createMultiplayerAuth requires mysql pool');
 
     async function getSessionUserForRequest(req) {
-        // Express 미들웨어/일반 라우터 함수가 함께 쓰는 세션 조회 헬퍼
-        // req.query, req.body, 헤더 모두 기존 방식 그대로 허용합니다.
-        const source = req.method === 'GET'? req.query : req.body;
-        const id = String(source.id || source.userId || req.headers['x-user-id'] || '').trim();
-        const sessionToken = String(source.sessionToken || req.headers['x-session-token'] || '').trim();
-
-        if (!id || !sessionToken) return null;
-
-        const [rows] = await pool.query(
-            `SELECT id, name, sessionToken FROM wgs_users WHERE id = ? LIMIT 1`,
-            [id]
-        );
-        const user = rows[0];
-
-        if (!user || !user.sessionToken || user.sessionToken !== sessionToken) return null;
-
-        return { id: String(user.id), name: user.name || String(user.id), sessionToken };
+        const auth = await memberSessionService.validateRequest(req);
+        return auth.valid ? { id: String(auth.user.id), name: auth.user.name || String(auth.user.id), sessionHash: auth.sessionHash } : null;
     }
 
     async function requireSessionUser(req, res, next) {
@@ -35,7 +21,7 @@ function createMultiplayerAuth({ pool } = {}) {
             return next();
         } catch (error) {
             console.error('[multiplayer] session check error:', error);
-            return res.status(500).json({ success: false, msg: '세션 확인 중 오류가 발생했습니다.' });
+            return res.status(error.status || 500).json({ success: false, reason: error.reason || 'session_check_failed', msg: '세션 확인 중 오류가 발생했습니다.' });
         }
     }
 

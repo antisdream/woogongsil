@@ -130,7 +130,7 @@ const Signup = ({ embedded = false, afterSignupPath = '/' }) => {
                 setVerificationCsrf(res.data.csrfToken);
                 setIsEmailSent(true);
                 setTimer(120);       
-                setResendTimer(30);  
+                setResendTimer(res.data.resendAfterSeconds || 60);
             }
         } catch (err) {
             alert(err.response?.data?.msg || getSetting('messages.code_send_failed', '인증번호 전송에 실패했습니다.'));

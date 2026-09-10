@@ -69,6 +69,7 @@ function createWgsCorsOptions() {
             'X-Server-Instance-Id',
             'X-CSRF-Token',
             'X-Wgs-Verification-Csrf',
+            'X-Wgs-Member-Csrf',
         ],
         maxAge: 600,
     };
